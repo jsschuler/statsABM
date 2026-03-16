@@ -1,0 +1,7 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^CLAUDE\.md$
+^\.DS_Store$
+^chunks$
+^figures$
+^demo$

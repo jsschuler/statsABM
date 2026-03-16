@@ -1,0 +1,10 @@
+figures/
+*.tex
+*.pdf
+*.aux
+*.log
+.DS_Store
+*.Rhistory
+*.RData
+*.Ruserdata
+.Rproj.user/
