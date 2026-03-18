@@ -1,0 +1,1045 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage{booktabs}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+\usepackage[round]{natbib}
+\usepackage[margin=1in]{geometry}
+\usepackage{float}
+\usepackage{listings}
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+
+\title{Agent-Based Modeling for Statisticians\\
+  \large Short Course Notes}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================================
+% Global setup: options, chunk reading, package loading
+% ============================================================
+<<global-setup, echo=FALSE, message=FALSE, warning=FALSE>>=
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = "center",
+  fig.pos   = "H",
+  fig.width = 8,
+  fig.height = 4,
+  out.width = "\\textwidth"
+)
+library(here)
+knitr::read_chunk(here("chunks", "lv.R"))
+knitr::read_chunk(here("chunks", "isr.R"))
+knitr::read_chunk(here("chunks", "abm_predator_prey.R"))
+knitr::read_chunk(here("chunks", "abm_pandemic.R"))
+knitr::read_chunk(here("chunks", "abm_network.R"))
+knitr::read_chunk(here("chunks", "abm_grass.R"))
+knitr::read_chunk(here("chunks", "axtell.R"))
+pkgload::load_all(here(), quiet = TRUE)
+@
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+\subsection{What is Agent-Based Modeling?}
+
+An \emph{agent-based model} (ABM) is a computational model in which individual
+autonomous entities---agents---interact with each other and with their
+environment according to local rules. The population-level dynamics emerge from
+these micro-level interactions rather than being specified top-down. Agents can
+represent people, animals, firms, particles, or any discrete entity whose
+behaviour is governed by rules.
+
+ABMs differ from classical mathematical models in three respects:
+\begin{itemize}
+  \item \textbf{Discreteness.} Populations consist of integer counts of individuals,
+    not continuous densities.
+  \item \textbf{Heterogeneity.} Individual agents can differ in state, location,
+    and behaviour.
+  \item \textbf{Locality.} Interactions occur between agents that are spatially or
+    socially proximate, not between population-level aggregates.
+\end{itemize}
+
+\subsection{Why Should Statisticians Care?}
+
+The classical tools of mathematical modeling---ordinary differential equations,
+compartmental models, mean-field approximations---are familiar to quantitative
+scientists. They are tractable and admit analytical results, but they rest on
+assumptions that are rarely stated explicitly and often violated in practice.
+
+The ABM offers three things a statistician should find immediately relevant:
+
+\begin{enumerate}
+  \item \textbf{Stochastic output.} The ABM is a data-generating process.
+    Each run produces a realisation; repeated runs produce a distribution.
+    This is the natural language of statistical inference.
+  \item \textbf{Finite-population effects.} When populations are small, the
+    law of large numbers does not apply. Variance matters, extinction is
+    possible, and the ODE's deterministic prediction can be systematically
+    wrong.
+  \item \textbf{Mechanism transparency.} The model's assumptions are explicit
+    rules applied to discrete agents. Misspecification is visible; structural
+    changes can be made one rule at a time.
+\end{enumerate}
+
+\subsection{The Central Epistemological Tension}
+
+The key intellectual tension running through this course is between two
+extrapolation failure modes.
+
+\textbf{False equilibrium.} A model built around a steady state implicitly
+assumes the system will remain near that state indefinitely. When the
+trajectory approaches a threshold, the model has nothing to say. Ecological
+models that assume stable predator-prey cycles cannot predict extinction;
+epidemic models built on $\mathcal{R}_0$ cannot predict stochastic fadeout.
+
+\textbf{Apocalypse extrapolation.} A model that captures exponential growth
+or power-law connectivity will, extrapolated far enough, predict catastrophe.
+Network epidemic models predict near-certain explosive spread for modest
+connectivity increases; this extrapolation is credible only within the regime
+the model was calibrated on.
+
+Isaac Newton's \emph{Principia Mathematica} \citep{newton1687} is the paradigm
+case of successful extrapolation: planetary mechanics obey conservation laws
+and exhibit closure and linearity over the relevant time scales and spatial
+scales. These conditions---conservation, closure, linearity---are precisely
+what ecological and epidemiological systems conspicuously lack.
+
+\textbf{The ABM resolution.} Rather than committing to a point prediction,
+the ABM produces a distribution over possible futures. Policy questions are
+reframed as hitting-time problems: ``what is the probability of crossing
+threshold $X$ before time $T$?'' This is a well-posed statistical question
+that ODE models cannot answer.
+
+\subsection{System Dynamics vs Agent-Based Models: a Roadmap}
+
+We develop three paired models: predator-prey, epidemic, and firm-size
+dynamics. In each case we implement the standard system-dynamics (ODE)
+model first, then build the agent-based counterpart using the same
+ecological or epidemiological parameters, then compare outputs.
+
+The comparison is not merely illustrative. Each section identifies exactly
+which assumptions the ODE makes, which of those assumptions the ABM relaxes,
+and what new phenomena become visible as a result.
+
+% ============================================================
+\section{System Dynamics: the Lotka-Volterra Predator-Prey Model}
+% ============================================================
+
+\subsection{Model Formulation}
+
+The Lotka-Volterra system \citep{lotka1925,volterra1926} describes two
+interacting populations---prey $x(t)$ and predators $y(t)$---via the
+coupled ODEs:
+\begin{align}
+  \frac{dx}{dt} &= \alpha x - \beta x y \label{eq:lv-prey}\\
+  \frac{dy}{dt} &= \delta x y - \gamma y \label{eq:lv-pred}
+\end{align}
+The parameters have the following ecological interpretation:
+\begin{itemize}
+  \item $\alpha > 0$: per-capita prey birth rate (intrinsic growth in
+    the absence of predators).
+  \item $\beta > 0$: predation rate (rate at which prey are removed per
+    predator--prey encounter).
+  \item $\gamma > 0$: per-capita predator death rate (decay in the
+    absence of prey).
+  \item $\delta > 0$: predator birth rate per prey eaten (conversion
+    efficiency of prey into predator offspring).
+\end{itemize}
+
+The model has two conserved quantities that together produce closed
+orbits: it is Hamiltonian, and the trajectories in $(x, y)$ space are
+closed curves around the non-trivial equilibrium.
+
+\subsection{Equilibrium Analysis}
+
+Setting $dx/dt = 0$ and $dy/dt = 0$ in equations~(\ref{eq:lv-prey}) and
+(\ref{eq:lv-pred}) yields two fixed points: the trivial equilibrium
+$(0, 0)$ and the non-trivial equilibrium.
+
+\begin{proposition}
+The non-trivial Lotka-Volterra equilibrium is
+\begin{equation}
+  x^* = \frac{\gamma}{\delta}, \qquad y^* = \frac{\alpha}{\beta}.
+  \label{eq:lv-eq}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+From $dy/dt = \delta x y - \gamma y = y(\delta x - \gamma) = 0$ with
+$y \neq 0$, we obtain $x^* = \gamma/\delta$.  Substituting into
+$dx/dt = x(\alpha - \beta y) = 0$ with $x \neq 0$ gives
+$y^* = \alpha/\beta$.
+\end{proof}
+
+\begin{remark}
+The equilibrium~(\ref{eq:lv-eq}) is \emph{neutrally stable}, not
+asymptotically stable.  The Jacobian at $(x^*, y^*)$ has purely imaginary
+eigenvalues $\pm i\sqrt{\alpha\gamma}$, so trajectories neither converge
+to nor diverge from the fixed point: they orbit it on closed curves.
+This neutral stability is a structural property of the Lotka-Volterra
+system and is not preserved by most perturbations; in particular, it
+is not preserved in finite-population realisations.
+\end{remark}
+
+\subsection{R Implementation}
+
+We integrate the system using \texttt{deSolve::ode()} with the default
+Runge-Kutta solver.
+
+<<lv-run-model>>=
+@
+
+<<lv-equilibrium>>=
+@
+
+\subsection{Phase Portrait and Time Series}
+
+\begin{figure}[H]
+  \centering
+<<lv-time-series, fig.height=4>>=
+@
+  \caption{Lotka-Volterra ODE: prey (blue) and predator (plum) populations
+    over 200 time units.  The system exhibits undamped oscillations; neither
+    population reaches zero.  Default parameters: $\alpha = 0.1$,
+    $\beta = 0.02$, $\gamma = 0.3$, $\delta = 0.01$.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+<<lv-phase-portrait, fig.width=5, fig.height=5>>=
+@
+  \caption{Phase portrait of the Lotka-Volterra ODE.  The trajectory
+    traces a closed orbit around the equilibrium $(x^*, y^*) = (30, 5)$.
+    The dot marks the initial condition $(x_0, y_0) = (40, 9)$.}
+\end{figure}
+
+\subsection{Mean-Field Foundations and Time-Scale Limitations}
+
+The Lotka-Volterra ODE is the mean-field limit of a continuous-time
+stochastic birth-death process as the total population $N \to \infty$.
+In the stochastic version, each individual birth, death, and predation
+event is a Poisson process; the ODE describes the expected trajectory
+when $N$ is large enough that fluctuations are negligible.
+
+For finite $N$, the system behaves differently in three important ways.
+
+\textbf{Demographic stochasticity.}  Variance in population size scales
+as $1/N$.  Deviations from the ODE trajectory are of order $1/\sqrt{N}$
+per unit time.  For the small populations typical in ecological management
+contexts---hundreds or thousands of individuals, not millions---this
+variance is substantial.
+
+\textbf{Drift and extinction.}  The ODE equilibrium is neutrally stable:
+the Hamiltonian structure ensures that the expected trajectory orbits the
+fixed point indefinitely.  The stochastic version lacks this conservation
+law.  Population sizes execute a random walk around the orbit, and random
+walks in one dimension are recurrent \citep{karlin1975}: they revisit every
+state, including zero.  In finite time, the stochastic predator-prey system
+goes extinct with probability one.
+
+\begin{remark}
+The Recurrence Theorem \citep{karlin1975}: a one-dimensional random walk
+on the integers is recurrent; it visits every state infinitely often.  The
+ODE cannot represent this because it operates on continuous densities; the
+ABM makes it directly observable.
+\end{remark}
+
+\textbf{Time-scale limitations.}  The ODE is a reliable approximation over
+short time horizons, large populations, and trajectories that stay well away
+from zero.  Error accumulates as $T$ grows, as $N$ shrinks, and as the
+trajectory approaches a boundary.  Conservation management plans built on
+ODE cycles implicitly assume the mean-field regime persists indefinitely.
+The ABM reframes the policy question: not ``do populations cycle?'' but
+``what is the probability of extinction before time $T$?''
+
+\subsection{Activity 1: ODE vs ABM Extinction}
+\label{sec:activity1}
+
+\textbf{Teaching point:} The ODE predicts survival at any positive parameter
+value; the ABM reveals finite extinction probability.
+
+\textbf{Instructions.}  Open \texttt{demo/demo\_lotka\_volterra.R} and navigate
+to the \texttt{ACTIVITY 1} comment.
+
+\begin{enumerate}
+  \item Run the ODE with \texttt{params\_low\_alpha} (prey birth rate
+    $\alpha = 0.02$).  Plot the trajectory.  Does prey reach zero?
+    What does the ODE predict long-run?
+  \item Run \texttt{find\_abm\_extinction\_probability()} with the same
+    parameters and \texttt{n\_runs = 20}.  What fraction of ABM runs go extinct
+    before step 500?  Why does the ODE not predict this?
+  \item Vary \texttt{width} from \texttt{10L} to \texttt{50L}.  How does
+    extinction probability change with grid size?
+  \item \textbf{Extension:} Vary $\alpha$ from 0.02 to 0.20 in steps of
+    0.02.  For each value, run 10 ABM replicates and compute extinction
+    probability.  Plot extinction probability vs $\alpha$.  Is there a
+    sharp threshold or a gradual transition?
+\end{enumerate}
+
+% ============================================================
+\section{System Dynamics: the ISR Epidemic Model}
+% ============================================================
+
+\subsection{Model Formulation}
+
+We adopt the ISR ordering: Infected, Susceptible, Recovered.  This
+unconventional labelling is deliberate---it keeps the focus on the
+infected compartment, which drives the dynamics, and prevents students
+from confusing compartment order with mechanistic flow.
+
+Let $I(t)$, $S(t)$, $R(t) \in [0,1]$ denote the fractions of the
+population that are infected, susceptible, and recovered, with
+$I + S + R = 1$.  The system evolves as:
+\begin{align}
+  \frac{dI}{dt} &= \beta I S - \gamma I \label{eq:isr-I}\\
+  \frac{dS}{dt} &= -\beta I S \label{eq:isr-S}\\
+  \frac{dR}{dt} &= \gamma I \label{eq:isr-R}
+\end{align}
+with parameters:
+\begin{itemize}
+  \item $\beta > 0$: transmission rate (contacts per unit time $\times$
+    probability of transmission per contact).
+  \item $\gamma > 0$: recovery rate ($1/\gamma$ is the mean infectious
+    period).
+\end{itemize}
+
+\subsection{The Basic Reproduction Number and Herd Immunity}
+
+The basic reproduction number $\mathcal{R}_0$ is the expected number of
+secondary infections caused by a single infectious individual introduced
+into a fully susceptible population.
+
+\begin{proposition}
+For the ISR model with $S(0) \approx 1$:
+\begin{equation}
+  \mathcal{R}_0 = \frac{\beta}{\gamma}.
+\end{equation}
+The epidemic grows (i.e.\ $dI/dt > 0$ initially) if and only if
+$\mathcal{R}_0 > 1$.
+\end{proposition}
+
+\begin{proof}
+At $t = 0$ with $I(0) = \epsilon \approx 0$ and $S(0) \approx 1$:
+\[
+  \frac{dI}{dt}\bigg|_{t=0} = \beta \epsilon S(0) - \gamma \epsilon
+  = \epsilon(\beta S(0) - \gamma) \approx \epsilon(\beta - \gamma).
+\]
+This is positive iff $\beta > \gamma$, i.e.\ $\mathcal{R}_0 = \beta/\gamma > 1$.
+\end{proof}
+
+\begin{proposition}[Herd Immunity Threshold]
+The fraction of the population that must be immune to prevent epidemic growth is:
+\begin{equation}
+  p_c = 1 - \frac{1}{\mathcal{R}_0}.
+\end{equation}
+\end{proposition}
+
+The default parameters ($\beta = 0.3$, $\gamma = 0.05$) give
+$\mathcal{R}_0 = 6$, comparable to measles.  This produces a dramatic,
+clearly peaked epidemic curve suitable for instruction.
+
+\subsection{R Implementation}
+
+<<isr-run-model>>=
+@
+
+<<isr-summary>>=
+@
+
+\subsection{Epidemic Curve and Final Size}
+
+\begin{figure}[H]
+  \centering
+<<isr-time-series, fig.height=4>>=
+@
+  \caption{ISR ODE epidemic curve with $\mathcal{R}_0 = 6$.  The infected
+    fraction (plum) peaks at approximately 52.8\% then declines as the
+    susceptible pool is exhausted.  The final epidemic size (total fraction
+    ever infected, $= R(\infty)$) is approximately 99\%.}
+\end{figure}
+
+\subsection{Mean-Field Foundations and Time-Scale Limitations}
+
+The ISR ODE is the $N \to \infty$ limit of a stochastic SIR process on a
+complete graph---where every individual can contact every other individual
+with equal probability.  The homogeneous mixing assumption is equivalent
+to assuming the contact network is a complete graph.
+
+Three limitations follow from this:
+
+\textbf{Stochastic fadeout.}  When $\mathcal{R}_0 > 1$ in a large
+deterministic population, an epidemic always takes off.  In a finite
+population, a single infected individual may recover before infecting
+anyone: the epidemic dies out by chance.  The probability of this
+stochastic fadeout can be approximated by a branching process argument
+\citep{bartlett1955, anderssonbritton2000}: the probability that the
+epidemic goes extinct is approximately $(1/\mathcal{R}_0)^{I_0}$, where
+$I_0$ is the initial number of infected individuals.
+
+\textbf{Contact heterogeneity.}  Real contact networks are not complete
+graphs.  High-degree nodes (super-spreaders) have disproportionate impact
+on transmission; removing them requires targeting the network structure,
+not just reducing $\mathcal{R}_0$.  The epidemic threshold on a
+heterogeneous network is determined by the spectral radius of the
+next-generation matrix, not by $\mathcal{R}_0$ alone
+\citep{diekmann1990}.
+
+\textbf{Policy timing.}  Intervention timing depends critically on where
+the epidemic is on its curve.  The ODE gives a single deterministic
+trajectory; the ABM gives a distribution.  The mean and the variance of
+peak timing both matter for policy.
+
+% ============================================================
+\section{Agent-Based Models: Predator-Prey}
+% ============================================================
+
+\subsection{From ODEs to Agents}
+
+The Lotka-Volterra ODE describes population-level flow rates.  The ABM
+replaces these continuous flows with discrete agents following local rules.
+The key changes are:
+\begin{itemize}
+  \item Prey and predators become individual sheep and wolves with positions,
+    energy levels, and survival states.
+  \item Interactions are local: a wolf can only eat a sheep that occupies
+    the same grid cell.
+  \item Reproduction is probabilistic: each agent reproduces with a fixed
+    probability per tick when its energy exceeds a threshold.
+  \item Energy dynamics replace the ODE's instantaneous birth-death flows:
+    each agent gains or loses energy from eating, starving, and reproducing.
+\end{itemize}
+
+The macro-level dynamics---population cycles, extinction---emerge from these
+micro-level rules without being programmed explicitly.
+
+\subsection{Model Rules}
+
+\textbf{Environment.}  A toroidal grid of \texttt{width} $\times$
+\texttt{height} cells.  Toroidal wrapping (opposite edges connect) avoids
+boundary effects.  Agent movement uses a Moore neighbourhood: eight adjacent
+cells plus the current cell.
+
+\textbf{Sheep} execute the following steps each tick:
+\begin{enumerate}
+  \item Move to a randomly chosen Moore-neighbourhood cell (including
+    current cell).
+  \item Gain \texttt{sheep\_gain\_from\_food} energy (baseline = 4; with
+    grass extension: only on grown cells).
+  \item Lose 1 energy (metabolic cost).
+  \item If energy $>$ \texttt{sheep\_reproduce\_threshold} and a uniform
+    draw $< \texttt{sheep\_reproduce}$: create an offspring at the same cell,
+    each receiving half the parent's energy.
+  \item Die if energy $\leq 0$.
+\end{enumerate}
+
+\textbf{Wolves} execute the following steps each tick:
+\begin{enumerate}
+  \item Move to a randomly chosen Moore-neighbourhood cell.
+  \item Lose 1 energy.
+  \item If any sheep occupies the current cell: eat one, gaining
+    \texttt{wolf\_gain\_from\_food} energy (baseline = 20).
+  \item If energy $>$ \texttt{wolf\_reproduce\_threshold} and a uniform
+    draw $< \texttt{wolf\_reproduce}$: create an offspring.
+  \item Die if energy $\leq 0$.
+\end{enumerate}
+
+All agents are stepped in uniformly random order each tick, preventing
+systematic first-mover advantage.
+
+\subsection{R Implementation}
+
+The model is implemented using R6 classes from the \texttt{R6} package.
+The \texttt{PredatorPreyModel} class holds the grid, the agent lists, and
+the step logic.
+
+<<pp-run-model>>=
+@
+
+<<pp-summary>>=
+@
+
+\subsection{Comparison with the ODE}
+
+\begin{figure}[H]
+  \centering
+<<pp-vs-ode, fig.height=4>>=
+@
+  \caption{Left: Lotka-Volterra ODE on a 200-unit time horizon.  Right:
+    predator-prey ABM on a 20$\times$20 grid (seed = 18, 300 ticks).
+    The ABM shows qualitatively similar oscillations but with greater
+    amplitude variance and eventual wolf extinction.  The ODE predicts
+    stable cycles indefinitely; the ABM reveals finite extinction risk.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+<<pp-time-series, fig.height=4>>=
+@
+  \caption{ABM predator-prey time series (20$\times$20, seed = 18, 300 steps).
+    Two complete boom-bust cycles are visible.  Running to step 341 shows wolf
+    extinction as the depleted sheep population can no longer sustain the
+    wolf cohort.}
+\end{figure}
+
+\subsection{Finite-Population Effects and Extinction Risk}
+
+The ABM makes explicit what the ODE conceals.  Extinction is not a
+parameter-driven event---it is a stochastic consequence of finite
+population size.  On a 20$\times$20 grid with the default parameters,
+100\% of 20 independent replicates go extinct within 500 steps, even
+though the ODE predicts indefinite cycling.
+
+<<pp-extinction-demo, cache=TRUE>>=
+@
+
+The mean time to extinction ($\approx 192$ steps across 20 replicates)
+provides a natural analogue to the hitting-time framing discussed in
+Section~\ref{sec:activity1}: with probability 1, the stochastic process
+eventually crosses the zero boundary that the ODE never approaches.
+
+From a statistical perspective, the ABM output is a distribution over
+trajectories, not a point prediction.  The relevant summary is not
+``the population at time $T$'' but ``the distribution of time to
+extinction'' or ``the distribution of peak wolf count.''
+
+\subsection{Activity 2: Spatial Density and Finite-Population Effects}
+\label{sec:activity2}
+
+\textbf{Teaching point:}  The mean-field assumption is a density
+assumption.  Holding population constant and varying grid size isolates
+spatial density as the variable.
+
+\textbf{Instructions.}  Open \texttt{demo/demo\_predator\_prey.R} and
+navigate to the \texttt{ACTIVITY 2} comment.
+
+\begin{enumerate}
+  \item Run the three models (sparse 100$\times$100, medium 50$\times$50,
+    dense 20$\times$20) with fixed $n_\mathrm{sheep} = 100$ and
+    $n_\mathrm{wolves} = 25$.  Which grid size produces dynamics closest
+    to the ODE?
+  \item Use \texttt{plot\_abm\_ode\_comparison()} to overlay all three ABM
+    trajectories on the ODE.  At what density do they diverge most?
+  \item Run each grid size 10 times (seeds 1--10).  At which grid size does
+    extinction probability first exceed 10\%?
+  \item \textbf{Extension:} Does the ODE give any warning that extinction
+    is coming?  What would a statistician need to observe to distinguish
+    ``near-extinct'' from ``stable cycle'' in real data?
+\end{enumerate}
+
+% ============================================================
+\section{Agent-Based Models: ISR Epidemic}
+% ============================================================
+
+\subsection{From Compartments to Individuals}
+
+The ISR ODE tracks fractions; the pandemic ABM tracks individual people.
+The key change is that infection is a \emph{local} event: a susceptible
+person becomes infected only if an infected person occupies their
+Moore neighbourhood.  In a well-mixed grid, this local rule approximates
+the ODE's homogeneous mixing assumption, but with finite-population effects
+intact.
+
+\subsection{Model Rules}
+
+\textbf{Person} agents follow these ISR rules each tick (applied
+synchronously from a tick-start snapshot):
+\begin{itemize}
+  \item If in state $S$: for each of the (up to 8) Moore-neighbourhood
+    cells containing an $I$ agent, become $I$ with probability $\beta$.
+    The compound probability for $k$ infected neighbours is
+    $1 - (1 - \beta)^k$.
+  \item If in state $I$: transition to $R$ with probability $\gamma$.
+  \item If in state $R$: remain $R$ (no re-infection).
+\end{itemize}
+After state updates, all agents move to a random Moore-neighbourhood cell.
+Synchronous updates (all state changes applied from a tick-start snapshot)
+ensure that mid-tick state changes do not cascade within a single step.
+
+\subsection{R Implementation}
+
+<<pandemic-run-model>>=
+@
+
+<<pandemic-summary>>=
+@
+
+\subsection{Comparison with the ODE}
+
+\begin{figure}[H]
+  \centering
+<<pandemic-vs-ode>>=
+@
+  \caption{Left: ISR ODE epidemic curve (single deterministic trajectory).
+    Right: mean ABM infected fraction across 10 replicates (plum line)
+    with $\pm 1$ SD shading.  The ODE and ABM mean agree qualitatively,
+    but the ABM reveals run-to-run variance that the ODE cannot represent.}
+\end{figure}
+
+\subsection{What the Well-Mixed Assumption Is Really Doing}
+
+The pandemic ABM on a 20$\times$20 grid is a well-mixed model in
+disguise: with 400 agents moving randomly on the torus, every agent
+is in every other agent's neighbourhood within a few steps.  The ABM
+approximates the ODE's complete-graph contact structure.
+
+The key insight is that ``well-mixed'' is not a property of the biology;
+it is a property of the \emph{model}.  The ABM makes this explicit by
+giving the contact structure (a grid with Moore neighbourhood movement) a
+concrete representation.  Replacing the grid with a heterogeneous network
+relaxes the assumption in a way that the ODE cannot: the contact
+structure is a model component, not a background assumption.
+
+\subsection{Activity 3: Stochastic Variation in Epidemic Outcomes}
+\label{sec:activity3}
+
+\textbf{Teaching point:}  The ODE gives one epidemic curve; the ABM gives
+a distribution.  Statistical thinking---summarising a distribution, not
+reading off a point---is the right framework for ABM output.
+
+\textbf{Instructions.}  Open \texttt{demo/demo\_isr.R} and navigate to
+the \texttt{ACTIVITY 3} comment.
+
+\begin{enumerate}
+  \item Run the pandemic model 10 times using \texttt{lapply()}.  Call
+    \texttt{summarise\_runs()} and examine the distribution of
+    \texttt{peak\_I} and \texttt{R0\_empirical}.
+  \item Call \texttt{plot\_epidemic\_comparison()} to overlay the mean ABM
+    trajectory on the ODE.  Does the ODE peak fall within the ABM
+    distribution?
+  \item What does the variance in \texttt{peak\_I} imply for policy
+    decisions based on the ODE peak infected fraction?
+  \item \textbf{Extension:} Increase \texttt{initial\_infected\_fraction}
+    to 0.05.  Does variance increase or decrease?  What does this imply
+    about epidemic prediction early vs.\ late in an outbreak?
+\end{enumerate}
+
+% ============================================================
+\section{Extension: Social Networks and Super-Spreaders}
+% ============================================================
+
+\subsection{The Well-Mixed Assumption Revisited}
+
+The well-mixed assumption is a complete-graph assumption: every
+susceptible individual is equally likely to contact every infected
+individual.  Real contact networks are sparse and heterogeneous.
+A small fraction of high-degree individuals---super-spreaders---accounts
+for a disproportionate share of transmission.
+
+The Barab\'{a}si--Albert (BA) preferential attachment model
+\citep{barabasi1999} generates networks with a power-law degree
+distribution $P(k) \propto k^{-\gamma_\mathrm{net}}$ that match the
+empirical structure of many real-world contact networks.
+
+\subsection{Barab\'{a}si--Albert Networks and Degree Heterogeneity}
+
+The BA algorithm begins with a small seed graph and adds nodes one at
+a time.  Each new node attaches $m$ edges to existing nodes, with
+attachment probability proportional to degree (preferential attachment).
+The resulting degree distribution follows a power law with exponent
+approximately $-3$ regardless of $m$.
+
+The model is constructed via:
+\begin{verbatim}
+igraph::sample_pa(n = n_agents, m = n_edges_per_new_node, directed = FALSE)
+\end{verbatim}
+Super-spreaders are defined as agents with degree above the 90th
+percentile of the degree distribution.
+
+\subsection{R Implementation}
+
+<<network-run-model>>=
+@
+
+<<network-summary>>=
+@
+
+\begin{figure}[H]
+  \centering
+<<network-degree-dist, fig.height=4>>=
+@
+  \caption{Degree distribution of the BA network (500 nodes, $m = 3$)
+    on log-log axes.  The power-law structure is visible as an
+    approximately linear relationship.  The heavy right tail represents
+    the small number of high-degree hub nodes that drive super-spreader
+    dynamics.}
+\end{figure}
+
+\subsection{Epidemic Curves: Grid vs Network}
+
+\begin{figure}[H]
+  \centering
+<<network-epidemic-comparison, fig.height=4>>=
+@
+  \caption{Epidemic curves on a well-mixed grid (left) and a BA network
+    (right) with identical transmission parameters.  The network can
+    produce faster-rising epidemics when highly connected hub nodes are
+    infected early.}
+\end{figure}
+
+\subsection{Super-Spreader Seeding}
+
+Activity 4 introduces a model parameter, \texttt{seed\_hubs}, that
+controls whether the initially infected agents are drawn from the
+highest-degree nodes rather than uniformly at random.  This isolates
+the \emph{seeding location} effect from the \emph{network structure}
+effect.
+
+\begin{figure}[H]
+  \centering
+<<network-hub-seeding, fig.height=4>>=
+@
+  \caption{Epidemic curves with random seeding (left) vs hub seeding
+    (right).  Identical parameters and network structure; only the
+    identity of the initially infected agents differs.  Hub seeding
+    typically produces a faster-rising epidemic because infected
+    agents immediately have many susceptible contacts.}
+\end{figure}
+
+\subsection{Statistical Implications: Why $\mathcal{R}_0$ Is Not Enough}
+
+On a heterogeneous network, the epidemic threshold is determined not
+by $\mathcal{R}_0 = \beta/\gamma$ but by the spectral radius of the
+next-generation matrix \citep{diekmann1990}.  On a complete graph, the
+next-generation matrix reduces to a scalar and its spectral radius
+equals $\mathcal{R}_0$.  On a heterogeneous network, the threshold is
+lower when variance in degree is high, and the final epidemic size
+depends on the degree distribution, not just its mean.
+
+\begin{remark}
+The apocalypse extrapolation failure mode applies directly here.
+Network epidemic models can predict near-certain explosive spread for
+modest increases in connectivity.  This extrapolation is credible only
+within the regime the model was calibrated on.  Real contact networks
+adapt when individuals change behaviour in response to epidemic risk;
+the structural assumptions break down precisely when the policy is
+most aggressive.
+\end{remark}
+
+\subsection{Activity 4: Hub Seeding and Epidemic Shape}
+\label{sec:activity4}
+
+\textbf{Teaching point:}  On a heterogeneous network, who gets infected
+first matters as much as how many.
+
+\textbf{Instructions.}  Open \texttt{demo/demo\_pandemic.R} and navigate
+to the \texttt{ACTIVITY 4} comment.
+
+\begin{enumerate}
+  \item Compare the epidemic curves from \texttt{seed\_hubs = FALSE} and
+    \texttt{seed\_hubs = TRUE}.  Which produces a faster-rising epidemic?
+    Which produces a higher peak?
+  \item Examine the super-spreader and non-super-spreader attack rates for
+    each seeding strategy.  How do they differ?
+  \item What does this imply for early containment policy (contact tracing,
+    quarantine)?
+  \item \textbf{Extension:} Run both seeding strategies 10 times each.
+    Does hub seeding always produce a faster epidemic, or does stochastic
+    variation sometimes reverse the result?  At what value of $m$
+    (network connectivity) does seeding strategy matter most?
+\end{enumerate}
+
+% ============================================================
+\section{Extension: Grass and Carrying Capacity}
+% ============================================================
+
+\subsection{Adding a Third Trophic Level}
+
+The baseline predator-prey ABM gives sheep unlimited food: they gain
+energy every tick regardless of local conditions.  This is equivalent
+to an unbounded carrying capacity.  The grass extension adds a finite
+food supply: sheep gain energy only from cells with grown grass; eaten
+grass must regrow over \texttt{grass\_regrowth\_time} ticks before it
+can be consumed again.
+
+The grass layer introduces a mechanistic carrying capacity that is
+absent from the baseline model.  In the Lotka-Volterra ODE, carrying
+capacity must be added as an explicit term (the logistic Lotka-Volterra
+system); in the ABM, it emerges from the local interaction rule.
+
+\textbf{Grass rules:}
+\begin{itemize}
+  \item Each cell is either grown (grass present) or bare.
+  \item At each tick, bare cells count down their regrowth timer;
+    cells whose timer reaches zero become grown.
+  \item A sheep on a grown cell eats the grass (cell becomes bare,
+    timer resets to \texttt{grass\_regrowth\_time}).
+  \item A sheep on a bare cell does not gain energy from food;
+    it loses 1 net energy per tick instead of gaining 3.
+\end{itemize}
+
+\subsection{R Implementation}
+
+\texttt{PredatorPreyGrassModel} inherits from \texttt{PredatorPreyModel}
+and overrides only the \texttt{initialize()}, \texttt{step()}, and
+\texttt{run()} methods.  All wolf and sheep agent logic is reused.
+
+<<grass-run-model>>=
+@
+
+<<grass-summary>>=
+@
+
+\subsection{Effect on Population Cycles}
+
+\begin{figure}[H]
+  \centering
+<<grass-time-series, fig.height=4>>=
+@
+  \caption{Predator-prey ABM with grass (20$\times$20, seed = 10,
+    300 ticks).  Left: sheep and wolves.  Right: grass cover fraction.
+    The grass carrying capacity limits sheep growth, which in turn
+    limits wolf growth.  Wolves exhaust the food supply and go extinct;
+    sheep stabilise at a grass-determined carrying capacity.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+<<grass-vs-baseline, fig.height=4>>=
+@
+  \caption{Baseline model (left, seed = 18) vs grass extension (right,
+    seed = 10).  Both end in wolf extinction, but via different mechanisms:
+    in the baseline, wolves overshoot the sheep population; in the grass
+    model, grass limits the sheep carrying capacity and wolves cannot
+    sustain themselves on the smaller food supply.}
+\end{figure}
+
+\subsection{Extinction Probability Across Regrowth Rates}
+
+\begin{figure}[H]
+  \centering
+<<grass-extinction-curve, cache=TRUE>>=
+@
+  \caption{Extinction probability as a function of grass regrowth time
+    (20$\times$20 grid, 20 replicates per regrowth time, 300-step runs).
+    Faster regrowth reduces extinction probability by providing more food
+    for sheep (and therefore wolves).  The diamond marks the regrowth time
+    with minimum extinction probability.}
+\end{figure}
+
+\subsection{Activity 5: Grass as a Buffer and the Extinction Optimum}
+\label{sec:activity5}
+
+\textbf{Teaching point:}  Adding a third trophic level changes not just
+cycle amplitude but extinction risk, and there is an optimal grass regrowth
+rate that minimises extinction probability.
+
+\textbf{Instructions.}  Open \texttt{demo/demo\_predator\_prey.R} and
+navigate to the \texttt{ACTIVITY 5} comment.
+
+\begin{enumerate}
+  \item Compare the baseline and grass models using
+    \texttt{plot\_side\_by\_side()}.  How does cycle amplitude change?
+    How does the extinction mechanism differ between the two models?
+  \item Run \texttt{find\_grass\_extinction\_curve()} with
+    \texttt{regrowth\_times = c(5L, 15L, 30L, 60L, 120L)}.  Plot the
+    results with \texttt{plot\_extinction\_curve()}.  At which regrowth
+    time is extinction probability lowest?
+  \item Why does very fast regrowth not eliminate extinction risk?
+    Why does very slow regrowth increase it?
+  \item \textbf{Extension:}  Reduce initial populations to
+    $n_\mathrm{sheep} = 50$, $n_\mathrm{wolves} = 12$.  Does the optimal
+    regrowth time shift?  What does this suggest about conservation policy
+    for small populations?
+\end{enumerate}
+
+% ============================================================
+\section{Firm Size and Heavy-Tailed Distributions}
+% ============================================================
+
+\subsection{The Empirical Regularity}
+
+\citet{axtell2001} demonstrated that the distribution of US firm sizes
+(measured by number of employees) follows a power law over nearly six
+orders of magnitude.  This regularity, known as Zipf's law, has proven
+remarkably robust across time periods, countries, and industries: the
+size of the $r$-th largest firm is approximately proportional to
+$r^{-1}$.
+
+\subsection{Power Laws, Zipf's Law, and the Pareto Distribution}
+
+A random variable $X$ follows a \emph{power law} with exponent $\alpha$
+if its complementary CDF satisfies:
+\begin{equation}
+  P(X > x) \propto x^{-(\alpha - 1)}, \quad x \geq x_{\min}.
+\end{equation}
+Equivalently, the density is $f(x) \propto x^{-\alpha}$ for
+$x \geq x_{\min}$.  The special case $\alpha = 2$ (Zipf's law) gives a
+CCDF that declines as $1/x$, corresponding to the rank-size regularity.
+
+The maximum-likelihood estimator for $\alpha$, given $x_{\min}$, is:
+\begin{equation}
+  \hat{\alpha} = 1 + n\left[\sum_{i=1}^n \ln \frac{x_i}{x_{\min}}\right]^{-1}
+  \label{eq:mle-alpha}
+\end{equation}
+where $n$ is the number of observations above $x_{\min}$
+\citep{clauset2009}.  The \texttt{poweRlaw} package implements the full
+Clauset et al.\ methodology, including data-driven selection of
+$x_{\min}$ and goodness-of-fit via a KS test.
+
+\subsection{Why Top-Down Models Fail at Long Time Scales}
+
+Standard industrial organisation models predict stable size distributions
+around equilibrium.  The empirical distribution is heavy-tailed and
+non-Gaussian, which no equilibrium model generates convincingly.
+
+The time-scale argument is decisive: firm dynamics---entry, growth,
+merger, exit---operate on decade-long horizons.  No mean-field
+approximation is credible at these scales.  The ``equilibrium trap''
+is an instance of the false-equilibrium failure mode: assuming the
+system will remain near a stable size distribution ignores the drift
+and boundary-crossing that dominates long-run dynamics.
+
+\subsection{Local Interaction as a Generative Mechanism}
+
+\citet{axtell2001} showed that a simple ABM in which firms grow through
+local employee recruitment---agents move between firms based on
+effort and payoff comparisons---generates the observed power-law
+distribution from micro-level behaviour.  The power law is not assumed;
+it emerges from the interaction rules.  This is the prototype ABM
+explanatory argument: a parsimonious local rule generates a
+macro-level regularity that no aggregate model predicted.
+
+\subsection{Fitting and Interpreting the Power-Law Exponent}
+
+<<axtell-load-census>>=
+@
+
+<<axtell-fit>>=
+@
+
+\begin{figure}[H]
+  \centering
+<<axtell-plot, echo=FALSE>>=
+@
+  \caption{US Census firm-size distribution on log-log axes.  The dashed
+    line shows the fitted power law ($\hat{\alpha}$ as estimated by MLE
+    above $x_{\min}$).  An approximately linear log-log relationship over
+    several orders of magnitude is consistent with Zipf's law.}
+\end{figure}
+
+% AXTELL FIGURE PLACEHOLDER
+% The following figures will be replaced with Axtell's materials once received.
+% <<axtell-plot-placeholder>>=
+% @
+
+% ============================================================
+\section{Discussion: ABM as a Statistical Modeling Paradigm}
+% ============================================================
+
+\subsection{The Epistemological Thread Revisited}
+
+We began with a tension: false equilibrium vs.\ apocalypse extrapolation.
+Every model we built illustrated one or both failure modes.
+
+The Lotka-Volterra ODE predicts stable cycles that persist indefinitely.
+This is false equilibrium: in finite populations, the stochastic version
+drifts toward the absorbing boundary at zero.  The ABM makes the
+extinction probability directly observable.
+
+The network epidemic model predicts explosive spread for modest
+connectivity increases.  This is apocalypse extrapolation: the model
+is extrapolated into an intervention regime it was never calibrated on,
+and its structural assumptions (static network, constant $\beta$) break
+down precisely when the policy is most aggressive.
+
+Newton's laws work because planets conserve energy, operate in a closed
+system, and experience no feedback between the measurement and the
+measured \citep{newton1687}.  Ecological and epidemiological systems
+have none of these properties.  The ABM does not solve this problem;
+it makes it honest.
+
+\subsection{Strengths and Limitations of ABM}
+
+\textbf{Strengths:}
+\begin{itemize}
+  \item Natural representation of discrete individuals, heterogeneity,
+    and local interaction.
+  \item Output is a distribution: supports Bayesian updating, uncertainty
+    quantification, and scenario analysis.
+  \item Extensions are modular: adding a new mechanism is adding a new
+    rule, not restructuring an ODE system.
+  \item Extinction, thresholds, and rare events are representable.
+\end{itemize}
+
+\textbf{Limitations:}
+\begin{itemize}
+  \item Computational cost: each run is a simulation; many runs are
+    needed for distributional summaries.
+  \item Identifiability: ABMs typically have more parameters than can
+    be identified from available data.
+  \item No analytical tractability: equilibria, stability, and
+    sensitivity analysis require simulation rather than algebra.
+  \item Verification: emergent behaviour can be surprising; careful
+    testing is essential (see the ghost-eating and energy-timing bugs
+    documented in \texttt{Caddena.md}).
+\end{itemize}
+
+\subsection{Calibration and Identifiability}
+
+ABM calibration---fitting parameters to observed data---is an active
+research area.  Common approaches include:
+\begin{itemize}
+  \item \textbf{Approximate Bayesian Computation (ABC):} draw parameters
+    from the prior, run the ABM, accept parameter values whose simulated
+    summary statistics are close to the observed data.
+  \item \textbf{History matching:} iteratively rule out regions of
+    parameter space that are inconsistent with observed data.
+  \item \textbf{Emulation:} replace the expensive ABM with a fast
+    Gaussian process surrogate fitted to a design of simulation runs.
+\end{itemize}
+
+Identifiability remains a fundamental challenge: many different
+parameter combinations may produce indistinguishable output distributions.
+This is not a failure of the ABM methodology; it reflects genuine
+non-identifiability in the underlying process.
+
+\subsection{When to Use ABM vs.\ ODE vs.\ Statistical Models}
+
+\begin{itemize}
+  \item Use an \textbf{ODE} when: populations are large, contact is
+    homogeneous, the time horizon is short enough that stochastic
+    drift is negligible, and analytical tractability is needed.
+  \item Use an \textbf{ABM} when: populations are small, contact is
+    heterogeneous (network structure matters), the policy question
+    involves rare events or thresholds, or mechanistic transparency
+    is required.
+  \item Use a \textbf{statistical model} when: the goal is prediction
+    from data rather than mechanistic understanding, the process is too
+    complex to model from first principles, or calibrated uncertainty
+    quantification is the primary deliverable.
+  \item The three approaches are complementary.  A well-designed
+    empirical workflow uses ODE analysis to identify parameter regimes,
+    ABM to probe finite-population and heterogeneity effects, and
+    statistical models to link both to data.
+\end{itemize}
+
+\subsection{Further Reading}
+
+Key references for each module:
+\begin{itemize}
+  \item Lotka-Volterra: \citet{lotka1925}, \citet{volterra1926}.
+  \item ISR epidemic: \citet{kermack1927}.
+  \item Stochastic processes and recurrence: \citet{karlin1975}.
+  \item Stochastic epidemic extinction: \citet{bartlett1955},
+    \citet{anderssonbritton2000}.
+  \item Network epidemic threshold: \citet{diekmann1990}.
+  \item BA networks: \citet{barabasi1999}.
+  \item Firm-size power law: \citet{axtell2001}.
+  \item Power-law fitting: \citet{clauset2009}.
+\end{itemize}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

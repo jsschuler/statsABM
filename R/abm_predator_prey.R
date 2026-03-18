@@ -108,12 +108,20 @@ Wolf <- R6::R6Class("Wolf",
       # 2. Lose energy each tick
       self$energy <- self$energy - 1
 
-      # 3. If any sheep at current cell: eat one
-      prey_here <- which(
-        vapply(model$sheep, function(s) {
-          s$alive && s$x == self$x && s$y == self$y
-        }, logical(1L))
-      )
+      # 3. If any sheep at current cell: eat one.
+      #    Use the cell lookup (built at tick start) to find candidates, then
+      #    verify each is still alive AND still at this cell — sheep that moved
+      #    earlier this tick will have a different position, so they escape.
+      key       <- paste0(self$x, ",", self$y)
+      prey_here <- model$sheep_cell[[key]]
+      if (length(prey_here) > 0L) {
+        prey_here <- prey_here[
+          vapply(prey_here, function(idx) {
+            s <- model$sheep[[idx]]
+            s$alive && s$x == self$x && s$y == self$y
+          }, logical(1L))
+        ]
+      }
       if (length(prey_here) > 0L) {
         chosen <- prey_here[sample.int(length(prey_here), 1L)]
         model$sheep[[chosen]]$alive <- FALSE
@@ -161,6 +169,10 @@ PredatorPreyModel <- R6::R6Class("PredatorPreyModel",
     step_count = 0L,
     #' @field history Tibble of recorded population counts built by `run()`.
     history    = NULL,
+    #' @field sheep_cell Named list mapping `"x,y"` keys to integer vectors of
+    #'   sheep indices. Built at the start of each tick so `Wolf$step()` can
+    #'   do O(1) cell lookups instead of scanning all sheep (O(n_sheep)).
+    sheep_cell = NULL,
 
     #' @description Initialise the predator-prey model.
     #' @param width Grid width. Default `50L`.
@@ -235,6 +247,9 @@ PredatorPreyModel <- R6::R6Class("PredatorPreyModel",
     #'
     #' Steps all agents in random order, then removes dead agents.
     step = function() {
+      # Build O(1) cell lookup for wolf hunting before any agent moves
+      private$.build_sheep_cell()
+
       # Combine agents and shuffle for fairness
       all_agents <- c(self$sheep, self$wolves)
       idx        <- sample.int(length(all_agents))
@@ -309,6 +324,18 @@ PredatorPreyModel <- R6::R6Class("PredatorPreyModel",
     .next_id_impl = function() {
       private$.id_counter <- private$.id_counter + 1L
       private$.id_counter
+    },
+
+    # Build cell → sheep-index lookup: called once per tick before agent stepping.
+    # Stores result in self$sheep_cell (public) so Wolf$step() can access it.
+    .build_sheep_cell = function() {
+      cell <- list()
+      for (i in seq_along(self$sheep)) {
+        s   <- self$sheep[[i]]
+        key <- paste0(s$x, ",", s$y)
+        cell[[key]] <- c(cell[[key]], i)
+      }
+      self$sheep_cell <- cell
     }
   )
 )

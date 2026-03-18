@@ -1,0 +1,58 @@
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}What is Agent-Based Modeling?}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Why Should Statisticians Care?}{3}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}The Central Epistemological Tension}{4}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}System Dynamics vs Agent-Based Models: a Roadmap}{4}{subsection.1.4}%
+\contentsline {section}{\numberline {2}System Dynamics: the Lotka-Volterra Predator-Prey Model}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Model Formulation}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Equilibrium Analysis}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}R Implementation}{5}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Phase Portrait and Time Series}{5}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Mean-Field Foundations and Time-Scale Limitations}{5}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}Activity 1: ODE vs ABM Extinction}{6}{subsection.2.6}%
+\contentsline {section}{\numberline {3}System Dynamics: the ISR Epidemic Model}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Model Formulation}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}The Basic Reproduction Number and Herd Immunity}{7}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}R Implementation}{7}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Epidemic Curve and Final Size}{7}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Mean-Field Foundations and Time-Scale Limitations}{7}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Agent-Based Models: Predator-Prey}{8}{section.4}%
+\contentsline {subsection}{\numberline {4.1}From ODEs to Agents}{8}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Model Rules}{8}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}R Implementation}{9}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Comparison with the ODE}{9}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Finite-Population Effects and Extinction Risk}{9}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Activity 2: Spatial Density and Finite-Population Effects}{9}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Agent-Based Models: ISR Epidemic}{10}{section.5}%
+\contentsline {subsection}{\numberline {5.1}From Compartments to Individuals}{10}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Model Rules}{10}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}R Implementation}{10}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Comparison with the ODE}{10}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}What the Well-Mixed Assumption Is Really Doing}{10}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Activity 3: Stochastic Variation in Epidemic Outcomes}{11}{subsection.5.6}%
+\contentsline {section}{\numberline {6}Extension: Social Networks and Super-Spreaders}{11}{section.6}%
+\contentsline {subsection}{\numberline {6.1}The Well-Mixed Assumption Revisited}{11}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Barab\'{a}si--Albert Networks and Degree Heterogeneity}{11}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}R Implementation}{11}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Epidemic Curves: Grid vs Network}{12}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Super-Spreader Seeding}{12}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}Statistical Implications: Why $\mathcal {R}_0$ Is Not Enough}{12}{subsection.6.6}%
+\contentsline {subsection}{\numberline {6.7}Activity 4: Hub Seeding and Epidemic Shape}{12}{subsection.6.7}%
+\contentsline {section}{\numberline {7}Extension: Grass and Carrying Capacity}{13}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Adding a Third Trophic Level}{13}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}R Implementation}{13}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Effect on Population Cycles}{13}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Extinction Probability Across Regrowth Rates}{13}{subsection.7.4}%
+\contentsline {subsection}{\numberline {7.5}Activity 5: Grass as a Buffer and the Extinction Optimum}{14}{subsection.7.5}%
+\contentsline {section}{\numberline {8}Firm Size and Heavy-Tailed Distributions}{14}{section.8}%
+\contentsline {subsection}{\numberline {8.1}The Empirical Regularity}{14}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Power Laws, Zipf's Law, and the Pareto Distribution}{14}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Why Top-Down Models Fail at Long Time Scales}{14}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}Local Interaction as a Generative Mechanism}{15}{subsection.8.4}%
+\contentsline {subsection}{\numberline {8.5}Fitting and Interpreting the Power-Law Exponent}{15}{subsection.8.5}%
+\contentsline {section}{\numberline {9}Discussion: ABM as a Statistical Modeling Paradigm}{15}{section.9}%
+\contentsline {subsection}{\numberline {9.1}The Epistemological Thread Revisited}{15}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Strengths and Limitations of ABM}{15}{subsection.9.2}%
+\contentsline {subsection}{\numberline {9.3}Calibration and Identifiability}{16}{subsection.9.3}%
+\contentsline {subsection}{\numberline {9.4}When to Use ABM vs.\ ODE vs.\ Statistical Models}{16}{subsection.9.4}%
+\contentsline {subsection}{\numberline {9.5}Further Reading}{17}{subsection.9.5}%

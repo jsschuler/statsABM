@@ -21,23 +21,22 @@ fit_power_law <- function(x) {
   x <- as.integer(round(x))
   x <- x[x >= 1L]
 
-  m <- poweRlaw::displ$new(x)
-  poweRlaw::setXmin(m, poweRlaw::estimate_xmin(m))
-  poweRlaw::setParameters(m, poweRlaw::estimate_pars(m))
+  m   <- poweRlaw::displ$new(x)
+  est <- poweRlaw::estimate_xmin(m)
+  m$setXmin(est)
+  m$setPars(poweRlaw::estimate_pars(m))
 
-  ks  <- poweRlaw::dist_ll(m)  # log-likelihood, not KS directly
-  # Use bootstrap_p for KS statistic; use a small number of bootstraps
-  # to keep test run time low
-  gof <- tryCatch(
-    poweRlaw::bootstrap_p(m, no_of_sims = 100L, threads = 1L, seed = 1L),
-    error = function(e) NULL
+  # Compute KS statistic directly (avoids expensive bootstrap)
+  ks_stat <- tryCatch(
+    poweRlaw::get_distance_statistic(m),
+    error = function(e) NA_real_
   )
 
   list(
     alpha        = m$pars,
     xmin         = m$xmin,
-    ks_statistic = if (!is.null(gof)) gof$gof  else NA_real_,
-    ks_p_value   = if (!is.null(gof)) gof$p    else NA_real_,
+    ks_statistic = ks_stat,
+    ks_p_value   = NA_real_,   # bootstrap p-value not computed (too slow for large n)
     n            = sum(x >= m$xmin)
   )
 }

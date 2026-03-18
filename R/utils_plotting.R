@@ -198,6 +198,7 @@ plot_distribution <- function(values, title, log_log = FALSE, fit = NULL,
       ecdf = seq_len(n) / n
     )
     df$ccdf <- 1 - df$ecdf
+    df <- df[df$ccdf > 0, ]   # drop zero-tail points that cause log10(0) = -Inf
 
     p <- ggplot2::ggplot(df, ggplot2::aes(x = .data[["x"]],
                                            y = .data[["ccdf"]])) +

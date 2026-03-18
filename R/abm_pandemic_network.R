@@ -31,6 +31,10 @@ NetworkPandemicModel <- R6::R6Class("NetworkPandemicModel",
     #'   Default `0.3`.
     #' @param gamma Recovery probability per infected agent per tick.
     #'   Default `0.05`.
+    #' @param seed_hubs Logical; if `TRUE` the initially infected agents are
+    #'   drawn from the highest-degree nodes rather than uniformly at random.
+    #'   Used in Activity 4 to demonstrate how seeding location affects
+    #'   epidemic dynamics. Default `FALSE`.
     #' @param seed Optional integer random seed for reproducibility.
     initialize = function(
       n_agents                  = 500L,
@@ -38,13 +42,15 @@ NetworkPandemicModel <- R6::R6Class("NetworkPandemicModel",
       initial_infected_fraction = 0.01,
       beta                      = 0.3,
       gamma                     = 0.05,
+      seed_hubs                 = FALSE,
       seed                      = NULL
     ) {
       if (!is.null(seed)) set.seed(seed)
 
       self$n_agents <- as.integer(n_agents)
       self$params   <- list(beta = beta, gamma = gamma,
-                            n_edges_per_new_node = as.integer(n_edges_per_new_node))
+                            n_edges_per_new_node = as.integer(n_edges_per_new_node),
+                            seed_hubs = seed_hubs)
 
       # Build Barabasi-Albert graph
       self$graph <- igraph::sample_pa(
@@ -58,9 +64,18 @@ NetworkPandemicModel <- R6::R6Class("NetworkPandemicModel",
 
       # Initialise agent data frame
       n_infected <- max(1L, as.integer(round(self$n_agents * initial_infected_fraction)))
-      states     <- sample(
-        c(rep("I", n_infected), rep("S", self$n_agents - n_infected))
-      )
+
+      if (seed_hubs) {
+        # Infect the top n_infected nodes by degree
+        ranked   <- order(degrees, decreasing = TRUE)
+        inf_ids  <- ranked[seq_len(n_infected)]
+        states   <- rep("S", self$n_agents)
+        states[inf_ids] <- "I"
+      } else {
+        states <- sample(
+          c(rep("I", n_infected), rep("S", self$n_agents - n_infected))
+        )
+      }
 
       self$agents <- data.frame(
         id               = seq_len(self$n_agents),

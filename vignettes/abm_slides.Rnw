@@ -1,0 +1,669 @@
+\documentclass{beamer}
+\usetheme{Madrid}
+\usecolortheme{default}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{natbib}
+
+%% ---- Colour definitions (must precede setbeamercolor) ----------------------
+\definecolor{SlideBG}{HTML}{1B2A4A}
+\definecolor{SlideAccent}{HTML}{F18F01}
+\definecolor{SlideText}{HTML}{E8E8E8}
+\definecolor{SlidePanel}{HTML}{1E3A5F}
+
+%% ---- Beamer colour theme ---------------------------------------------------
+\setbeamercolor{normal text}{fg=SlideText, bg=SlideBG}
+\setbeamercolor{frametitle}{fg=SlideAccent, bg=SlideBG}
+\setbeamercolor{title}{fg=SlideAccent}
+\setbeamercolor{subtitle}{fg=SlideText}
+\setbeamercolor{author}{fg=SlideText}
+\setbeamercolor{date}{fg=SlideText}
+\setbeamercolor{block title}{fg=SlideBG, bg=SlideAccent}
+\setbeamercolor{block body}{fg=SlideText, bg=SlidePanel}
+\setbeamercolor{itemize item}{fg=SlideAccent}
+\setbeamercolor{itemize subitem}{fg=SlideText}
+\setbeamercolor{enumerate item}{fg=SlideAccent}
+\setbeamercolor{section in toc}{fg=SlideAccent}
+\setbeamercolor{palette primary}{bg=SlideBG, fg=SlideText}
+\setbeamercolor{palette secondary}{bg=SlideBG, fg=SlideText}
+\setbeamercolor{palette tertiary}{bg=SlideBG, fg=SlideText}
+\setbeamercolor{palette quaternary}{bg=SlideBG, fg=SlideText}
+\setbeamercolor{structure}{fg=SlideAccent}
+\setbeamercolor{background canvas}{bg=SlideBG}
+\setbeamercolor{footline}{bg=SlideBG, fg=SlideText}
+\setbeamercolor{headline}{bg=SlideBG}
+\setbeamercolor{separation line}{fg=SlideAccent}
+
+\setbeamerfont{frametitle}{series=\bfseries}
+\setbeamertemplate{itemize item}{\textbullet}
+\setbeamertemplate{itemize subitem}{--}
+\setbeamertemplate{navigation symbols}{}
+
+\title{Agent-Based Modeling for Statisticians}
+\author{}
+\date{}
+
+%% ---- knitr setup -----------------------------------------------------------
+<<global-setup-slides, include=FALSE>>=
+if (!requireNamespace("here", quietly = TRUE)) install.packages("here")
+library(here)
+knitr::opts_chunk$set(
+  echo      = FALSE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = "center",
+  fig.width = 7,
+  fig.height = 3.5,
+  out.width = "\\textwidth",
+  cache     = FALSE
+)
+knitr::read_chunk(here("chunks", "lv.R"))
+knitr::read_chunk(here("chunks", "isr.R"))
+knitr::read_chunk(here("chunks", "abm_predator_prey.R"))
+knitr::read_chunk(here("chunks", "abm_pandemic.R"))
+knitr::read_chunk(here("chunks", "abm_network.R"))
+knitr::read_chunk(here("chunks", "abm_grass.R"))
+knitr::read_chunk(here("chunks", "axtell.R"))
+pkgload::load_all(here(), quiet = TRUE)
+@
+
+%% ---- Run all models once so chunks can reference results ------------------
+<<slides-run-all, include=FALSE, cache=TRUE>>=
+## LV
+lv_params  <- LV_DEFAULTS
+lv_results <- run_lv(params = lv_params)
+
+## ISR ODE
+isr_params  <- ISR_DEFAULTS
+isr_results <- run_isr(params = isr_params)
+
+## ABM predator-prey (seed 18, 20x20, 300 steps)
+pp_model <- PredatorPreyModel$new(seed = 18L, width = 20L, height = 20L)
+pp_out   <- pp_model$run(steps = 300L)
+
+## ABM pandemic (grid)
+pandemic_model <- PandemicModel$new(seed = 42L)
+pandemic_out   <- pandemic_model$run(steps = 200L)
+
+## Network pandemic
+net_model <- NetworkPandemicModel$new(seed = 42L)
+net_out   <- net_model$run(steps = 200L)
+
+## Grass model
+grass_model <- PredatorPreyGrassModel$new(seed = 10L, width = 20L, height = 20L)
+grass_out   <- grass_model$run(steps = 300L)
+
+## Axtell / Census
+census_env <- new.env(parent = emptyenv())
+has_census <- tryCatch(
+  { data("census_firm_sizes", package = "abmcourse", envir = census_env); TRUE },
+  warning = function(w) FALSE,
+  error   = function(e) FALSE
+)
+if (has_census) census_sizes <- census_env$census_firm_sizes
+
+## Shared colours
+abm_colours <- c(sheep  = COURSE_PALETTE[["sd"]],
+                 wolves = COURSE_PALETTE[["abm"]])
+isr_colours <- c(I = COURSE_PALETTE[["abm"]],
+                 S = COURSE_PALETTE[["sd"]],
+                 R = COURSE_PALETTE[["extended"]])
+@
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+  \tableofcontents
+\end{frame}
+
+%% ==========================================================================
+\section{Introduction}
+%% ==========================================================================
+
+\begin{frame}{What is Agent-Based Modeling?}
+  \begin{itemize}
+    \item Individual agents follow local rules; global patterns \emph{emerge}
+    \item No closed-form equations required
+    \item Heterogeneity, stochasticity, and space are first-class citizens
+    \item Complement to ODEs, not a replacement
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Why Should Statisticians Care?}
+  \begin{itemize}
+    \item ABM = generative model: simulate, then compare to data
+    \item Finite-population effects invisible in ODEs
+    \item Structural heterogeneity (networks, space) changes outcomes
+    \item Policy questions naturally expressed as distributions over futures
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The Central Tension}
+  \begin{block}{False Equilibrium vs.\ Apocalypse Extrapolation}
+    \begin{itemize}
+      \item Any equilibrium model, extended far enough, ignores drift toward a threshold
+      \item Any deterministic trend, extrapolated far enough, crosses that threshold
+      \item Both failures arise from the \emph{same} source: ignoring when structural conditions break
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Newton: When Extrapolation Works}
+  \begin{itemize}
+    \item Conservation, closure, linearity $\Rightarrow$ ODEs extrapolate reliably
+    \item Ecological and epidemiological systems: none of these hold indefinitely
+    \item Mean-field ODE is reliable over \emph{short horizons with large populations}
+    \item The further you extrapolate, the more the structural assumptions matter
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The ABM Resolution}
+  \begin{itemize}
+    \item Replace point predictions with distributions over futures
+    \item Reframe policy as a \textbf{hitting-time problem}:
+      \begin{quote}
+        \textit{What is the probability of crossing threshold $X$ before time $T$?}
+      \end{quote}
+    \item This question: ABM answers it, ODE cannot
+    \item All five models today are instances of this reframing
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Roadmap: System Dynamics vs.\ ABM}
+  \begin{center}
+  \begin{tabular}{lll}
+    \toprule
+    & \textbf{System Dynamics} & \textbf{ABM} \\
+    \midrule
+    State      & Aggregate fractions   & Individual agents \\
+    Randomness & Deterministic         & Stochastic \\
+    Space      & Well-mixed (implicit) & Grid or network \\
+    Output     & One trajectory        & Distribution \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \medskip
+  We build each model twice and compare.
+\end{frame}
+
+%% ==========================================================================
+\section{System Dynamics: Lotka-Volterra}
+%% ==========================================================================
+
+\begin{frame}{Lotka-Volterra: Model Equations}
+  \begin{align*}
+    \frac{dN}{dt} &= \alpha N - \beta N P \\[4pt]
+    \frac{dP}{dt} &= \delta N P - \gamma P
+  \end{align*}
+  \begin{itemize}
+    \item $N$ = prey population; $P$ = predator population
+    \item $\alpha$ prey birth, $\beta$ predation, $\gamma$ predator death, $\delta$ conversion
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Lotka-Volterra: Equilibrium}
+  \begin{block}{Result (Non-trivial Fixed Point)}
+    \[
+      N^* = \frac{\gamma}{\delta}, \qquad P^* = \frac{\alpha}{\beta}
+    \]
+    The fixed point is \textbf{neutrally stable} (Lyapunov), not asymptotically stable.
+    Cycles neither grow nor decay --- but the stochastic version drifts toward extinction.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Lotka-Volterra: Time Series}
+<<lv-time-series-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Lotka-Volterra: Phase Portrait}
+<<lv-phase-portrait-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Mean-Field Foundations}
+  \begin{itemize}
+    \item LV is the mean-field limit ($N \to \infty$) of a stochastic birth-death process
+    \item Demographic stochasticity: variance $\propto 1/N$
+    \item ODE cycles are exact only in the limit; small populations drift
+    \item \textbf{Recurrence theorem} \citep{karlin1975}: a 1-D random walk is recurrent ---
+      it visits every state, including zero
+    \item The ODE cannot represent stochastic extinction; the ABM reveals it
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Mean-Field Limitations}
+  \begin{itemize}
+    \item ODE is reliable for large $N$, short horizons, near equilibrium
+    \item Error accumulates as $T$ grows, $N$ shrinks, or trajectory nears a boundary
+    \item Conservation policy built on ODE cycles implicitly assumes mean-field holds forever
+    \item ABM reframing: \textit{what is extinction probability before time $T$?}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\textcolor{SlideAccent}{Activity 1: Extinction Boundaries}}
+  \begin{block}{Instructions}
+    \begin{enumerate}
+      \item Run \texttt{run\_lv()} with low $\alpha$ and note the ODE trajectory
+      \item Run \texttt{find\_abm\_extinction\_probability()} at the same $\alpha$
+      \item Lower $\alpha$ until extinction probability exceeds 50\%
+    \end{enumerate}
+  \end{block}
+  \textit{20 minutes --- open \texttt{demo\_lotka\_volterra.R} at the
+  \texttt{ACTIVITY 1} comment.}
+\end{frame}
+
+%% ==========================================================================
+\section{System Dynamics: ISR Epidemic}
+%% ==========================================================================
+
+\begin{frame}{ISR Epidemic: Model Equations}
+  \begin{align*}
+    \frac{dI}{dt} &= \beta I S - \gamma I \\[4pt]
+    \frac{dS}{dt} &= -\beta I S \\[4pt]
+    \frac{dR}{dt} &= \gamma I
+  \end{align*}
+  \begin{itemize}
+    \item $I$ infected, $S$ susceptible, $R$ recovered (fractions; $I+S+R=1$)
+    \item $\beta$ transmission rate, $\gamma$ recovery rate
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ISR: $R_0$ and Herd Immunity}
+  \begin{block}{Basic Reproduction Number}
+    \[
+      R_0 = \frac{\beta}{\gamma}
+    \]
+    Default: $\beta = 0.3$, $\gamma = 0.05 \Rightarrow R_0 = 6$ (measles-like).
+  \end{block}
+  \begin{block}{Herd Immunity Threshold}
+    \[
+      p^* = 1 - \frac{1}{R_0}
+    \]
+    Vaccinate fraction $p^*$ to prevent epidemic spread.
+  \end{block}
+\end{frame}
+
+\begin{frame}{ISR: Epidemic Curve}
+<<isr-time-series-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Mean-Field Foundations: ISR}
+  \begin{itemize}
+    \item ISR ODE = $N \to \infty$ limit of stochastic SIR on a complete graph
+    \item Homogeneous mixing assumption: every pair contacts equally
+    \item Early epidemic: mean-field most accurate; $R_0$ estimate reliable here
+    \item Around peak: degrades as susceptibles depleted heterogeneously
+    \item \textbf{Stochastic fadeout} \citep{anderssonbritton2000}: even when $R_0>1$,
+      small populations can extinguish early
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ISR: Time-Scale Limitations}
+  \begin{itemize}
+    \item ODE final-size equation reliable for large, homogeneous populations
+    \item Breaks down: small $N$, heterogeneous contacts, long endemic horizons
+    \item Intervention timing (lockdowns, vaccination) depends on where you are on curve
+    \item ODE and network ABM can disagree substantially near the peak
+  \end{itemize}
+\end{frame}
+
+%% ==========================================================================
+\section{ABM: Predator-Prey}
+%% ==========================================================================
+
+\begin{frame}{From ODEs to Agents}
+  \begin{center}
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{ODE} & \textbf{ABM} \\
+    \midrule
+    Continuous fractions & Discrete individuals \\
+    Deterministic & Stochastic \\
+    No space & Toroidal grid \\
+    No identity & Agent ID, energy, position \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  Parameters $\alpha, \beta, \gamma, \delta$ map to agent rules.
+\end{frame}
+
+\begin{frame}{Agent Rules: Sheep}
+  Each tick a Sheep:
+  \begin{enumerate}
+    \item Moves to a random Moore neighbour (toroidal wrap)
+    \item Loses 1 energy
+    \item Reproduces with probability $p_s$ if energy $> \theta_s$
+    \item Dies if energy $\leq 0$
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Agent Rules: Wolf}
+  Each tick a Wolf:
+  \begin{enumerate}
+    \item Moves to a random Moore neighbour
+    \item Loses 1 energy
+    \item Eats one Sheep at current cell (gains $g_w$ energy)
+    \item Reproduces with probability $p_w$ if energy $> \theta_w$
+    \item Dies if energy $\leq 0$
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{ABM vs.\ ODE: Population Time Series}
+<<pp-vs-ode-dark>>=
+@
+\end{frame}
+
+\begin{frame}{ABM: Phase Portrait}
+<<pp-phase-portrait-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Finite-Population Effects}
+  \begin{itemize}
+    \item Small grids $\Rightarrow$ higher stochastic fluctuation
+    \item Wolf extinction is a \emph{real} event in the ABM; impossible in ODE
+    \item Extinction probability increases as grid shrinks
+    \item This is the recurrence theorem made concrete
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\textcolor{SlideAccent}{Activity 2: Grid Size and Extinction}}
+  \begin{block}{Instructions}
+    \begin{enumerate}
+      \item Run ODE and ABM side by side with \texttt{plot\_abm\_ode\_comparison()}
+      \item Shrink grid (e.g.\ $10\times10$); observe variance increase
+      \item Find the grid size at which extinction probability exceeds 50\%
+    \end{enumerate}
+  \end{block}
+  \textit{20 minutes --- open \texttt{demo\_predator\_prey.R} at \texttt{ACTIVITY 2}.}
+\end{frame}
+
+%% ==========================================================================
+\section{ABM: ISR Epidemic}
+%% ==========================================================================
+
+\begin{frame}{From Compartments to Individuals}
+  \begin{itemize}
+    \item Each \texttt{Person} has state $\in \{I, S, R\}$ and a grid position
+    \item Transmission: susceptible checks infected Moore neighbours
+    \item Recovery: infected recovers with probability $\gamma$ per step
+    \item Well-mixed grid approximates the ODE's complete-graph assumption
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ABM vs.\ ODE: Epidemic Curves}
+<<pandemic-vs-ode-dark>>=
+@
+\end{frame}
+
+\begin{frame}{What ``Well-Mixed'' Really Means}
+  \begin{itemize}
+    \item ODE assumes every pair contacts equally --- a complete graph
+    \item Grid ABM: contacts limited to 8 nearest neighbours
+    \item At large $N$: curves converge; at small $N$: stochastic variance dominates
+    \item The ODE is the limit; the ABM reveals where the limit breaks
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\textcolor{SlideAccent}{Activity 3: Empirical $R_0$}}
+  \begin{block}{Instructions}
+    \begin{enumerate}
+      \item Run 10 epidemic simulations; record \texttt{R0\_empirical} each time
+      \item Summarise with \texttt{summarise\_runs()}
+      \item Compare mean empirical $R_0$ to theoretical $\beta/\gamma$
+    \end{enumerate}
+  \end{block}
+  \textit{20 minutes --- open \texttt{demo\_isr.R} at \texttt{ACTIVITY 3}.}
+\end{frame}
+
+%% ==========================================================================
+\section{Extension: Social Networks and Super-Spreaders}
+%% ==========================================================================
+
+\begin{frame}{The Well-Mixed Assumption Revisited}
+  \begin{itemize}
+    \item Complete graph = every agent contacts every other
+    \item Real social networks: power-law degree distribution
+    \item A few hubs (super-spreaders) connect to many others
+    \item Removing the complete-graph assumption changes the epidemic qualitatively
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Barab\'asi-Albert Network: Degree Distribution}
+<<network-degree-dist-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Epidemic Curves: Grid vs.\ Network}
+<<network-epidemic-comparison-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Super-Spreader Attack Rates}
+<<network-hub-seeding-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Spectral Radius Threshold}
+  \begin{block}{Result \citep{diekmann1990}}
+    The epidemic threshold on a heterogeneous network is determined by
+    the \textbf{spectral radius} of the next-generation matrix, not $R_0$.
+    On a complete graph this reduces to $R_0 = \beta/\gamma$.
+  \end{block}
+  \begin{itemize}
+    \item Targeting hubs is highly effective --- in the static model
+    \item Real networks adapt; structural assumptions break under intervention
+    \item The apocalypse extrapolation: modest connectivity change $\Rightarrow$ epidemic explosion
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The Extrapolation Trap: Network Edition}
+  \begin{itemize}
+    \item Network models predict near-certain explosion for small connectivity changes
+    \item This is the trend-extrapolation trap applied to network structure
+    \item Networks are not static; behaviour changes under intervention
+    \item Policy implication: treat network-model predictions as scenario bounds, not forecasts
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\textcolor{SlideAccent}{Activity 4: Network Connectivity}}
+  \begin{block}{Instructions}
+    \begin{enumerate}
+      \item Vary \texttt{n\_edges\_per\_new\_node} ($m$) from 1 to 8
+      \item Run with hub seeding and random seeding
+      \item Compare epidemic curves and super-spreader attack rates
+    \end{enumerate}
+  \end{block}
+  \textit{15 minutes --- open \texttt{demo\_pandemic.R} at \texttt{ACTIVITY 4}.}
+\end{frame}
+
+%% ==========================================================================
+\section{Extension: Grass and Carrying Capacity}
+%% ==========================================================================
+
+\begin{frame}{Adding a Third Trophic Level}
+  \begin{itemize}
+    \item Sheep eat grass; each cell is either grown or depleted
+    \item Eaten grass regrows after \texttt{grass\_regrowth\_time} steps
+    \item Sheep gain energy only from grown cells (not from bare ground)
+    \item Creates a carrying capacity that the baseline model lacks
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Grass Model: Time Series}
+<<grass-time-series-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Baseline vs.\ Grass Extension}
+<<grass-vs-baseline-dark>>=
+@
+\end{frame}
+
+\begin{frame}{Effect on Population Cycles}
+  \begin{itemize}
+    \item Grass adds a lag that modulates cycle amplitude
+    \item Slow regrowth $\Rightarrow$ lower sheep numbers $\Rightarrow$ wolves starve
+    \item Extinction probability is a function of regrowth time
+    \item Another instance of the hitting-time question
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\textcolor{SlideAccent}{Activity 5: Baseline vs.\ Grass}}
+  \begin{block}{Instructions}
+    \begin{enumerate}
+      \item Run baseline and grass models; compare with \texttt{plot\_side\_by\_side()}
+      \item Use \texttt{find\_grass\_extinction\_curve()} across regrowth times
+      \item Plot the extinction curve; identify the tipping point
+    \end{enumerate}
+  \end{block}
+  \textit{20 minutes --- open \texttt{demo\_predator\_prey.R} at \texttt{ACTIVITY 5}.}
+\end{frame}
+
+%% ==========================================================================
+\section{Firm Size and Heavy-Tailed Distributions}
+%% ==========================================================================
+
+\begin{frame}{The Empirical Regularity}
+  \begin{itemize}
+    \item US firm-size distribution: power law with exponent $\approx 2$
+    \item A few very large firms; many tiny ones --- the Zipf / Pareto pattern
+    \item Same regularity appears in city sizes, word frequencies, wealth
+    \item \citet{axtell2001}: ABM with local interaction reproduces the exponent
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Power Laws and Zipf's Law}
+  \begin{block}{Power Law}
+    \[
+      P(X \geq x) \propto x^{-(\alpha - 1)}, \qquad x \geq x_{\min}
+    \]
+  \end{block}
+  \begin{itemize}
+    \item Zipf's law: $\alpha \approx 2$ (rank-frequency)
+    \item Fit via maximum likelihood \citep{clauset2009}, not log-log regression
+    \item KS statistic measures goodness of fit
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Why Equilibrium Models Fail}
+  \begin{itemize}
+    \item Firm dynamics operate on decade-long timescales
+    \item No mean-field approximation is credible at these horizons
+    \item Standard IO models predict stable size distributions
+    \item Empirical distribution is heavy-tailed and non-Gaussian
+    \item No equilibrium model generates this convincingly
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Local Interaction as a Generative Mechanism}
+  \begin{itemize}
+    \item Agents share labour locally; firm size = coalition size
+    \item Preferential attachment: larger firms attract more workers
+    \item Power law emerges from the interaction structure, not from parameters
+    \item This is ABM's core claim: \emph{macro-structure from micro-rules}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Census Firm-Size Distribution}
+<<axtell-plot-dark>>=
+@
+\end{frame}
+
+% AXTELL FIGURE PLACEHOLDER
+% \begin{frame}{Axtell ABM: Simulated Firm Sizes}
+%   [Figure from Axtell's materials]
+% \end{frame}
+
+%% ==========================================================================
+\section{Discussion}
+%% ==========================================================================
+
+\begin{frame}{The Epistemological Thread: Revisited}
+  \begin{itemize}
+    \item All five models today: same structure, same failure modes
+    \item ODE assumes the structural conditions that make it reliable hold indefinitely
+    \item ABM replaces this assumption with a distribution over futures
+    \item The question is always: \textit{what are the conditions, and when do they break?}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Newton and the Conditions for Extrapolation}
+  \begin{itemize}
+    \item \citet{newton1687}: extrapolation works under conservation, closure, linearity
+    \item Physics succeeds; ecology and epidemiology struggle with the same tools
+    \item The conditions that make ODEs work are structural, not mathematical
+    \item Checking those conditions is a \emph{statistical} task
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The Hitting-Time Reframing}
+  \begin{block}{Policy Question (ABM formulation)}
+    What is the probability of crossing threshold $X$ before time $T$?
+  \end{block}
+  \begin{itemize}
+    \item Conservation threshold, epidemic extinction, firm failure, etc.
+    \item Requires distribution over futures $\Rightarrow$ stochastic ABM
+    \item Answered by simulating many runs and computing empirical CDF
+    \item The ODE gives one trajectory; the ABM gives a distribution
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Strengths and Limitations of ABM}
+  \begin{columns}
+    \begin{column}{0.48\textwidth}
+      \textbf{Strengths}
+      \begin{itemize}
+        \item Heterogeneity natural
+        \item Stochasticity included
+        \item Spatial structure explicit
+        \item Hitting times computable
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Limitations}
+      \begin{itemize}
+        \item Many free parameters
+        \item Calibration is hard
+        \item No analytical results
+        \item Computationally expensive
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{When to Use ABM vs.\ ODE vs.\ Statistical Models}
+  \begin{center}
+  \begin{tabular}{lp{5cm}}
+    \toprule
+    \textbf{Use} & \textbf{When} \\
+    \midrule
+    ODE      & Large $N$, short horizon, near equilibrium \\
+    ABM      & Small $N$, long horizon, heterogeneity, hitting-time questions \\
+    Stats    & Data-rich, prediction target well-defined, no mechanism needed \\
+    All three & Triangulate: use agreement as model validation \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Further Reading}
+  \begin{itemize}
+    \item \citet{lotka1925}, \citet{volterra1926}: predator-prey foundations
+    \item \citet{kermack1927}: SIR model
+    \item \citet{karlin1975}: recurrence theorem
+    \item \citet{anderssonbritton2000}: stochastic epidemic models
+    \item \citet{diekmann1990}: next-generation matrix / spectral threshold
+    \item \citet{barabasi1999}: preferential attachment networks
+    \item \citet{axtell2001}: firm-size power law
+    \item \citet{clauset2009}: power-law fitting methodology
+  \end{itemize}
+\end{frame}
+
+\end{document}

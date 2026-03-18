@@ -61,40 +61,43 @@ PredatorPreyGrassModel <- R6::R6Class("PredatorPreyGrassModel",
       self$grass[ready_mask]          <- TRUE
       self$grass_countdown[ready_mask] <- 0L
 
-      # Override sheep gain-from-food: zero on bare cells, normal on grass cells
-      # We patch each sheep's step by temporarily adjusting energy here instead
-      # of modifying the base Sheep class. We override the gain by hooking into
-      # the model params after position update.
-      # This is handled inside the overridden step: for each sheep, check grass
-      # at their *post-move* cell and set energy gain accordingly.
-      # We achieve this by temporarily setting sheep_gain_from_food to 0 and
-      # applying grass gains manually after each sheep step.
+      # Grass energy is applied AFTER Sheep$step() by subtracting the standard
+      # gain from sheep that land on bare cells.  This sidesteps the death-timing
+      # bug of the original approach (setting gain=0 meant a sheep at energy=1 on
+      # a grass cell would die in Sheep$step() before receiving the grass bonus).
+      #
+      # Mechanism: let Sheep$step() run with the full sheep_gain_from_food (+4),
+      # then apply a −gain penalty to every sheep that landed on a bare cell.
+      # Net result: grass cell → +3/tick; bare cell → −1/tick.  Correct semantics.
 
-      # Shuffle all agents and step them
+      # Build O(1) cell lookup for wolf hunting before any agent moves
+      private$.build_sheep_cell()
+
+      # Shuffle all agents and step them (sheep receive full gain in Sheep$step)
       all_agents <- c(self$sheep, self$wolves)
       idx        <- sample.int(length(all_agents))
-
       orig_gain  <- self$params$sheep_gain_from_food
-      # Set gain to 0 so Sheep$step doesn't add energy; we'll do it ourselves
-      self$params$sheep_gain_from_food <- 0
 
       for (i in idx) {
         agent <- all_agents[[i]]
         if (!agent$alive) next
         agent$step(self)
-
-        # For sheep: apply grass gain if current cell has grass
-        if (inherits(agent, "Sheep") && agent$alive) {
-          if (self$grass[agent$y, agent$x]) {
-            agent$energy           <- agent$energy + orig_gain
-            self$grass[agent$y, agent$x]  <- FALSE
-            self$grass_countdown[agent$y, agent$x] <- self$grass_regrowth_time
-          }
-        }
       }
 
-      # Restore original gain for consistency
-      self$params$sheep_gain_from_food <- orig_gain
+      # Apply grass interactions: deduct gain from sheep on bare cells;
+      # remove grass and reset countdown for sheep on grown cells.
+      for (agent in self$sheep) {
+        if (!agent$alive) next
+        if (self$grass[agent$y, agent$x]) {
+          # Sheep grazed: grass consumed
+          self$grass[agent$y, agent$x]           <- FALSE
+          self$grass_countdown[agent$y, agent$x] <- self$grass_regrowth_time
+        } else {
+          # Bare cell: subtract the unearned gain from Sheep$step
+          agent$energy <- agent$energy - orig_gain
+          if (agent$energy <= 0) agent$alive <- FALSE
+        }
+      }
 
       # Purge dead agents
       self$sheep  <- Filter(function(a) a$alive, self$sheep)
