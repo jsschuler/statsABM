@@ -1,9 +1,0 @@
-\beamer@sectionintoc {1}{Introduction}{3}{0}{1}
-\beamer@sectionintoc {2}{System Dynamics: Lotka-Volterra}{9}{0}{2}
-\beamer@sectionintoc {3}{System Dynamics: ISR Epidemic}{16}{0}{3}
-\beamer@sectionintoc {4}{ABM: Predator-Prey}{21}{0}{4}
-\beamer@sectionintoc {5}{ABM: ISR Epidemic}{28}{0}{5}
-\beamer@sectionintoc {6}{Extension: Social Networks and Super-Spreaders}{32}{0}{6}
-\beamer@sectionintoc {7}{Extension: Grass and Carrying Capacity}{39}{0}{7}
-\beamer@sectionintoc {8}{Firm Size and Heavy-Tailed Distributions}{44}{0}{8}
-\beamer@sectionintoc {9}{Discussion}{49}{0}{9}

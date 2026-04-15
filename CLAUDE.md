@@ -1,1478 +1,826 @@
-# ABM for Statisticians — Build Instructions for Claude Code
-
-## Project purpose
-
-This codebase supports a day-long short course titled **Agent-Based Modeling for
-Statisticians**. It demonstrates each model in two paradigms — system dynamics (ODE)
-and agent-based — so that students can compare them directly. The code must be clean
-enough to run live during the course and readable enough to serve as reference
-material afterward.
-
-The audience is practicing statisticians fluent in R. Code should feel idiomatic —
-tidyverse-style data handling, ggplot2 for all visualization, R6 classes for model
-objects.
+# Claude Code Specification: Agent-Based Modeling for Statisticians
+## JSM Short Course — Full Day
+## Version 2
 
 ---
 
-## Technology stack
+## Project Overview
 
-| Layer | Choice | Rationale |
-|---|---|---|
-| Language | R 4.3+ | Native to the audience |
-| ODE solver | `deSolve` | Standard, well-documented, familiar interface |
-| ABM framework | R6 classes (`R6` package) | Pythonic-style OOP; transferable pattern |
-| Networks | `igraph` | Power-law graph generation, degree analysis |
-| Visualization | `ggplot2` + `patchwork` | Publication-quality, composable |
-| Data wrangling | `dplyr`, `tidyr` | Idiomatic R |
-| Power law fitting | `poweRlaw` | Clauset et al. 2009 method |
-| Progress reporting | `cli` | Clean console output during long runs |
-| Testing | `testthat` | Standard R package testing |
-| Package structure | Standard R package (`DESCRIPTION`, `NAMESPACE`) | `devtools::load_all()` workflow |
+This specification generates two parallel sets of R Markdown course materials for a full-day JSM short course titled **"Agent-Based Modeling for Statisticians."** The course moves from ODE-based models (Lotka-Volterra, SIR) through agent-based versions of the same, to Axtell's firm size empirics, and concludes with a philosophical argument about expressive resolution, the structure of modeling assumptions, and policy humility.
 
-**ABM framework note:** R does not have a dominant ABM framework equivalent to Mesa.
-Use **R6 classes** from the `R6` package for agents and models. This gives students
-a transferable OOP pattern without requiring a specialized ABM package. If a student
-asks about dedicated ABM packages, mention `RNetLogo` (interface to NetLogo) and
-`ABM` (lightweight), but do not use them here.
+All materials must be production-ready R Markdown. The course text is a single unified document with high production value. The slides are separated by section and built in Xaringan. A shared theme scaffold is used across both.
 
-Do **not** introduce dependencies beyond those listed without explicit approval.
-The package must install cleanly via `devtools::install()`.
+All R code uses **Tidyverse + deSolve + ggplot2** conventions throughout. No base R graphics. LaTeX math via MathJax. Code chunks within a chapter may depend on earlier chunks in the same chapter but never on chunks from a prior chapter — each chapter opens with a self-contained setup chunk.
 
 ---
 
-## Repository layout
+## Stylistic Exemplar
 
-Build this exact structure. Do not add files or directories not listed here without
-asking first.
+**This is the most important section of this specification. Read it before writing a single word of prose.**
+
+The repository will contain a file at the path:
 
 ```
-abmcourse/
-├── DESCRIPTION
-├── NAMESPACE
+style/spectral_hands.tex
+```
+
+This is a paper by the course author. Before writing any prose, read it in full. It is the stylistic target for the course book. Study it at the sentence level. Notice:
+
+- How technical vocabulary is introduced through argument rather than definition
+- How the prose moves between registers — historical, mathematical, philosophical — without signaling the transitions
+- How wit operates through juxtaposition and etymology rather than jokes
+- How the argument builds so that conclusions feel retrospectively inevitable
+- The rhythm of the sentences: varied length, occasional abruptness, the periodic long sentence that earns its length
+
+The course book should sound like this paper. Not an imitation — the subject matter differs — but the same mind, the same confidence, the same pleasure in ideas.
+
+### Prose Register
+
+The prose is **precise and playful**. These are not in tension. Precision means every technical term is doing real work and could not be replaced by a vaguer one. Playfulness means the prose is visibly enjoying the argument — through unexpected angles of approach, etymological wit, the occasional sentence that arrives somewhere the reader did not expect.
+
+The prose is **not**:
+- Dry technical exposition
+- Performed enthusiasm
+- Hedged academic prose that qualifies every claim into meaninglessness
+- Conversational in the sense of informal or imprecise
+
+The argument has **Mandelbrotian structure**: the conclusion of each section feels inevitable in retrospect. The reader finishes a section feeling they could not have arrived anywhere else. This is achieved not by stating conclusions early but by making each step feel necessary — the next move is the only move available given what has just been shown.
+
+### Absolutely Forbidden Phrases and Constructions
+
+The following are banned. Their appearance anywhere in the prose is an error requiring correction:
+
+- "close the loop" / "comes full circle"
+- "unpack" (as in "let us unpack this")
+- "dive into" / "deep dive"
+- "it's worth noting that"
+- "at the end of the day"
+- "in other words" (use it sparingly; prefer to simply restate more precisely)
+- "as we have seen" (show don't tell — if the reader has seen it, they know)
+- "importantly," as a sentence opener
+- "interesting" as a content-free intensifier
+- "powerful" applied to mathematical tools or frameworks
+- Any sentence of the form "In this section, we will..."
+- Any sentence of the form "Having established X, we now turn to Y"
+- Rhetorical questions that answer themselves in the next sentence
+
+These constructions are the grammatical equivalent of a shrug. The prose should never shrug.
+
+---
+
+## Repository Structure
+
+```
+abm-statisticians/
 ├── README.md
-├── CLAUDE.md                        <- this file (copy into repo root)
-├── .Rbuildignore
-├── .gitignore                       <- must include: figures/, *.tex, *.pdf
-|
-├── R/
-│   ├── utils_plotting.R             <- shared ggplot2 helpers + both themes
-│   ├── utils_stats.R                <- power law fit, Gini, KS test wrappers
-│   ├── utils_axtell.R               <- load + plot Axtell's firm-size results
-│   │
-│   ├── sd_lotka_volterra.R          <- ODE predator-prey
-│   ├── sd_isr_pandemic.R            <- ODE ISR compartmental model
-│   │
-│   ├── abm_predator_prey.R          <- ABM wolves + sheep (baseline)
-│   ├── abm_predator_prey_grass.R    <- ABM wolves + sheep + grass (extension)
-│   ├── abm_pandemic.R               <- ABM ISR on well-mixed grid (baseline)
-│   ├── abm_pandemic_network.R       <- ABM ISR on social network + super-spreaders
-│   └── utils_axtell.R               <- load + plot Axtell's firm-size results
-│   ├── lv.R                         <- Lotka-Volterra chunks (light + dark variants)
-│   ├── isr.R                        <- ISR pandemic chunks
-│   ├── abm_predator_prey.R          <- predator-prey ABM chunks
-│   ├── abm_pandemic.R               <- pandemic ABM chunks
-│   ├── abm_network.R                <- network extension chunks
-│   ├── abm_grass.R                  <- grass extension chunks
-│   └── axtell.R                     <- Axtell presentation chunks
-│
-├── demo/
-│   ├── demo_lotka_volterra.R
-│   ├── demo_isr.R
-│   ├── demo_predator_prey.R
-│   ├── demo_pandemic.R
-│   └── demo_axtell.R
-│
-├── vignettes/
-│   ├── abm_for_statisticians.Rnw    <- main course document (LaTeX + knitr)
-│   ├── abm_slides.Rnw               <- beamer slide deck (LaTeX + knitr)
-│   └── references.bib               <- BibTeX references (shared by both)
-│
-├── data-raw/
-│   └── census_firm_sizes.R          <- script to fetch/clean Census firm data
-│
-├── data/
-│   └── census_firm_sizes.rda        <- cleaned Census firm-size data (usethis::use_data)
-│
-└── tests/
-    └── testthat/
-        ├── test-sd.R
-        ├── test-abm-predator-prey.R
-        └── test-abm-pandemic.R
+├── _theme/
+│   ├── custom.css              # Shared CSS for course book (HTML output)
+│   ├── xaringan-theme.R        # xaringanthemer scaffold, sourced by all slide decks
+│   └── fonts.css               # Google Fonts import block
+├── style/
+│   └── spectral_hands.tex      # Stylistic exemplar — READ BEFORE WRITING PROSE
+├── book/
+│   ├── abm_course_book.Rmd     # Single unified course textbook
+│   └── refs.bib                # BibTeX references
+├── slides/
+│   ├── 01_ode_foundations.Rmd
+│   ├── 02_abm_contrast.Rmd
+│   ├── 03_axtell_empirics.Rmd
+│   └── 04_philosophical_conclusion.Rmd
+└── code/
+    ├── ch01_ode_foundations.R
+    ├── ch02_abm_contrast.R
+    ├── ch03_axtell_empirics.R
+    └── ch04_philosophical_conclusion.R
 ```
 
-The `.gitignore` must include at minimum:
-```
-figures/
-*.tex
-*.pdf
-*.aux
-*.log
-```
-Generated figures and compiled LaTeX artifacts are not committed.
-
-The `README.md` must include:
-1. One-paragraph description of the course and codebase.
-2. Installation instructions: `devtools::install_github(...)` or
-   `devtools::install()` from a local clone.
-3. How to run a demo: `Rscript demo/demo_lotka_volterra.R`
-4. How to find activity starting points: search for `ACTIVITY` in any
-   demo script, or see the course document for instructions.
-5. How to compile the course document and slides (the two `knitr::knit()`
-   + `pdflatex` sequences).
-6. A note that Axtell's data files are not included in the repository and
-   must be obtained separately.
-
-```
-Package: abmcourse
-Title: Agent-Based Modeling for Statisticians
-Version: 0.1.0
-Authors@R: person("First", "Last", role = c("aut", "cre"),
-    email = "you@example.com")
-Description: Course materials comparing system dynamics and agent-based
-    models for predator-prey, epidemic, and firm-size applications.
-License: MIT + file LICENSE
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
-Imports:
-    R6,
-    deSolve,
-    igraph,
-    ggplot2,
-    patchwork,
-    dplyr,
-    tidyr,
-    poweRlaw,
-    cli
-Suggests:
-    testthat (>= 3.0.0),
-    devtools,
-    pkgload,
-    here
-Config/testthat/edition: 3
-```
+The `code/` directory contains the same R code as the book chunks, fully commented, for distribution via GitHub. These are the files students take away.
 
 ---
 
-## Conventions applying to all R code
+## Visual Identity & Theme Scaffold
 
-- **Roxygen2 documentation** on every exported function. Include `@param`, `@return`,
-  `@examples`.
-- **No global state.** Model objects carry all state. No assignments to `.GlobalEnv`
-  from library code.
-- **Reproducibility.** Every stochastic function accepts a `seed = NULL` parameter.
-  Set it with `set.seed(seed)` at the top of the function when non-NULL.
-- **Return values are named lists** (or R6 objects with a `$results` field). Never
-  return bare vectors from top-level model functions.
-- **tidyverse-style data frames** for time series output — long format, suitable for
-  direct piping into ggplot2. Model run functions should return a tibble with a
-  `step` or `time` column and `variable` / `value` columns where multiple series
-  are present.
-- **Chunk file package loading**: chunk files load the package via
-  `pkgload::load_all(here::here())` at the top of the first chunk in each
-  file. Do not use `library(abmcourse)` in chunk files — this requires an
-  installed version and will silently use stale code during development.
-  Add `pkgload` and `here` to `Suggests` in `DESCRIPTION`.
-- **Activity scaffolding in demo scripts**: the activity block in each demo
-  script must define all modifiable parameters as named variables immediately
-  above the `ACTIVITY` comment, followed by `# YOUR CODE HERE` stubs for
-  each numbered step. Students see the full demo code above and learn from
-  it; the activity section gives them a clean entry point. Example pattern:
+### Philosophy
 
-```r
-## ---- ACTIVITY 1: Finding extinction boundaries ------------------------------
-## Instructions: course document Section 2.6. Expected time: ~20 minutes.
+The visual identity should feel like a serious intellectual artifact — something between a well-designed academic monograph and a piece of scientific journalism. It should signal that the author takes both the mathematics and the prose seriously. It should not look like a default R Markdown document, a corporate slide deck, or a generic data science tutorial.
 
-# Parameters to modify:
-alpha <- 0.1   # try reducing this toward zero
-beta  <- 0.02
-gamma <- 0.3
-delta <- 0.01
+The aesthetic target is **refined typographic seriousness with quiet distinctiveness.** Not loud. Not playful. Not corporate. Think: a beautifully typeset book you find in the mathematics section of a good independent bookstore.
 
-# Step 1: Run the model with the default parameters and note the trajectory.
-# YOUR CODE HERE
+### Fonts
 
-# Step 2: Reduce alpha until you observe extinction. What is the threshold?
-# YOUR CODE HERE
+All fonts loaded from Google Fonts.
 
-# Extension (fast finishers): How does extinction probability change with
-# initial population size? Vary n_sheep and n_wolves and run 10 replicates.
-# YOUR CODE HERE
+- **Body text:** Source Serif 4 (weights 400, 400 italic, 600)
+- **Headings:** Raleway (weights 300, 500, 700)
+- **Code:** Fira Code (with ligatures enabled via `font-variant-ligatures: contextual`)
+
+### Color Palette (Placeholder — to be refined after content is complete)
+
+Define all colors as CSS variables so they can be changed globally in one place.
+
+```css
+:root {
+  --color-bg:         #FAFAF7;   /* warm off-white, not pure white */
+  --color-text:       #1C1C1E;   /* near-black, slightly warm */
+  --color-heading:    #1C1C1E;
+  --color-accent:     #2D5F8A;   /* a measured steel blue — placeholder */
+  --color-accent-alt: #8A4A2D;   /* warm rust — placeholder for secondary accent */
+  --color-rule:       #DCDCD4;   /* subtle horizontal rules */
+  --color-code-bg:    #F0F0EA;   /* slightly warm code block background */
+  --color-link:       #2D5F8A;
+}
 ```
 
+These are placeholders. The color scheme should be revisited once content is drafted. The key constraint is that it must work for both extended reading (book) and projection (slides).
+
+### Course Book HTML Output Parameters
+
+```yaml
 ---
-
-## Module specifications
-
-Build modules in the order listed in the Build Order section. Each specification
-gives the public interface; implementation details are left to you unless
-constrained.
-
+title: "Agent-Based Modeling for Statisticians"
+subtitle: "A Short Course"
+author: "John Lynham"
+date: "Joint Statistical Meetings, 2025"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+    theme: null           # disable default Bootstrap theme entirely
+    css: ["../_theme/fonts.css", "../_theme/custom.css"]
+    highlight: null       # code highlighting handled in custom.css
+    self_contained: true  # single portable HTML file
+    mathjax: "default"
+    fig_caption: true
+    fig_width: 8
+    fig_height: 5
+    df_print: paged
+    code_folding: show
+    includes:
+      in_header: "../_theme/header.html"
 ---
-
-### 1. `R/utils_plotting.R`
-
-All plots use ggplot2. Define package-level palette and theme constants:
-
-```r
-COURSE_PALETTE <- c(
-  sd       = "#2E86AB",   # blue  -- system dynamics
-  abm      = "#A23B72",   # plum  -- ABM baseline
-  extended = "#F18F01",   # amber -- ABM extension
-  data     = "#4B8B3B"    # green -- empirical data
-)
-
-# Slide background and accent colours (shared with beamer theme)
-SLIDE_BG      <- "#1B2A4A"   # dark navy
-SLIDE_ACCENT  <- "#F18F01"   # amber -- frame titles, block borders
-SLIDE_TEXT    <- "#E8E8E8"   # off-white body text
-SLIDE_PANEL   <- "#1E3A5F"   # slightly lighter navy for code panels
 ```
 
-Two ggplot2 theme functions are required. Both must produce visually identical
-layouts — axis structure, legend position, font sizes — differing only in
-background and text colours. This ensures figures are comparable across the
-course document and slides.
+### Xaringan Slide Parameters
 
-```r
-#' Light ggplot2 theme for the course document
-#' @return A ggplot2 theme object.
-theme_course_light <- function()
-# Based on theme_minimal(). White panel background, dark axis text,
-# light gray grid lines. Used in all course document chunks.
-
-#' Dark ggplot2 theme for the beamer slides
-#' @return A ggplot2 theme object.
-theme_course_dark <- function()
-# Panel background: SLIDE_BG. Grid lines: slightly lighter navy.
-# Axis text, legend text, strip text: SLIDE_TEXT.
-# Used in all slide chunks. Must produce figures that are legible
-# on a projected dark background.
-```
-
-Required functions (all return a `ggplot` object):
-
-```r
-#' Plot time series from a model results tibble
-#'
-#' @param results A long-format tibble with columns: time (or step),
-#'   variable, value.
-#' @param title Plot title string.
-#' @param colour_map Named character vector mapping variable names to hex
-#'   colours. Defaults to COURSE_PALETTE.
-#' @param log_y Logical; use log scale on y-axis.
-#' @return A ggplot object.
-plot_time_series <- function(results, title, colour_map = NULL, log_y = FALSE)
-
-#' Plot a phase portrait (x vs y trajectory)
-#'
-#' @param results Tibble with columns x and y (e.g., prey and predators).
-#' @param xlabel,ylabel Axis label strings.
-#' @param title Plot title.
-plot_phase_portrait <- function(results, xlabel, ylabel, title)
-
-#' Plot an empirical distribution, optionally on log-log axes
-#'
-#' @param values Numeric vector of observed values.
-#' @param title Plot title.
-#' @param log_log Logical; plot on log-log axes.
-#' @param fit Optional list with elements slope and intercept for a
-#'   reference power-law line.
-plot_distribution <- function(values, title, log_log = FALSE, fit = NULL)
-
-#' Combine two ggplot objects side by side using patchwork
-#'
-#' @param left,right ggplot objects.
-#' @param title Overall title string (patchwork annotation).
-plot_side_by_side <- function(left, right, title = NULL)
-```
-
+```yaml
 ---
-
-### 2. `R/utils_stats.R`
-
-```r
-#' Fit a discrete power law using the poweRlaw package (Clauset et al. 2009)
-#'
-#' @param x Integer or numeric vector of positive values.
-#' @return Named list: alpha, xmin, ks_statistic, ks_p_value, n.
-fit_power_law <- function(x)
-
-#' Compute the Gini coefficient
-#'
-#' @param x Non-negative numeric vector.
-#' @return Scalar in [0, 1].
-gini <- function(x)
-
-#' Compare two distributions via KS test and summary statistics
-#'
-#' @param simulated,empirical Numeric vectors.
-#' @return Named list: ks_statistic, ks_p_value, simulated_mean,
-#'   empirical_mean, simulated_gini, empirical_gini.
-compare_distributions <- function(simulated, empirical)
+title: "[Section Title]"
+subtitle: "Agent-Based Modeling for Statisticians"
+author: "John Lynham"
+date: "JSM 2025"
+output:
+  xaringan::moon_reader:
+    css: ["../_theme/xaringan-custom.css", "default-fonts"]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+      navigation:
+        scroll: false
+    self_contained: false
+---
 ```
 
----
-
-### 3. `R/sd_lotka_volterra.R`
-
-Use `deSolve::ode()` to integrate the Lotka-Volterra system.
+### xaringanthemer Scaffold (`_theme/xaringan-theme.R`)
 
 ```r
-# Default parameters (document ecological meaning in roxygen)
-LV_DEFAULTS <- list(
-  alpha = 0.1,    # prey birth rate
-  beta  = 0.02,   # predation rate (prey removed per predator per prey)
-  gamma = 0.3,    # predator death rate
-  delta = 0.01    # predator birth rate per prey eaten
-)
+library(xaringanthemer)
 
-#' Run the Lotka-Volterra ODE system
-#'
-#' @param params Named list of parameters. Defaults to LV_DEFAULTS.
-#' @param y0 Named numeric vector c(prey = 40, predators = 9).
-#' @param t_span Numeric vector c(start, end). Default c(0, 200).
-#' @param n_points Number of output time points. Default 2000.
-#' @return Named list:
-#'   - results: long-format tibble with columns time, variable, value
-#'       (variable is "prey" or "predators")
-#'   - equilibrium: named vector c(prey = ..., predators = ...)
-#'   - params: the params list used
-run_lv <- function(params = LV_DEFAULTS, y0 = c(prey=40, predators=9),
-                   t_span = c(0, 200), n_points = 2000)
+style_mono_accent(
+  # Base colors — placeholders, to be refined
+  base_color         = "#2D5F8A",
+  white_color        = "#FAFAF7",
+  black_color        = "#1C1C1E",
+  background_color   = "#FAFAF7",
+  header_color       = "#1C1C1E",
+  text_color         = "#1C1C1E",
+  link_color         = "#2D5F8A",
+  text_slide_number_color = "#AAAAAA",
 
-#' Compute the non-trivial Lotka-Volterra equilibrium
-#'
-#' @param params Named list with alpha, beta, gamma, delta.
-#' @return Named vector c(prey = gamma/delta, predators = alpha/beta).
-lv_equilibrium <- function(params)
-```
+  # Typography
+  header_font_google  = google_font("Raleway", "300, 500, 700"),
+  text_font_google    = google_font("Source Serif 4", "400, 400i, 600"),
+  code_font_google    = google_font("Fira Code"),
 
----
+  # Sizing
+  text_font_size      = "1.05rem",
+  header_h1_font_size = "2.2rem",
+  header_h2_font_size = "1.7rem",
+  header_h3_font_size = "1.3rem",
+  code_font_size      = "0.85rem",
 
-### 4. `R/sd_isr_pandemic.R`
-
-Note: **ISR** ordering (Infected, Susceptible, Recovered) — do not reorder to SIR.
-
-```r
-ISR_DEFAULTS <- list(
-  beta  = 0.3,    # transmission rate
-  gamma = 0.05    # recovery rate
-  # R0 = beta / gamma = 6 (measles-like; produces a dramatic curve)
-)
-
-#' Run the ISR compartmental ODE model
-#'
-#' @param params Named list. Defaults to ISR_DEFAULTS.
-#' @param y0 Named vector c(I=0.01, S=0.98, R=0.01) of fractions.
-#' @param t_span Numeric vector c(0, 160).
-#' @param n_points Integer. Default 1600.
-#' @return Named list:
-#'   - results: long tibble with columns time, variable, value
-#'       (variable in c("I","S","R"))
-#'   - R0: scalar
-#'   - peak_I: peak infected fraction
-#'   - peak_time: time of peak
-#'   - final_R: fraction recovered at end of simulation
-#'   - params: params list used
-run_isr <- function(params = ISR_DEFAULTS,
-                    y0 = c(I=0.01, S=0.98, R=0.01),
-                    t_span = c(0, 160),
-                    n_points = 1600)
-
-#' Herd immunity threshold
-#'
-#' @param params Named list with beta and gamma.
-#' @return Scalar 1 - 1/R0.
-herd_immunity_threshold <- function(params)
-```
-
----
-
-### 5. `R/abm_predator_prey.R`
-
-R6-based wolf-sheep predator-prey ABM. This is the **baseline** ABM.
-
-```r
-#' Sheep agent
-#'
-#' @description Grazes on a plain grid. Reproduces probabilistically.
-#'   Dies when energy reaches zero.
-Sheep <- R6::R6Class("Sheep",
-  public = list(
-    id        = NULL,
-    energy    = NULL,
-    x         = NULL,   # grid column (1-indexed)
-    y         = NULL,   # grid row (1-indexed)
-    alive     = TRUE,
-
-    initialize = function(id, x, y, energy),
-    step = function(model)
-    # step() logic:
-    #   1. Move to a random Moore neighbor (wrap at grid edges -- torus).
-    #   2. Lose 1 energy.
-    #   3. If energy > sheep_reproduce_threshold: reproduce with
-    #      probability sheep_reproduce (spawn offspring at same cell,
-    #      each gets half of parent energy).
-    #   4. Set alive = FALSE if energy <= 0.
-  )
-)
-
-#' Wolf agent
-Wolf <- R6::R6Class("Wolf",
-  public = list(
-    id        = NULL,
-    energy    = NULL,
-    x         = NULL,
-    y         = NULL,
-    alive     = TRUE,
-
-    initialize = function(id, x, y, energy),
-    step = function(model)
-    # step() logic:
-    #   1. Move to random Moore neighbor (torus).
-    #   2. Lose 1 energy.
-    #   3. If any Sheep at current cell: eat one (remove it, gain
-    #      wolf_gain_from_food energy).
-    #   4. Reproduce with probability wolf_reproduce if energy >
-    #      wolf_reproduce_threshold.
-    #   5. Set alive = FALSE if energy <= 0.
-  )
-)
-
-#' Predator-prey ABM
-#'
-#' @description Baseline wolf-sheep model on a toroidal grid.
-PredatorPreyModel <- R6::R6Class("PredatorPreyModel",
-  public = list(
-    width                    = NULL,
-    height                   = NULL,
-    params                   = NULL,
-    sheep                    = NULL,   # list of Sheep R6 objects
-    wolves                   = NULL,   # list of Wolf R6 objects
-    step_count               = 0L,
-    history                  = NULL,   # tibble built up by run()
-
-    initialize = function(
-      width                     = 50L,
-      height                    = 50L,
-      n_sheep                   = 100L,
-      n_wolves                  = 25L,
-      sheep_reproduce           = 0.04,
-      wolf_reproduce            = 0.05,
-      wolf_gain_from_food       = 20.0,
-      sheep_gain_from_food      = 4.0,
-      sheep_reproduce_threshold = 10.0,
-      wolf_reproduce_threshold  = 20.0,
-      seed                      = NULL
-    ),
-
-    step = function(),    # advance model one tick; purge dead agents
-
-    #' @return Named list:
-    #'   - results: long tibble, columns step, variable, value
-    #'       (variable in c("sheep","wolves"))
-    #'   - extinct: logical, TRUE if either pop hit 0
-    #'   - params: params list
-    run = function(steps = 500L)
-  )
+  # Output
+  outfile = "_theme/xaringan-custom.css"
 )
 ```
 
-**Implementation notes:**
-- Store agents in plain R lists. Use `Filter()` to purge dead agents after each
-  step.
-- Agent stepping order must be **randomized each tick** (shuffle the combined
-  agent list before iterating). This is important for fairness and matches
-  standard ABM convention.
-- Do not use a formal spatial grid object. A data frame of
-  `(x, y, agent_id, type)` for lookups is fine. Ensure Moore-neighborhood
-  lookup is efficient enough for a 50x50 grid with ~125 agents.
+This file is run once to generate the CSS. It is not sourced at render time.
 
 ---
 
-### 6. `R/abm_predator_prey_grass.R`
+## The Argument of the Course
 
-Extension of module 5. Adds a grass layer. Inherit from `PredatorPreyModel`.
+This section describes the intellectual arc that the prose must carry. Every chapter, section, and slide exists in service of this argument. It should be invisible as structure and felt only as inevitability.
 
-```r
-#' Predator-prey ABM with grass dynamics
-#'
-#' @description Adds a GrassPatch layer. Sheep gain energy only from
-#'   grown cells. Eaten grass regrows after grass_regrowth_time steps.
-PredatorPreyGrassModel <- R6::R6Class("PredatorPreyGrassModel",
-  inherit = PredatorPreyModel,
+### The Central Claim
 
-  public = list(
-    grass               = NULL,   # matrix(logical, nrow=height, ncol=width)
-    grass_countdown     = NULL,   # matrix(integer) regrowth timers
-    grass_regrowth_time = NULL,
+Every modeling choice is a choice of resolution — temporal, spectral, and expressive. The ODE, the representative agent, stationarity, equilibrium, regularization penalties, sampling frequency — all restrict the language in which the modeler works. Each restriction makes some phenomena expressible and others not. A phenomenon that requires distinctions the model's language cannot make is not a failure of fit. It is exterior to the model's dogma entirely.
 
-    initialize = function(
-      ...,                          # pass through all PredatorPreyModel args
-      grass_regrowth_time    = 30L,
-      initial_grass_fraction = 0.5,
-      seed                   = NULL
-    ),
+This is not a counsel of despair about modeling. It is a demand for precision about what each model can and cannot say — and therefore about what conclusions may and may not be drawn from it.
 
-    step = function(),   # override: tick grass countdowns; call super$step()
+### The Devastating Example
 
-    run = function(steps = 500L)
-    # Returns same as PredatorPreyModel$run() plus:
-    #   results tibble gains rows where variable == "grass_fraction"
-  )
-)
-```
+The mean-field assumption is the hinge on which the entire argument turns. It is the single restriction that, when stated precisely, makes visible everything the ODE cannot see. It should arrive at the end of Chapter 1 with full weight — stated not as a criticism but as a fact about the model's language. Everything in Chapters 2, 3, and 4 is the demonstration of what lies outside that language.
 
-Override only `initialize()`, `step()`, and `run()`. Reuse all wolf/sheep logic
-from the parent class.
+### Answering the Critics Without Appearing to
+
+The standard objections to ABM — that it multiplies assumptions, that it can produce any prediction — must be answered without ever appearing defensive. The strategy is to answer them before they are raised, in the language the audience already speaks.
+
+**The "multiplies assumptions" objection** is answered by the reduction result in Chapter 2. The ABM does not add assumptions to the ODE — it relaxes a restriction the ODE imposes silently. Statisticians understand this immediately: the ODE is the degenerate special case where the distribution of agent characteristics and interaction outcomes collapses to a point mass. An ODE is an ABM with a very strong prior.
+
+**The "can produce any prediction" objection** is answered by the sparsity point. The nominal parameter space of an ABM may be large, but the effective dimensionality of the calibrated structure is low — most parameter combinations produce qualitatively identical dynamics, and the interesting behavior lives on a low-dimensional manifold. This is regularization. The critic who worries about parameter proliferation is confusing nominal dimensionality with effective dimensionality. A statistician who has used LASSO understands the distinction immediately.
+
+**The deeper unification**: Bayesian priors are regularization tools — this is not an analogy but a mathematical identity. A Gaussian prior on coefficients produces ridge regression exactly. A Laplace prior produces LASSO exactly. The posterior mode under these priors *is* the regularized estimator. Further, L2 regularization is the limiting case of training on Gaussian-perturbed data; the Bayesian, the frequentist regularizer, and the distributionally robust optimizer are solving the same problem from different angles. Every modeling assumption is a prior. Every prior restricts the expressive language. The question is always whether the restriction is warranted for the phenomenon at hand.
+
+**The Simon near-decomposability point**: different models fit well at different temporal resolutions because each resolution has its natural phenomena. This is not merely a practical observation — it is a theorem about the spectral structure of complex systems. A quarterly model is not wrong about the annual dynamics it was built to describe. It is linguistically incapable of expressing sub-quarterly phenomena. The error is applying it at the wrong resolution, or failing to ask what resolution the policy question actually requires. Stationarity is a temporal regularity prior: it asserts that the data-generating process lies within a neighborhood of the estimated distribution. When the system is capable of bifurcation, that neighborhood does not contain the true future distribution. The stationarity prior is miscalibrated in exactly the way a Gaussian prior is miscalibrated when the true coefficients are sparse.
 
 ---
 
-### 7. `R/abm_pandemic.R`
+## Course Structure & Learning Objectives
 
-ISR model on a well-mixed grid. Baseline for comparison with the ODE model.
+### Block 1: ODE Foundations (8:30–10:00)
+**Slides file:** `01_ode_foundations.Rmd`
+**Book chapter:** Chapter 1
+
+**Learning objectives:**
+1. Derive Lotka-Volterra from verbal biological assumptions, identifying each parameter precisely.
+2. Derive SIR from first principles, with explicit attention to the mass-action assumption.
+3. Understand the qualitative dynamics of both systems: neutral cycling in Lotka-Volterra, epidemic threshold and herd immunity in SIR.
+4. Articulate the mean-field assumption precisely — a prior that collapses the distribution of interactions to a point mass, not a neutral modeling default.
+5. Solve and visualize both systems in R using `deSolve` and `ggplot2`.
+
+---
+
+### Block 2: Agent-Based Contrast (10:15–12:00)
+**Slides file:** `02_abm_contrast.Rmd`
+**Book chapter:** Chapter 2
+
+**Learning objectives:**
+1. Implement agent-based versions of Lotka-Volterra and SIR in R using Tidyverse data structures.
+2. Show the reduction result explicitly: ABM output converges to ODE output under random mixing and large population — the ODE is a limiting case, not a separate paradigm.
+3. Show what lies outside the ODE's language: extinction events, network topology effects, spatial structure.
+4. Implement network-based SIR using `igraph` / `tidygraph`; demonstrate how contact network topology changes epidemic dynamics in ways the ODE cannot express.
+5. Display a pre-rendered `gganimate` animation of spatial Lotka-Volterra — shown as demonstration, code available in materials.
+6. Articulate the sparsity point: the effective dimensionality of the calibrated ABM is low; this is regularization in a sense statisticians already understand.
+
+---
+
+### Block 3: Axtell Firm Size (12:30–3:15)
+**Slides file:** `03_axtell_empirics.Rmd`
+**Book chapter:** Chapter 3
+
+**Note:** No live model execution. R code is used only for visualizing empirical distributions and fitting power law models.
+
+**Learning objectives:**
+1. Understand the firm size power law as an empirical regularity that is cross-country stable and temporally robust.
+2. Fit and visualize power law distributions in R; compare to lognormal and exponential alternatives.
+3. Understand why this distribution is not merely poorly fit but linguistically inexpressible by representative agent models — the representative agent is the mean-field assumption applied to the distribution of firms.
+4. Understand the qualitative logic of Axtell's model: agents, returns to scale, team formation and dissolution as the generative mechanism.
+5. Define emergence precisely: a macro regularity exterior to the language of its micro rules.
+
+**R packages:** `poweRlaw`, `ggplot2`, `tidyverse`, `broom`
+
+---
+
+### Block 4: The Possibility Space of Dynamics (3:30–5:00)
+**Slides file:** `04_philosophical_conclusion.Rmd`
+**Book chapter:** Chapter 4
+
+**Learning objectives:**
+1. Articulate the unified framework: every modeling choice is a restriction on expressive resolution — temporal, spectral, linguistic.
+2. Understand the mean-field failure mode: network topology and heterogeneity are exterior to its language.
+3. Understand the naive extrapolation failure mode: regime change and bifurcation are exterior to a stationarity prior — and stationarity is a prior, with all that implies about miscalibration.
+4. Understand the unwarranted equilibrium failure mode: path dependence and lock-in are exterior to an equilibrium prior.
+5. Connect regularization, Bayesian priors, and distributional robustness as three descriptions of the same operation: restricting effective model complexity by restricting the language.
+6. Apply the Simon near-decomposability point: models fit at particular temporal resolutions; the error is resolution mismatch, not model richness.
+7. Articulate the statistician's checklist question: at what resolution is this model working, and is the phenomenon I care about expressible at that resolution?
+
+---
+
+## Chapter-by-Chapter Content Specification
+
+---
+
+### Chapter 1: The Differential Equations of Living Systems
+
+#### Prose Style Notes
+
+Read `style/spectral_hands.tex` before writing this chapter. The opening of this chapter should have the quality of the opening of that paper — a provocative observation that makes the reader feel the terrain shifting underfoot before any formal apparatus has been introduced.
+
+The chapter earns its formalism. The Lotka-Volterra system does not appear until the reader feels why a differential equation is the right instrument for this problem. The mean-field assumption does not appear as a criticism — it appears as a precise description of what the model is doing, stated with enough clarity that the reader can see both its utility and its cost.
+
+Do not write: "In this section, we will derive..." Write the derivation. The section header is enough announcement.
+
+#### Opening
+
+Open with the observation that the simplest living systems defeat the intuitions we bring to them. Not because they are complicated — the rules governing a population of rabbits and foxes are not complicated — but because feedback does something to time that our unaided intuition cannot follow. A population of rabbits with unlimited food does not grow forever. An epidemic does not infect everyone it could. These outcomes are not accidents. They are the signatures of feedback, and the differential equation is the instrument built to read them.
+
+Establish that the goal is not differential equations per se but rather to look at two classical models with fresh eyes, attending to the assumptions built into their structure — because those assumptions will become the subject of the rest of the day.
+
+#### Section 1.1: Predators, Prey, and the Geometry of Cycles
+
+Derive Lotka-Volterra from scratch. Start with verbal biological assumptions stated precisely:
+
+- Prey grow exponentially absent predators
+- Predators decline exponentially absent prey
+- Encounters between predators and prey occur at a rate proportional to the product of their populations
+- Each encounter reduces prey and, with some efficiency, increases predators
+
+The product term $\beta NP$ deserves a sentence of its own before the equation appears. It says that the rate of encounters is proportional to the product of population sizes. This is the first hint of what will later be named explicitly.
+
+$$\frac{dN}{dt} = \alpha N - \beta N P$$
+$$\frac{dP}{dt} = \delta N P - \gamma P$$
+
+Identify each parameter verbally. Derive the nullclines. The trajectories are closed orbits — the system cycles forever without damping or growth. Dwell on this. It is geometrically beautiful and physically strange: a pendulum that never loses energy, a clock that never runs down. The phase portrait is the right place to linger — the reader is seeing something genuinely odd about the world, and the prose should honor that.
+
+Implement in R with `deSolve`. Produce:
+1. Time series of N and P on shared axes (tidy format via `pivot_longer`, two colors)
+2. Phase portrait showing closed orbits for several initial conditions
+
+#### Section 1.2: The Mean-Field Assumption
+
+Before SIR, name what has been hiding in the product term.
+
+The expression $\beta NP$ says that every predator is equally likely to encounter every prey individual at every moment. The population is perfectly mixed. Space does not exist. Individuals have no persistent relationships, no locations, no neighborhoods. Every interaction is drawn at random from the full population, at every instant.
+
+This is the mean-field assumption. It is not stated as an assumption in most presentations of Lotka-Volterra. It is embedded in the functional form. It is doing the work that makes the closed-orbit result possible — and it is doing considerably more work than that, work whose full extent will become apparent in Chapter 2.
+
+Name it. Define it precisely. Note that it is a prior — it assigns all probability mass to a single interaction structure, the fully mixed population, and zero probability to everything else. Then move on. The seed is planted.
+
+#### Section 1.3: Epidemics and the Threshold Phenomenon
+
+Derive SIR from verbal assumptions. A closed population. Each individual is Susceptible, Infectious, or Recovered and immune. Infectious individuals contact susceptibles at a rate proportional to $SI$ — the mean-field assumption again, now governing human contact rather than predator-prey encounter. Infectious individuals recover at a constant per-capita rate.
+
+$$\frac{dS}{dt} = -\beta S I$$
+$$\frac{dI}{dt} = \beta S I - \gamma I$$
+$$\frac{dR}{dt} = \gamma I$$
+
+Derive $\mathcal{R}_0 = \beta N / \gamma$ from the sign of $dI/dt$ at $t=0$. The epidemic threshold is not a numerical fact to memorize — it is a consequence of the model's structure, visible in the algebra. A reader who has seen only the number should see the derivation and recognize it as something they have always been owed.
+
+Note — with deliberate understatement — that the years since 2020 have given most people in the room considerably more opinions about this model than they might have anticipated forming.
+
+Implement in R with `deSolve`. Produce:
+1. Time series of S, I, R (tidy format, `pivot_longer`)
+2. Parameter sweep over $\mathcal{R}_0$ showing variation in epidemic curves
+
+#### Section 1.4: What the Language Can Say
+
+Close with a short synthetic section. Collect the shared assumptions of both models:
+
+- Populations are continuous — no individuals, no discreteness
+- Populations are homogeneous — every individual is equivalent
+- Mixing is perfect and instantaneous — mass action throughout
+- Space does not exist
+- History does not matter — the state at $t$ fully determines the state at $t + dt$
+
+These are not flaws. Models that make these assumptions have been scientifically productive for over a century. The point is that they are a language, and every language has an expressive boundary. The phenomena that lie outside this boundary are not anomalies to be explained away. They are the subject of the next chapter.
+
+End with a sentence that opens toward Chapter 2 — not a signpost ("next we will see...") but a held breath, the feeling of a door not yet opened.
+
+---
+
+#### Chapter 1 Setup Chunk
 
 ```r
-Person <- R6::R6Class("Person",
-  public = list(
-    id     = NULL,
-    state  = NULL,   # character: "I", "S", or "R"
-    x      = NULL,
-    y      = NULL,
+# Chapter 1 Setup
+# All packages and global settings for this chapter.
+# This chunk is self-contained — it does not depend on any prior chapter.
 
-    initialize = function(id, x, y, state),
-    step = function(model)
-    # step() logic (ISR ordering):
-    #   - If "S": for each "I" agent in Moore neighborhood (radius 1),
-    #     become "I" with probability beta.
-    #   - If "I": become "R" with probability gamma.
-    #   - If "R": stay "R".
-  )
+library(tidyverse)
+library(deSolve)
+library(patchwork)
+
+theme_set(
+  theme_minimal(base_family = "Source Serif 4") +
+    theme(
+      plot.title       = element_text(family = "Raleway", face = "plain",
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = "Source Serif 4", size = 11,
+                                      color = "#555555", margin = margin(b = 12)),
+      axis.title       = element_text(family = "Source Serif 4", size = 10),
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = "#FAFAF7", color = NA)
+    )
 )
 
-#' Pandemic ABM on well-mixed grid
-PandemicModel <- R6::R6Class("PandemicModel",
-  public = list(
-    width      = NULL,
-    height     = NULL,
-    params     = NULL,
-    agents     = NULL,
-    step_count = 0L,
-
-    initialize = function(
-      width                     = 50L,
-      height                    = 50L,
-      n_agents                  = 2500L,
-      initial_infected_fraction = 0.01,
-      beta                      = 0.3,
-      gamma                     = 0.05,
-      seed                      = NULL
-    ),
-
-    step = function(),
-
-    #' @return Named list:
-    #'   - results: long tibble, columns step, variable, value
-    #'       (variable in c("I","S","R") as fractions)
-    #'   - R0_empirical: estimated from early exponential growth rate
-    #'   - peak_I: peak infected fraction
-    #'   - peak_step: step at peak
-    #'   - params: params list
-    run = function(steps = 200L)
-  )
+palette_ch1 <- c(
+  prey        = "#2D5F8A",
+  predator    = "#8A4A2D",
+  susceptible = "#2D5F8A",
+  infectious  = "#C0392B",
+  recovered   = "#27AE60"
 )
 ```
 
 ---
 
-### 8. `R/abm_pandemic_network.R`
+### Chapter 2: Agents, Networks, and the Geometry of Interaction
 
-Extension: replace spatial grid with a Barabasi-Albert social network.
-This is the key teaching moment — the ODE's well-mixed assumption becomes
-explicit and removable.
+#### Prose Style Notes
+
+This chapter is where the argument turns. The writing should have the quality of a demonstration — the same world seen through a different instrument, and notice what was invisible before. The reduction result is the rhetorical center: show it before the audience thinks to ask for it, and they will trust everything that follows.
+
+The sparsity and regularization point should arrive naturally, as if the connection were obvious — because to a statistician, once it is named, it is obvious. The prose should give the reader the pleasure of recognition, not the sensation of being taught.
+
+#### Section 2.1: What Is an Agent?
+
+An agent is an entity with a state, a set of rules governing how that state updates, and a neighborhood — a set of other agents it can interact with. The neighborhood is the structural innovation. In the ODE, every agent's neighborhood is the entire population, weighted uniformly. In the ABM, the neighborhood is local, structured, and potentially heterogeneous across agents and across time.
+
+The ABM is not "more realistic" than the ODE in any simple sense. It is a different language — one in which the interaction structure is a first-class object rather than a fixed assumption. What you can say in this language that you cannot say in the ODE's language will become clear shortly.
+
+#### Section 2.2: An Agent-Based Lotka-Volterra
+
+Implement a non-spatial ABM version of Lotka-Volterra in R. Use a `tibble` to represent the population with columns for agent ID, type (prey/predator), and alive status. At each timestep: each prey reproduces with probability $p_{birth}$; predator-prey pairs drawn by random pairing result in prey death and predator reproduction with probability $p_{eat}$; each predator dies with probability $p_{death}$.
+
+Show two results:
+
+**The reduction result**: under random pairing with large populations, ABM time series converges to the ODE solution. Show this as an overlay — multiple stochastic ABM runs as translucent ribbons, ODE solution as a solid line. The ODE is not a different model. It is what this model becomes when you take the mean-field prior seriously.
+
+**What the ODE cannot see**: with small populations, the ABM produces extinction events. The ODE orbits forever. The ABM can fall to zero, and stay there. The ODE's language has no word for this.
+
+The sparsity point belongs here, in a brief paragraph: the ABM has more nominal parameters than the ODE, but the dynamics are not more complex in the effective sense — most of the parameter space produces qualitatively identical behavior, and the interesting structure is low-dimensional. A statistician who has used regularization to recover a sparse solution from a high-dimensional regression has already solved this problem in a different guise. The critic who objects to ABM parameter proliferation is counting nominal parameters. They should be counting effective dimensions.
+
+#### Section 2.3: An Agent-Based SIR
+
+Implement an agent-based SIR in two versions.
+
+**Version 1 — Random mixing**: each infectious agent contacts a random subset of the population at each timestep. Show convergence to ODE under large $N$. This is the reduction result for epidemics.
+
+**Version 2 — Network SIR**: use `igraph` to generate two contact networks with the same mean degree — an Erdős-Rényi random graph and a Barabási-Albert scale-free graph. Run SIR on each. The Erdős-Rényi produces dynamics similar to random mixing. The scale-free network produces a qualitatively different epidemic: faster initial spread through hubs, different final size, potential endemic persistence.
+
+Visualize the network with `ggraph`, nodes colored by compartment at a key timestep. The visual is the argument: the same $\mathcal{R}_0$, the same parameters, and the epidemic is a different animal entirely. The ODE cannot express this difference because the ODE's language has no representation for the contact network. It is not that the ODE gets the wrong answer. It is that the question — what does topology do to epidemic dynamics? — cannot be asked in the ODE's language.
+
+#### Section 2.4: The Reduction Theorem
+
+State the result cleanly in prose, without excessive formalism:
+
+As population size grows, as mixing becomes increasingly random, and as individual heterogeneity averages out across the population, the ABM converges in distribution to the ODE. The ODE is not wrong — it is a limiting case. It is what the ABM becomes when the mean-field prior is exact. Every ABM that includes random mixing as a special case contains the ODE as a theorem.
+
+This framing dissolves the apparent competition between the two paradigms. There is no competition. There is a richer language and one of its sublanguages. The question is always whether the phenomena of interest are expressible in the sublanguage — and for many of the most interesting social and biological phenomena, they are not.
+
+#### Section 2.5: Spatial Extension (Reference Module)
+
+Mark this section explicitly as an extension for self-study. It is not covered in the live session but is fully implemented in the distributed materials.
+
+Implement a spatial grid-based Lotka-Volterra in R. Agents occupy cells on a grid. Interactions are local — agents interact only with their Moore neighborhood (8 adjacent cells). Show spiral wave patterns and parameter regimes where spatial structure sustains populations that the mean-field version drives to extinction.
+
+Include a `gganimate` animation rendered to gif. The animation is the argument. Spiral waves are a dynamical regime that is simply inexpressible in the mean-field language — they require the spatial language to exist at all.
+
+The code is fully implemented and commented. In the live session, show the animation without walking through the code. The audience has already understood the principle; the animation is confirmation.
+
+---
+
+#### Chapter 2 Setup Chunk
 
 ```r
-#' Network pandemic ABM
-#'
-#' @description ISR model on a Barabasi-Albert graph (igraph).
-#'   Power-law degree distribution produces natural super-spreader structure.
-#'   Super-spreaders are agents in the top decile of degree.
-NetworkPandemicModel <- R6::R6Class("NetworkPandemicModel",
-  public = list(
-    n_agents   = NULL,
-    params     = NULL,
-    graph      = NULL,    # igraph object
-    agents     = NULL,    # data frame: id, state, degree, is_super_spreader
-    step_count = 0L,
+# Chapter 2 Setup
+# Self-contained — does not depend on Chapter 1.
 
-    initialize = function(
-      n_agents                  = 500L,
-      n_edges_per_new_node      = 3L,     # m in sample_pa()
-      initial_infected_fraction = 0.01,
-      beta                      = 0.3,
-      gamma                     = 0.05,
-      seed                      = NULL
-    ),
+library(tidyverse)
+library(deSolve)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(gganimate)
+library(patchwork)
 
-    step = function(),
-    # Each step: for each infected agent, attempt transmission to each
-    # network neighbor with probability beta. Then apply recovery.
+theme_set(
+  theme_minimal(base_family = "Source Serif 4") +
+    theme(
+      plot.title       = element_text(family = "Raleway", face = "plain",
+                                      size = 14, margin = margin(b = 8)),
+      axis.title       = element_text(family = "Source Serif 4", size = 10),
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = "#FAFAF7", color = NA)
+    )
+)
 
-    #' @return Same keys as PandemicModel$run(), plus:
-    #'   - super_spreader_attack_rate: fraction of super-spreaders ever infected
-    #'   - non_super_spreader_attack_rate: same for non-super-spreaders
-    #'   - degree_distribution: integer vector of node degrees
-    run = function(steps = 200L)
-  )
+palette_ch2 <- c(
+  prey        = "#2D5F8A",
+  predator    = "#8A4A2D",
+  susceptible = "#2D5F8A",
+  infectious  = "#C0392B",
+  recovered   = "#27AE60"
 )
 ```
 
-Use `igraph::sample_pa(n_agents, m = n_edges_per_new_node, directed = FALSE)`.
-Super-spreaders = agents with degree above the 90th percentile of the degree
-distribution.
+---
+
+### Chapter 3: The Size of Firms, and What It Tells Us
+
+#### Prose Style Notes
+
+This chapter is the most empirical and the most argumentative. There is no model to run. The writing should have the quality of a detective story — here is a regularity in the world, here is what cannot explain it, here is what is required. The power law is the devastating example: a phenomenon that is not merely poorly fit by standard models but is inexpressible within their language.
+
+The statistical work should be done with appropriate rigor. The naive log-log plot is not enough. Use maximum likelihood estimation via `poweRlaw`, report goodness-of-fit, compare to lognormal. The audience are statisticians; show them the statistics.
+
+#### Section 3.1: A Regularity That Refuses to Go Away
+
+In virtually every measured economy, the distribution of firm sizes by employment follows a power law over many orders of magnitude. The largest firms employ hundreds of thousands; the smallest employ one. The distribution between these extremes is not normal, not lognormal, not exponential. It is a power law, and it has been so for as long as anyone has measured it, across countries with radically different institutions, legal systems, and histories.
+
+Present the empirical data. Show the histogram on a linear scale first — the dynamic range defeats it, and the defeat is instructive. Then show the log-log plot, and let the linear relationship speak. Fit a power law using maximum likelihood via `poweRlaw`. Compare to a lognormal alternative using a likelihood ratio test. The power law wins, or comes close enough that the point is made.
+
+#### Section 3.2: What the Standard Models Cannot Say
+
+A representative agent model produces a distribution with a characteristic scale — a typical firm size around which variation is distributed. An ODE model of industry dynamics produces smooth trajectories toward equilibrium configurations. Neither produces a power law, and neither can, because neither contains the mechanism that generates it.
+
+The representative agent is the mean-field assumption applied to the distribution of firms. It collapses the entire heterogeneity of the firm population to a point mass — one firm, standing in for all firms, interacting with one consumer, standing in for all consumers. This is not an approximation that becomes exact in the limit of large populations. It is a restriction that eliminates the phenomenon entirely. The power law firm size distribution is not an equilibrium property of a representative agent economy. It is a dynamical property of a heterogeneous agent economy with local interaction. It is exterior to the representative agent's language.
+
+This is not a methodological debating point. It is an empirical constraint. A model that cannot reproduce the firm size distribution is, to that extent, wrong about the economy it claims to describe — regardless of how well it fits aggregate moments.
+
+#### Section 3.3: Axtell's Model — Logic Without Code
+
+Describe the qualitative logic of Axtell's firm formation model:
+
+Agents allocate effort between solitary work and team membership. Teams form when agents find collaborations that increase their returns under local increasing returns to scale. Teams dissolve when agents find better alternatives. No central planner. No equilibrium assumption. No representative agent.
+
+The power law emerges from the dynamics of team formation and dissolution — purely endogenous, not calibrated. More strikingly, the power law exponent is not sensitive to most parameter choices. It is a structural consequence of the interaction rules, a macro regularity that is exterior to the micro rules in exactly the sense that makes it interesting.
+
+#### Section 3.4: Emergence
+
+Define emergence carefully: a macro-level regularity that is not present in the micro-level rules and cannot be derived analytically from them, but arises robustly from the dynamics of agent interaction. The word is often used loosely. Here it has a precise meaning: the power law is not in the rules. It is generated by the rules. No amount of analysis of the individual agent's decision problem will reveal it. It requires the dynamics.
+
+This is the payoff of the ABM framework. Not that it is more realistic than the ODE in some vague sense. It is a language capable of expressing phenomena — emergence, path dependence, heterogeneity-driven macro structure — that the ODE's language cannot reach. The firm size distribution is the canonical social science example because the data are unambiguous, the generative mechanism is clean, and the contrast with standard models is stark.
 
 ---
 
-### 9. `R/utils_axtell.R`
-
-> **No ABM implementation.** The Axtell firm-size model is presented using
-> materials supplied directly by Rob Axtell. This module provides only the
-> statistical and plotting support needed to display and discuss his results
-> in the course.
+#### Chapter 3 Setup Chunk
 
 ```r
-#' Plot a firm-size distribution on log-log axes with power-law fit
-#'
-#' @param firm_sizes Integer vector of firm sizes (one element per firm).
-#' @param fit Optional list from fit_power_law(); if supplied, overlays
-#'   the fitted line.
-#' @param title Plot title.
-#' @return A ggplot object.
-plot_firm_size_distribution <- function(firm_sizes, fit = NULL,
-                                        title = "Firm size distribution")
+# Chapter 3 Setup
+# Self-contained — does not depend on prior chapters.
 
-#' Load Axtell firm-size data from a CSV or RDA file
-#'
-#' @param path Path to file. CSV must have a column named `size`.
-#' @return Integer vector of firm sizes.
-load_firm_sizes <- function(path)
-```
+library(tidyverse)
+library(poweRlaw)
+library(broom)
+library(patchwork)
 
-The demo script (`demo/demo_axtell.R`) loads Axtell's data, fits a power law
-via `fit_power_law()`, plots the log-log distribution, and prints the estimated
-exponent and KS statistic. The discussion — local interaction, heavy tails,
-Zipf's law, contrast with log-normal — is handled verbally using Axtell's slides.
-
----
-
-### 10. Demo scripts (`demo/`)
-
-Each demo is a standalone R script with a clearly marked section at the top that
-users can run. Scripts load the package via `devtools::load_all()` or
-`library(abmcourse)`.
-
-Every demo must:
-1. Run both the SD and ABM versions (or ABM baseline and extension).
-2. Produce a side-by-side comparison figure via `plot_side_by_side()`.
-3. Print a brief statistical summary using `cli::cli_alert_info()`.
-4. Save figures to `figures/` (create if missing) as `.png` at 150 dpi.
-
-```r
-# demo_lotka_volterra.R
-# Compares ODE and ABM predator-prey.
-# Figures: side-by-side time series + phase portrait overlay.
-
-# demo_isr.R
-# Compares ODE and ABM ISR pandemic.
-# Figures: ODE curve overlaid with mean +/- 1 SD band from 10 ABM runs.
-
-# demo_predator_prey.R
-# Compares baseline ABM vs grass-extension ABM.
-# Figures: population time series + grass fraction panel.
-
-# demo_pandemic.R
-# Compares grid ABM vs network ABM.
-# Figures: epidemic curves + BA degree distribution.
-
-# demo_axtell.R
-# Runs firm-size model. Plots log-log distribution with power-law fit line.
-# Overlays US Census firm-size data from data/census_firm_sizes.rda.
-```
-
-Scripts must be runnable via `Rscript demo/demo_lotka_volterra.R` from the
-package root.
-
----
-
-## Course schedule
-
-The schedule below is authoritative for all timing decisions in the demo
-scripts, slide deck, and course document. Activities are guided R exercises
-in which students run and modify the package's demo scripts directly.
-
-```
-8:30  Morning session 1 (105 min)
-      8:30  Introduction and framing — central epistemological
-            tension, Newton, hitting-time reframing, roadmap    30 min
-      9:00  SD: Lotka-Volterra — model sketch, equilibrium
-            result (no full derivation), phase portrait         25 min
-      9:25  SD: Lotka-Volterra — R implementation, figures      20 min
-      9:45  ACTIVITY 1: Modify LV parameters; find a
-            parameterization that causes extinction              20 min
-      10:05 SD: ISR — compartmental structure, R0 derivation,
-            herd immunity threshold                             10 min
-
-10:15 Break (15 min)
-
-10:30 Morning session 2 (90 min)
-      10:30 SD: ISR — R implementation, epidemic curve           20 min
-      10:50 ABM: predator-prey — from ODEs to agents,
-            rules, R implementation                              30 min
-      11:20 ABM: predator-prey — ODE vs ABM comparison,
-            stochastic variation                                 10 min
-      11:30 ACTIVITY 2: Compare ABM and ODE outputs; change
-            grid size and observe finite-population effects      20 min
-      11:50 Transition remarks: what the ABM buys you           10 min
-
-12:00 Lunch (60 min)
-
-1:00  Afternoon session 1 (120 min)
-      1:00  ABM: ISR pandemic — agent rules, well-mixed
-            grid, R implementation                              25 min
-      1:25  ABM: ISR — ODE vs ABM, variance across runs         15 min
-      1:40  ACTIVITY 3: Run 10 epidemic simulations; compute
-            empirical R0 and compare to theoretical             20 min
-      2:00  Extension: network + super-spreaders — BA graph,
-            igraph, model rules and implementation              30 min
-      2:30  Extension: network — epidemic curves,
-            super-spreader attack rates                         15 min
-      2:45  ACTIVITY 4: Rewire the network (vary m); observe
-            effect on epidemic curve shape                      15 min
-
-3:00  Break (15 min)
-
-3:15  Afternoon session 2 (105 min)
-      3:15  Extension: grass — motivation, rules, R
-            implementation, effect on population cycles         25 min
-      3:40  ACTIVITY 5: Add grass; compare cycle amplitude
-            and extinction probability to baseline              20 min
-      4:00  Axtell: firm size — empirical distribution,
-            power law, local interaction as mechanism           35 min
-      4:35  Discussion: ABM as a statistical modeling
-            paradigm, calibration, when to use it               20 min
-      4:55  Closing remarks and further reading                  5 min
-
-5:00  End
-```
-
-### Activity specifications
-
-Each activity corresponds to a guided exercise in the course document
-(a dedicated subsection with instructions and questions) and a matching
-block comment in the relevant demo script marking the starting point.
-
-| Activity | Demo script | What students do |
-|---|---|---|
-| 1 | `demo_lotka_volterra.R` | Call `run_lv()` with modified params; find extinction boundary |
-| 2 | `demo_predator_prey.R` | Run ABM and ODE side by side; vary `width`/`height`; note stochastic extinction |
-| 3 | `demo_isr.R` | Run `PandemicModel` 10 times; summarise `R0_empirical` distribution |
-| 4 | `demo_pandemic.R` | Vary `n_edges_per_new_node`; plot resulting epidemic curves |
-| 5 | `demo_predator_prey.R` | Switch to `PredatorPreyGrassModel`; compare outputs |
-
-### Implications for demo scripts
-
-Each demo script must contain a clearly marked activity block comment:
-
-```r
-## ---- ACTIVITY [n]: [title] --------------------------------------------------
-## Students start here. Instructions are in the course document Section [x.y].
-## Expected run time: ~5 minutes.
-```
-
-The activity block should be self-contained: all parameters students are
-expected to modify are defined as named variables immediately above the
-comment, not buried in function calls.
-
-### Implications for the slide deck
-
-Each session block maps to a beamer `\section{}`. Activity slides use a
-distinct frame template:
-
-```latex
-\begin{frame}{Activity N: Title}
-  \begin{block}{Instructions}
-    \begin{enumerate}
-      \item ...
-    \end{enumerate}
-  \end{block}
-  \textit{20 minutes — open \texttt{demo\_xxx.R} and start at the
-  \texttt{ACTIVITY N} comment.}
-\end{frame}
-```
-
-### Implications for the course document
-
-Each activity gets a dedicated subsection immediately following the
-relevant content section, structured as:
-
-```
-\subsection{Activity N: Title}
-Instructions paragraph.
-\begin{enumerate}
-  \item Step one.
-  \item Step two (question to answer and record).
-  \item Extension: harder question for fast finishers.
-\end{enumerate}
-```
-
-Include an extension question for fast finishers in every activity.
-
----
-
-## Knitr course document (`vignettes/abm_for_statisticians.Rnw`)
-
-A single self-contained `.Rnw` document (LaTeX + knitr) covering the full course
-curriculum. This is the primary take-home reference for students. It is **not** a
-vignette in the R package sense — place it in `vignettes/` for convenience but it
-is compiled independently via `knitr::knit()` + `pdflatex`, not by
-`R CMD build`.
-
-The `chunks/` directory must be listed in `.Rbuildignore` so that
-`devtools::load_all()` and `R CMD build` do not attempt to source chunk
-files as package functions. Add this line to `.Rbuildignore`:
-
-```
-^chunks$
-```
-
-### Compilation
-
-```bash
-Rscript -e "knitr::knit('vignettes/abm_for_statisticians.Rnw')"
-pdflatex abm_for_statisticians.tex
-pdflatex abm_for_statisticians.tex   # second pass for references
-```
-
-Document must compile cleanly to PDF with no warnings from `pdflatex`.
-
-### External chunk files
-
-All R code is stored in `chunks/` and loaded via `knitr::read_chunk()`.
-Neither `.Rnw` file contains inline R code beyond the `read_chunk()` calls
-and chunk references. This ensures a single source of truth for all
-executable code.
-
-At the top of `abm_for_statisticians.Rnw`, after the global options chunk:
-
-```r
-knitr::read_chunk("../chunks/lv.R")
-knitr::read_chunk("../chunks/isr.R")
-knitr::read_chunk("../chunks/abm_predator_prey.R")
-knitr::read_chunk("../chunks/abm_pandemic.R")
-knitr::read_chunk("../chunks/abm_network.R")
-knitr::read_chunk("../chunks/abm_grass.R")
-knitr::read_chunk("../chunks/axtell.R")
-```
-
-Chunks are then referenced by label only:
-
-```latex
-<<lv-run-model>>=
-@
-
-<<lv-time-series>>=
-@
-```
-
-Each chunk file uses the standard knitr named-chunk comment convention:
-
-```r
-## ---- lv-run-model ----------------------------------------------------------
-params <- LV_DEFAULTS
-results <- run_lv(params = params)
-
-## ---- lv-time-series --------------------------------------------------------
-plot_time_series(results$results, title = "Lotka-Volterra: prey and predators",
-                 theme_fn = theme_course_light)
-
-## ---- lv-phase-portrait -----------------------------------------------------
-plot_phase_portrait(
-  results$results |> tidyr::pivot_wider(names_from = variable,
-                                         values_from = value),
-  xlabel = "Prey", ylabel = "Predators",
-  title  = "Phase portrait",
-  theme_fn = theme_course_light
+theme_set(
+  theme_minimal(base_family = "Source Serif 4") +
+    theme(
+      plot.title       = element_text(family = "Raleway", face = "plain",
+                                      size = 14, margin = margin(b = 8)),
+      axis.title       = element_text(family = "Source Serif 4", size = 10),
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = "#FAFAF7", color = NA)
+    )
 )
 ```
 
-**The `theme_fn` parameter**: all plotting functions accept a `theme_fn`
-argument (default `theme_course_light`) that is applied as the ggplot2 theme.
-Slide chunks pass `theme_fn = theme_course_dark`. This is the only difference
-between a document chunk and its slide counterpart — the chunk label gets a
-`-dark` suffix in the slide deck (e.g. `lv-time-series-dark`) and the chunk
-body is identical except for `theme_fn`.
+---
 
-### LaTeX preamble requirements
+### Chapter 4: The Possibility Space of Dynamics
 
-```latex
-\documentclass[11pt]{article}
-\usepackage{amsmath, amsthm, amssymb}
-\usepackage{booktabs}
-\usepackage{hyperref}
-\usepackage{natbib}
-\usepackage{geometry}[margin=1in]
-\usepackage{float}      % for H figure placement
-\usepackage{listings}   % fallback; knitr handles most code display
+#### Prose Style Notes
 
-\newtheorem{definition}{Definition}
-\newtheorem{proposition}{Proposition}
-\newtheorem{remark}{Remark}
-```
+This is the philosophical culmination. The writing should be the most assured — the argument has been built across three chapters and can now be stated plainly. It is not aggressive. It is the calm confidence of someone who has shown their work.
 
-### Global knitr chunk options
+The Girard point — that a paradox is not a contradiction but a phenomenon exterior to a language's expressive capacity — should be stated once, cleanly, without attribution, in terms the audience can immediately apply to everything they have seen during the day. It should arrive as a crystallization, not an introduction.
 
-Set once at the top of the document:
+There is almost no new code. What R there is serves to illustrate abstract arguments: a bifurcation diagram, a visualization of multiple possible trajectories from the same initial condition.
+
+#### Section 4.1: Resolution
+
+A model does not merely approximate the world. It defines a language, and that language has an expressive boundary. A phenomenon that requires distinctions the model cannot make is not a failure of fit — it is outside the language entirely. When a modeling tradition calls something a paradox or an anomaly, it is often naming a phenomenon that is simply exterior to its dogma: real, reproducible, and inexpressible in the available formal vocabulary.
+
+This observation has teeth. The mean-field assumption makes network topology and agent heterogeneity inexpressible. The representative agent assumption makes the firm size distribution inexpressible. A stationarity prior makes regime change and bifurcation inexpressible — not unlikely, but grammatically forbidden within the model's language. An equilibrium assumption makes path dependence inexpressible. These are not failures of fit that more data or better estimation can remedy. They are restrictions on what questions the model can ask.
+
+Every modeling choice is a choice of resolution — temporal, spectral, expressive. The ODE, the representative agent, stationarity, equilibrium, regularization penalties, the sampling frequency of a time series — all are restrictions on the language. Each restriction makes some phenomena expressible and others not. The question a careful modeler asks is not only "does my model fit?" but "at what resolution is my model working, and is the phenomenon I care about expressible at that resolution?"
+
+#### Section 4.2: The Regularization Unification
+
+A Gaussian prior on regression coefficients produces ridge regression, exactly — the posterior mode under a Gaussian prior is the ridge estimator. A Laplace prior produces LASSO, exactly. The statistician who uses LASSO is placing a Laplace prior on their coefficients whether they think of it that way or not. The Bayesian and the frequentist regularizer are solving the same problem.
+
+The connection runs further. L2 regularization is the limiting case of training on Gaussian-perturbed data. The distributionally robust optimizer who minimizes worst-case loss over a Wasserstein ball around the empirical distribution recovers regularized estimators as special cases. The Bayesian prior, the regularization penalty, and the distributional perturbation are three descriptions of the same restriction on expressive complexity.
+
+Every modeling assumption examined in this course is a prior of this kind. The mean-field assumption is a prior that assigns all probability mass to one interaction structure. The representative agent is a prior that assigns all probability mass to one firm type. Stationarity is a prior that asserts the data-generating process lies within a particular neighborhood of the estimated distribution. Each restricts the language. Each makes some phenomena expressible and others not. The ABM critic who objects to parameter proliferation is demanding a stronger prior. The question is whether that prior is warranted.
+
+#### Section 4.3: Temporal Resolution and Near-Decomposability
+
+Complex adaptive systems are, to a good approximation, nearly decomposable in the sense Herbert Simon described: subsystems interact tightly at fast time scales and loosely at slow ones. The firm coordinates internally at time scales too fast for prices to clear. The economy coordinates across firms at time scales over which transaction costs can be overcome. Each level has its characteristic frequency.
+
+A model fit at a particular temporal resolution is a low-pass filter. It recovers structure at frequencies below the resolution's Nyquist limit and makes faster structure inexpressible. A quarterly macroeconomic model is not wrong about the annual dynamics it was designed to capture. It is linguistically incapable of expressing sub-quarterly phenomena. This is not a data limitation. It is a resolution mismatch — applying a coarse-resolution language to a fine-resolution phenomenon.
+
+Stationarity is the temporal analogue of the mean-field assumption. It asserts that the spectral structure of the data-generating process is stable across time — that the past is informative about the future in a particular, strong sense. When the system is capable of bifurcation, this prior is miscalibrated in exactly the way a Gaussian prior is miscalibrated when the true signal is sparse: the language simply does not have the words for what is about to happen.
+
+Show this with a simple example: a logistic growth process observed only in its exponential phase. Naive extrapolation predicts unbounded growth. The ODE knows about the carrying capacity because the modeler specified it. The time series model does not know, and cannot know from the data alone in the exponential phase, that a ceiling exists. The turn is exterior to the language built from the early data.
+
+Generalize: any system capable of bifurcation will defeat stationarity-based extrapolation at the bifurcation point. This is not a statistical point about forecast intervals. It is a structural point about the limits of inductive inference from time series in nonlinear systems.
+
+#### Section 4.4: The Possibility Space
+
+The ABM framework does not produce better point forecasts. It is not a superior extrapolation engine. What it offers is a map of the possibility space — the range of qualitatively distinct behaviors the system is capable of, the conditions under which each is realized, and the locations of the bifurcation points that separate them.
+
+A policy advisor working from a point forecast is navigating with a single trajectory. A policy advisor working from a possibility space map is navigating with a chart that shows not only where the current trajectory leads but which turns exist, which conditions trigger them, and which interventions have leverage at the critical points. The map does not eliminate uncertainty. It characterizes it structurally rather than suppressing it.
+
+This reframes what modeling is for. Not false precision — "the economy will grow at 2.3% next year" — but honest cartography: these are the regimes, these are the boundaries between them, these are the variables that govern which regime the system occupies.
+
+#### Section 4.5: The Statistician's Checklist
+
+Close with what this means for the practicing statistician — which is to say, for everyone in the room.
+
+The statistician's instinct toward honest uncertainty quantification is exactly the right instinct. Confidence intervals, posterior distributions, prediction intervals — these are all ways of refusing to report false precision. The framework developed in this course extends that instinct from parameter uncertainty to structural uncertainty: uncertainty not only about the values of model parameters but about which qualitative regime the system occupies and which it will move toward.
+
+The checklist question is this: at what resolution is this model working, and is the phenomenon I care about expressible at that resolution? It applies to any regression, any time series model, any compartmental epidemic model, any production function. The ABM is not the answer to every question it raises. It is evidence that the resolution choice is a choice, that the language restriction is a restriction, and that richer expressive resources exist when the phenomenon demands them.
+
+The tools are harder. The answers are less clean. They are more likely to be true.
+
+---
+
+#### Chapter 4 Setup Chunk
 
 ```r
-knitr::opts_chunk$set(
-  echo    = TRUE,       # always display code
-  warning = FALSE,
-  message = FALSE,
-  fig.align = "center",
-  fig.pos   = "H",      # place figures exactly here
-  fig.width = 8,
-  fig.height = 4,
-  out.width = "\\textwidth"
+# Chapter 4 Setup
+# Self-contained — does not depend on prior chapters.
+
+library(tidyverse)
+library(deSolve)
+library(patchwork)
+
+theme_set(
+  theme_minimal(base_family = "Source Serif 4") +
+    theme(
+      plot.title       = element_text(family = "Raleway", face = "plain",
+                                      size = 14, margin = margin(b = 8)),
+      axis.title       = element_text(family = "Source Serif 4", size = 10),
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = "#FAFAF7", color = NA)
+    )
 )
 ```
 
-### Document structure
+---
 
-The document follows the course arc exactly. Each section introduces the model
-formally (mathematics), shows the R implementation running, displays the output
-figure, and closes with a statistical interpretation paragraph.
+## Slide Deck Specifications
 
-```
-1  Introduction
-   1.1  What is agent-based modeling?
-   1.2  Why should statisticians care?
-   1.3  The central epistemological tension: false equilibrium vs apocalypse
-        extrapolation
-        - Any deterministic trend, extrapolated far enough, crosses a
-          critical threshold
-        - Any equilibrium model, extended far enough, ignores drift toward
-          a threshold
-        - Newton as the paradigm case: extrapolation works when structural
-          conditions (conservation, closure, linearity) are satisfied;
-          ecological and epidemiological systems conspicuously lack these
-        - The ABM resolution: replace point predictions with distributions
-          over futures; reframe policy questions as hitting-time problems
-        - This tension is a thread running through the entire course
-   1.4  System dynamics vs agent-based models: a roadmap
+Each slide deck mirrors the corresponding book chapter in content but is authored independently. Slides are not excerpts from the book — they are a different genre. The book argues; the slide shows.
 
-2  System Dynamics: the Lotka-Volterra predator-prey model
-   2.1  Model formulation (ODEs, parameters, ecological interpretation)
-   2.2  Equilibrium analysis — full derivation in document;
-        sketch only on slides (state the fixed point, cite the
-        result, move on)
-   2.3  R implementation with deSolve
-   2.4  Phase portrait and time series
-   2.5  Mean-field foundations and time-scale limitations
-        - LV as the mean-field limit of a stochastic birth-death process
-        - Demographic stochasticity: variance scales as 1/N; deviations
-          are of order 1/sqrt(N)
-        - The ODE equilibrium is neutrally stable, not asymptotically
-          stable: cycles neither grow nor decay, but the stochastic version
-          drifts
-        - Recurrence theorem (state without proof, cite Karlin & Taylor):
-          a one-dimensional random walk is recurrent — it visits every
-          state including zero. The ODE cannot represent this; the ABM
-          reveals it as finite extinction probability
-        - Time-scale argument: ODE is a reliable approximation over short
-          horizons; error accumulates as T grows, as N shrinks, and as the
-          trajectory approaches a boundary
-        - Policy consequence: conservation management built on ODE cycles
-          is implicitly assuming the mean-field regime persists
-          indefinitely. The ABM reframes this as a hitting-time problem:
-          what is the probability of extinction before time T?
-   2.6  Activity 1: Modifying parameters and finding extinction boundaries
+### General Slide Principles
 
-3  System Dynamics: the ISR epidemic model
-   3.1  Model formulation (compartments, flow diagram, assumptions)
-   3.2  Basic reproduction number R0 (derive from next-generation method)
-   3.3  Herd immunity threshold
-   3.4  R implementation with deSolve
-   3.5  Epidemic curve and final size
-   3.6  Mean-field foundations and time-scale limitations
-        - ISR ODE as the N -> inf limit of a stochastic SIR process on a
-          complete graph: the homogeneous mixing assumption stated precisely
-        - Early epidemic phase: mean-field is most accurate here;
-          R0 estimated in this phase is reliable
-        - Around the peak and late epidemic: mean-field degrades as
-          susceptible pool is depleted heterogeneously across the network
-        - Stochastic fadeout: probability of extinction when R0 > 1 in a
-          finite population (branching process approximation, cite
-          Bartlett 1955 or Andersson & Britton 2000); the ODE cannot
-          represent this
-        - Time-scale argument: ODE final-size equation is reliable for
-          large homogeneous populations; breaks down for small populations,
-          heterogeneous contact structure, and long endemic time horizons
-        - Policy consequence: intervention timing (lockdowns, vaccination
-          rollout) depends critically on where you are on the epidemic
-          curve; ODE and network ABM can disagree substantially about that
-          timing, especially in the presence of super-spreaders
+- One main idea per slide. No crowding.
+- Equations appear large and centered, not inline with dense prose.
+- Code chunks on slides: 10–15 lines maximum. Full code is in the book and on GitHub.
+- Use incremental reveals (`--`) to build arguments step by step.
+- Each deck opens with a title slide and a brief roadmap slide.
+- Each deck closes with a summary slide and a transition to the next block.
+- Speaker notes (`???`) on every substantive slide — key points and anticipated questions, not a script.
+- Forbidden phrases apply to slide prose equally. Slides should sound like the book, compressed.
 
-4  Agent-Based Models: predator-prey
-   4.1  From ODEs to agents: what changes and what does not
-   4.2  Model rules (Sheep, Wolf, toroidal grid)
-   4.3  R implementation with R6
-   4.4  Comparison with ODE: time series overlay, stochastic variation
-   4.5  Finite-population effects and extinction risk
-   4.6  Activity 2: Grid size and finite-population effects
+### Slide Deck 01: ODE Foundations
+~35–45 slides, 90 minutes.
 
-5  Agent-Based Models: ISR epidemic
-   5.1  From compartments to individuals
-   5.2  Model rules (Person, well-mixed grid)
-   5.3  R implementation with R6
-   5.4  Comparison with ODE: mean trajectory and variance across runs
-   5.5  What the well-mixed assumption is really doing
-   5.6  Activity 3: Empirical R0 across stochastic runs
+Key slides:
+- Title + roadmap
+- "Feedback defeats intuition" — the motivating observation
+- Lotka-Volterra assumptions, built incrementally
+- Parameter identification
+- Phase portrait
+- "The product term $\beta NP$" — the mean-field assumption named precisely, without fanfare
+- SIR derivation, incremental
+- $\mathcal{R}_0$ derivation from algebra
+- SIR time series
+- Parameter sweep over $\mathcal{R}_0$
+- Summary: a language and its boundary
+- Transition: "What if individuals were actually individual?"
 
-6  Extension: social networks and super-spreaders
-   6.1  The well-mixed assumption revisited
-   6.2  Barabasi-Albert networks and degree heterogeneity
-   6.3  R implementation with igraph
-   6.4  Epidemic curves on the network vs the grid
-   6.5  Super-spreader identification and attack rates
-   6.6  Statistical implications: why R0 is not enough
-        - On a heterogeneous network, the threshold quantity is the
-          spectral radius of the next-generation matrix, not R0
-        - State the result (cite Diekmann, Heesterbeek & Metz 1990):
-          the epidemic threshold on a network is determined by the largest
-          eigenvalue of the next-generation matrix; reduces to R0 = beta/gamma
-          on a complete graph
-        - Super-spreader removal: targeting hubs is highly effective in a
-          static network model — but this is an extrapolation into an
-          intervention regime the model was never fit on; real networks
-          adapt, behavior changes, and the model's structural assumptions
-          break down precisely when the policy is most aggressive
-        - The apocalypse extrapolation failure mode: network models can
-          predict near-certain epidemic explosion for modest changes in
-          connectivity; this is the trend-extrapolation trap applied to
-          network structure
-   6.7  Activity 4: Varying network connectivity
+### Slide Deck 02: ABM Contrast
+~45–55 slides, 105 minutes.
 
-7  Extension: grass and carrying capacity
-   7.1  Adding a third trophic level (motivation and rules)
-   7.2  R implementation
-   7.3  Effect on population cycles: amplitude, period, extinction
-        probability
-   7.4  Activity 5: Comparing baseline and grass-extension ABM
+Key slides:
+- Title + roadmap
+- "What is an agent?" — state, rules, neighborhood
+- ABM Lotka-Volterra rules, verbally
+- Reduction result: ABM ribbons over ODE line
+- "The ODE cannot see this" — extinction events
+- ABM SIR, random mixing
+- "Now give them an address" — introducing network structure
+- Erdős-Rényi vs scale-free network visualization (`ggraph`)
+- Epidemic curves compared across topologies
+- "Same $\mathcal{R}_0$. Different world."
+- The reduction theorem stated
+- Sparsity: nominal vs effective dimensionality
+- [ANIMATION] Spatial Lotka-Volterra — no code walkthrough
+- Summary
+- Transition to Axtell
 
-8  Firm Size and Heavy-Tailed Distributions (Axtell)
-   8.1  The empirical regularity: US firm-size distribution
-   8.2  Power laws, Zipf's law, and the Pareto distribution
-   8.3  Why top-down models fail: the time-scale argument applied to
-        economic dynamics
-        - Firm-size dynamics operate on decade-long time scales; no
-          mean-field approximation is credible at these horizons
-        - The equilibrium trap: standard industrial organization models
-          predict stable size distributions; the empirical distribution
-          is heavy-tailed and non-Gaussian, which no equilibrium model
-          generates convincingly
-   8.4  Local interaction as a generative mechanism
-   8.5  Fitting and interpreting the power-law exponent
-   8.6  [Figures and results from Axtell's materials]
+### Slide Deck 03: Axtell Firm Size
+~40–50 slides, 165 minutes.
 
-9  Discussion: ABM as a statistical modeling paradigm
-   9.1  The epistemological thread: revisited
-        - Restate the central tension: false equilibrium vs apocalypse
-          extrapolation
-        - Newton's laws as the paradigm of successful extrapolation:
-          what made it work (conservation, closure, linearity) and why
-          those conditions rarely hold in social and biological systems
-          (cite Newton Principia; discuss why physics succeeded where
-          other sciences struggle)
-        - The recurrence theorem as the mathematical statement of the
-          long-run fragility of equilibrium: cite Karlin & Taylor (1975)
-          A First Course in Stochastic Processes
-        - The hitting-time reframing: policy questions should be stated
-          as "what is the probability of crossing threshold X before
-          time T" — a question ABM with stochastic replication can
-          answer and ODE models cannot
-        - The Lucas critique as an instance of the same structure
-          (for audiences with economics background)
-   9.2  Strengths and limitations of ABM
-   9.3  Calibration and identifiability
-   9.4  When to use ABM vs ODE vs statistical models
-   9.5  Further reading and key references
-```
+Key slides:
+- Title + roadmap
+- "A regularity that refuses to go away"
+- Linear scale histogram — the dynamic range problem
+- Log-log plot — the power law
+- MLE fit and goodness-of-fit
+- Lognormal comparison
+- "What the representative agent predicts" — characteristic scale, one firm
+- "The representative agent is the mean-field assumption for firms"
+- Axtell's model: agent rules verbally
+- Team formation logic
+- Exponent robustness — not calibrated, structural
+- Emergence defined precisely
+- Summary
+- Transition to afternoon break
 
-### Content standards
+### Slide Deck 04: The Possibility Space of Dynamics
+~35–45 slides, 90 minutes.
 
-- **Mathematics**: use `align` environments for multi-line derivations. Number
-  only equations that are referenced later. Use `\begin{proposition}` /
-  `\begin{proof}` for analytical results (equilibria, R0 derivation, herd
-  immunity threshold).
-- **R code**: every chunk that produces a figure or printed result must be
-  shown (`echo = TRUE`). Chunks that are purely setup (library loading,
-  palette definition) may use `echo = FALSE` if they add no instructional
-  value, but this should be rare.
-- **Figures**: every figure gets a `\caption{}` with a full sentence of
-  interpretation, not just a label. Figures are produced by calling the
-  package's plotting functions (`plot_time_series()`, `plot_phase_portrait()`,
-  etc.) so the document and the demo scripts produce visually consistent output.
-- **Interpretation paragraphs**: every model section closes with a paragraph
-  explicitly connecting the result to statistical concepts the audience already
-  knows — likelihood, variance, distributional assumptions, model
-  misspecification. This is the bridge that justifies the course to a
-  skeptical statistician.
-- **Section 8**: leave a clearly marked placeholder comment where Axtell's
-  figures and results will be inserted. The surrounding prose (power law
-  motivation, fitting methodology, interpretation) should be written in full.
-- **References**: use `natbib` with `\citep{}` / `\citet{}`. Required
-  entries in `references.bib` (to be populated when instructor provides
-  full bibliography):
-  - Lotka (1925) — LV prey equation
-  - Volterra (1926) — LV predator equation
-  - Kermack & McKendrick (1927) — SIR model
-  - Karlin & Taylor (1975) *A First Course in Stochastic Processes* —
-    recurrence theorem
-  - Bartlett (1955) or Andersson & Britton (2000) — stochastic fadeout /
-    branching process approximation for epidemic extinction
-  - Diekmann, Heesterbeek & Metz (1990) — next-generation matrix /
-    spectral radius epidemic threshold
-  - Barabasi & Albert (1999) — BA preferential attachment network
-  - Axtell (2001) — firm-size power law
-  - Clauset, Shalizi & Newman (2009) — power law fitting methodology
-  - Newton, *Principia Mathematica* (1687) — paradigm case of
-    successful extrapolation (Section 9 discussion)
-  - Additional references to be added from instructor's list
-
-### Build order for the document
-
-Write the `.Rnw` in section order. After each section is drafted, verify that:
-1. `knitr::knit()` runs without error on the section's chunks in isolation.
-2. All figures render and are correctly captioned.
-3. All mathematical environments compile without `pdflatex` errors.
-
-Do not write the full document in one pass. Build and verify section by section.
+Key slides:
+- Title + roadmap
+- "A model defines a language" — the Girard point, unnamed
+- Three restrictions and what they make inexpressible
+- Regularization unification: prior = penalty = perturbation
+- Bayesian-LASSO identity stated
+- Stationarity as a temporal prior
+- Logistic growth: what extrapolation cannot see
+- Bifurcation: the language cannot see the turn
+- Near-decomposability and temporal resolution
+- "The checklist question"
+- Possibility space vs point forecast
+- Closing: the statistician's instinct, extended
+- Final slide: GitHub, contact
 
 ---
 
-## Beamer slide deck (`vignettes/abm_slides.Rnw`)
+## GitHub README Specification
 
-A single `.Rnw` beamer presentation covering the full course. Used by the
-instructor during delivery. Compiled independently from the course document
-but shares `references.bib` and calls the same package functions to produce
-identical figures.
+The README should:
 
-### Compilation
+1. Introduce the course in 2–3 sentences — what it argues, not just what it covers
+2. Software requirements: R version, all packages with versions
+3. Repository structure explained
+4. Instructions for rendering the book and each slide deck
+5. Note on the `code/` directory as the primary student take-away
+6. Note that `_theme/` is a placeholder scaffold, intentionally left for customization
+7. Note that `style/spectral_hands.tex` is a stylistic exemplar included for reference
 
-```bash
-Rscript -e "knitr::knit('vignettes/abm_slides.Rnw')"
-pdflatex abm_slides.tex
-pdflatex abm_slides.tex
-```
+---
 
-### LaTeX preamble
-
-```latex
-\documentclass{beamer}
-\usetheme{Madrid}
-\usecolortheme{default}
-\usepackage{amsmath, amssymb}
-\usepackage{booktabs}
-\usepackage{natbib}
-
-% Dark navy theme
-\setbeamercolor{normal text}{fg=SlideText, bg=SlideBG}
-\setbeamercolor{frametitle}{fg=SlideAccent, bg=SlideBG}
-\setbeamercolor{title}{fg=SlideAccent}
-\setbeamercolor{block title}{fg=SlideBG, bg=SlideAccent}
-\setbeamercolor{block body}{fg=SlideText, bg=SlidePanel}
-\setbeamercolor{itemize item}{fg=SlideAccent}
-\setbeamercolor{itemize subitem}{fg=SlideText}
-\setbeamercolor{section in toc}{fg=SlideAccent}
-
-\definecolor{SlideBG}{HTML}{1B2A4A}
-\definecolor{SlideAccent}{HTML}{F18F01}
-\definecolor{SlideText}{HTML}{E8E8E8}
-\definecolor{SlidePanel}{HTML}{1E3A5F}
-
-\setbeamerfont{frametitle}{series=\bfseries}
-\setbeamertemplate{itemize item}{\textbullet}
-
-\title{Agent-Based Modeling for Statisticians}
-\author{}
-\date{}
-```
-
-### External chunk files
-
-`abm_slides.Rnw` loads the same chunk files as the course document.
-At the top of the file, after the global options chunk:
+## Package Dependencies
 
 ```r
-knitr::read_chunk("../chunks/lv.R")
-knitr::read_chunk("../chunks/isr.R")
-knitr::read_chunk("../chunks/abm_predator_prey.R")
-knitr::read_chunk("../chunks/abm_pandemic.R")
-knitr::read_chunk("../chunks/abm_network.R")
-knitr::read_chunk("../chunks/abm_grass.R")
-knitr::read_chunk("../chunks/axtell.R")
+install.packages(c(
+  "tidyverse",      # core data manipulation and visualization
+  "deSolve",        # ODE solvers
+  "igraph",         # network generation and manipulation
+  "tidygraph",      # tidy API for igraph
+  "ggraph",         # network visualization with ggplot2
+  "gganimate",      # animation
+  "gifski",         # gif renderer for gganimate
+  "poweRlaw",       # power law fitting and hypothesis testing
+  "broom",          # tidy model outputs
+  "patchwork",      # combining ggplot2 panels
+  "xaringan",       # slide framework
+  "xaringanthemer"  # xaringan theming
+))
 ```
-
-Figure chunks on slides use the `-dark` suffix convention and pass
-`theme_fn = theme_course_dark`:
-
-```latex
-<<lv-time-series-dark>>=
-@
-```
-
-The `-dark` variants are defined at the bottom of each chunk file:
-
-```r
-## ---- lv-time-series-dark ---------------------------------------------------
-plot_time_series(results$results, title = "Lotka-Volterra: prey and predators",
-                 theme_fn = theme_course_dark)
-```
-
-This is the **only** substantive difference between a document chunk and its
-slide counterpart. No other code duplication is permitted.
-
-### Global knitr chunk options for slides
-
-```r
-knitr::opts_chunk$set(
-  echo      = FALSE,      # code hidden by default on slides
-  warning   = FALSE,
-  message   = FALSE,
-  fig.align = "center",
-  fig.width = 7,
-  fig.height = 3.5,
-  out.width = "\\textwidth"
-)
-```
-
-Code is hidden by default. Use `echo = TRUE` only on slides explicitly
-intended to show code — mark these with a comment `% SHOW CODE SLIDE` so
-they are easy to find and toggle later.
-
-### Relationship to the course document
-
-The slides and the course document cover identical content in identical order.
-The mapping is strict:
-
-- Every **section** in the course document corresponds to a beamer `\section{}`
-  in the slides.
-- Every **figure** in the course document appears on a dedicated slide, produced
-  by the **same function call with the same arguments**. Do not produce separate
-  figures for slides.
-- Every **proposition or analytical result** appears on the slides as a result
-  box (`\begin{block}{Result}`) showing only the final statement. The derivation
-  and proof live in the course document only.
-- Every **interpretation paragraph** in the course document is condensed to
-  2--3 bullet points on the corresponding slide.
-
-### Slide structure
-
-```
-Section 1  Introduction
-  - What is ABM? (1 slide)
-  - Why statisticians should care (1 slide)
-  - The central tension: false equilibrium vs apocalypse
-    extrapolation (1 slide — sets up the entire day)
-  - Newton: when extrapolation works and why (1 slide)
-  - The ABM resolution: distributions over futures,
-    hitting-time problems (1 slide)
-  - Roadmap: SD vs ABM (1 slide)
-
-Section 2  System dynamics: Lotka-Volterra
-  - Model equations — write down the system, label
-    parameters ecologically (1 slide)
-  - Equilibrium result block: state prey* and predator*,
-    no derivation, note it is neutrally stable not
-    asymptotically stable (1 slide)
-  - Time series + phase portrait (1 slide per figure)
-  - Mean-field foundations: LV as limit of stochastic
-    process (1 slide)
-  - Recurrence theorem statement + citation (1 slide)
-  - Time-scale limitations and policy consequence (1 slide)
-
-Section 3  System dynamics: ISR epidemic
-  - Model equations and flow diagram (1 slide)
-  - R0 result and herd immunity threshold block (1 slide)
-  - Epidemic curve (1 slide)
-  - Mean-field foundations: complete graph assumption
-    stated precisely (1 slide)
-  - Stochastic fadeout: branching process result +
-    citation (1 slide)
-  - Time-scale limitations and policy consequence (1 slide)
-
-Section 4  ABM: predator-prey
-  - From ODEs to agents: what changes (1 slide)
-  - Agent rules: Sheep and Wolf (1 slide each, concise)
-  - ODE vs ABM comparison figure (1 slide)
-  - Finite-population effects and extinction risk (1 slide)
-
-Section 5  ABM: ISR epidemic
-  - From compartments to individuals (1 slide)
-  - Agent rules: Person (1 slide)
-  - ODE vs ABM mean + variance figure (1 slide)
-  - The well-mixed assumption unpacked (1 slide)
-
-Section 6  Extension: social networks and super-spreaders
-  - The well-mixed assumption as a complete-graph
-    assumption (1 slide)
-  - BA network: degree distribution (1 slide)
-  - Epidemic curves: grid vs network (1 slide)
-  - Super-spreader attack rates (1 slide)
-  - Spectral radius result + citation; reduces to R0
-    on complete graph (1 slide)
-  - The extrapolation trap: why aggressive network
-    interventions break the model (1 slide)
-
-Section 7  Extension: grass and carrying capacity
-  - Motivation and rules (1 slide)
-  - Before/after comparison figure (1 slide)
-  - Effect on population cycles (1 slide)
-
-Section 8  Firm size and heavy tails (Axtell)
-  - The empirical regularity (1 slide)
-  - Power laws and Zipf's law (1 slide)
-  - Why equilibrium models fail at long time scales (1 slide)
-  - Local interaction as generative mechanism (1 slide)
-  - [Placeholder slides for Axtell's figures]
-
-Section 9  Discussion
-  - The epistemological thread revisited: false equilibrium
-    vs apocalypse extrapolation (1 slide)
-  - Newton and the conditions for successful extrapolation
-    (1 slide)
-  - Hitting-time reframing of policy questions (1 slide)
-  - Strengths and limitations of ABM (1 slide)
-  - When to use ABM vs ODE vs statistical models (1 slide)
-  - Further reading (1 slide)
-```
-
-Target: approximately 50--55 slides. Each slide makes exactly one point.
-
-### Content standards for slides
-
-- **No derivations.** Proofs and algebraic steps belong in the course document
-  only. Slides show named results in `\begin{block}{}` environments.
-- **Bullets**: maximum 4 per slide, maximum 10 words each. If a point needs
-  more words it belongs in the course document.
-- **Figures**: same ggplot2 output as the course document. Adjust
-  `fig.width` / `fig.height` per chunk if needed for beamer's aspect ratio,
-  but do not alter the underlying function calls.
-- **Section 8 placeholder**: use `% AXTELL FIGURE PLACEHOLDER` comments on
-  slides that will receive his materials.
-- **Citations**: `\citep{}` on the slide where a result is first stated. No
-  bibliography slide needed; the course document carries full references.
 
 ---
 
-## Build order
+## Implementation Notes for Claude Code
 
-Build modules in this exact sequence. Each step should pass its tests before
-proceeding.
+1. **Read `style/spectral_hands.tex` before writing any prose.** This is not optional. The prose quality of the course book depends on it.
 
-1. `DESCRIPTION`, `NAMESPACE`, `.Rbuildignore`, package skeleton
-2. `R/utils_plotting.R` (including `theme_course_light`, `theme_course_dark`,
-   `COURSE_PALETTE`, `SLIDE_*` constants) + `R/utils_stats.R`
-3. `R/sd_lotka_volterra.R` → `tests/testthat/test-sd.R` (LV portion)
-4. `R/sd_isr_pandemic.R` → `tests/testthat/test-sd.R` (ISR portion)
-5. `R/abm_predator_prey.R` → `tests/testthat/test-abm-predator-prey.R`
-6. `R/abm_predator_prey_grass.R` → extend tests
-7. `R/abm_pandemic.R` → `tests/testthat/test-abm-pandemic.R`
-8. `R/abm_pandemic_network.R` → extend tests
-9. `R/utils_axtell.R` + `demo/demo_axtell.R` (no model, no simulation tests)
-10. `demo/` scripts (no tests required, but must run without error)
-11. `chunks/*.R` — one chunk file per module, light and dark variants;
-    verify each chunk runs in isolation before proceeding
-12. `vignettes/abm_for_statisticians.Rnw` — build section by section in
-    curriculum order; verify compilation after each section
-13. `vignettes/abm_slides.Rnw` — build section by section; verify figures
-    match course document and dark theme renders correctly
-14. `data-raw/census_firm_sizes.R` + `data/census_firm_sizes.rda`
+2. **Generate all files in the repository structure.** Do not omit any file.
 
----
+3. **The course book is a complete, renderable R Markdown document.** All prose from the chapter specifications above is written in full. Placeholder text is not acceptable. The prose is the course.
 
-## Testing standards
+4. **All R code chunks are complete and executable.** No pseudocode. No `# ... rest of implementation`. Every chunk runs.
 
-Use `testthat` edition 3. No single test should take longer than **30 seconds**.
-Use short simulation runs (<= 100 steps) and small grids (<= 20x20) in all tests.
+5. **The theme scaffold is a placeholder.** Generate it completely but include a comment block at the top of `custom.css` and `xaringan-theme.R` noting that colors and font weights are placeholders for post-content refinement.
 
-### `test-sd.R`
+6. **Slide decks are complete Xaringan documents** — all slides, speaker notes, and incremental reveal syntax as indicated.
 
-- LV: output tibble has correct columns; prey and predators stay positive over
-  the full integration; equilibrium formula is correct; increasing `alpha`
-  raises the predator equilibrium as expected analytically.
-- ISR: `I + S + R` sums to 1.0 at every time point (within 1e-6); `R` is
-  monotone non-decreasing; `R0` matches `beta / gamma`; `peak_I` is
-  correctly identified.
+7. **The spatial Lotka-Volterra (Chapter 2, Section 2.5) includes a complete, runnable `gganimate` implementation.** This is the most technically demanding code in the course. Take care with the grid data structure and frame logic.
 
-### `test-abm-predator-prey.R`
+8. **Use `set.seed()` at the top of every chunk involving randomness.** Comment that the seed is for reproducibility and may be changed.
 
-- Model runs 50 steps on a 20x20 grid without error.
-- Results tibble has columns `step`, `variable`, `value`.
-- Population counts are non-negative integers at every step.
-- Two runs with `seed = 42` produce identical results.
-- Grass extension: results contain rows where `variable == "grass_fraction"`;
-  all values are in [0, 1].
+9. **All plots are production quality** — proper axis labels, informative titles, clean legends, consistent use of the chapter color palette.
 
-### `test-abm-pandemic.R`
+10. **The `code/` directory R scripts are the most heavily commented files in the repository.** Every non-obvious line has a comment. These are what students take away.
 
-- Model runs 50 steps without error.
-- `I + S + R` sums to 1.0 at every step (within 1e-4 — discrete rounding).
-- `R` is monotone non-decreasing.
-- Network model: `degree_distribution` vector is present; mean degree is
-  approximately `2 * n_edges_per_new_node` (within 20%).
+11. **Do not invent empirical data for Chapter 3.** Use US Census Bureau SUSB data or generate synthetic data from a known power law distribution using `poweRlaw::rplcon()` as a placeholder, with a clear comment that real SUSB data should be substituted.
 
----
+12. **The forbidden phrases list in the Stylistic Exemplar section applies throughout.** Scan every paragraph of prose before finalizing. If any forbidden phrase appears, rewrite the sentence from scratch.
 
-## Parameters and ecological/epidemiological grounding
-
-Do not choose parameter values arbitrarily. Each default must be either:
-
-1. Justifiable from the ecological or epidemiological literature, **or**
-2. Chosen deliberately for pedagogical clarity, with an inline comment explaining
-   the choice.
-
-The ISR defaults (`beta = 0.3`, `gamma = 0.05`) yield R0 = 6, which is
-measles-like and produces a dramatic, clearly peaked epidemic curve suitable for
-teaching. The LV defaults should produce approximately 3-4 oscillation cycles
-within the default time window of 200 time units.
-
----
-
-## What to ask before writing code
-
-Stop and ask if any of the following is ambiguous:
-
-- Whether the network pandemic model should allow re-infection (default: no).
-- Whether `demo_isr.R` should show confidence bands across multiple stochastic
-  runs (recommended: yes, 10 runs).
-- Whether to fetch Census firm-size data from a URL at build time or bundle a
-  pre-cleaned CSV committed to the repository (recommended: bundle it alongside
-  Axtell's other materials once received).
-- Whether any additional packages beyond those in `DESCRIPTION` are needed
-  for the `.Rnw` compilation environment (e.g. `tikz`, `pgfplots`).
-
----
-
-## Out of scope for this build
-
-The following are explicitly **not** part of this codebase:
-
-- NetLogo or any non-R ABM framework.
-- Shiny apps or interactive dashboards.
-- Bayesian calibration or likelihood-based ABM parameter fitting.
-- Any causal inference machinery.
-- R Markdown or Quarto notebooks (the demo scripts serve this purpose).
-
-These may be added in a future version. Do not stub them out.
+13. **The argument of the course is stated in "The Argument of the Course" section above.** Every prose paragraph should serve that argument or be cut. The course has no filler.

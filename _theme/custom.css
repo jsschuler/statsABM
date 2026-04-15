@@ -1,0 +1,613 @@
+/* ============================================================
+   custom.css — Course book HTML styles for ABM for Statisticians
+   PLACEHOLDER SCAFFOLD — all color values and font weights below
+   are placeholders for post-content refinement. Colors are defined
+   as CSS custom properties so the entire palette can be updated in
+   one place. Typography choices (Source Serif 4, Raleway, Fira Code)
+   are the intended final selection; weights may be adjusted after
+   layout review on target projector/screen hardware.
+   ============================================================ */
+
+/* ============================================================
+   1. CSS CUSTOM PROPERTIES (DESIGN TOKENS)
+   ============================================================ */
+
+:root {
+  --color-bg:         #FAFAF7;   /* warm off-white, not pure white */
+  --color-text:       #1C1C1E;   /* near-black, slightly warm */
+  --color-heading:    #1C1C1E;
+  --color-accent:     #2D5F8A;   /* measured steel blue — placeholder */
+  --color-accent-alt: #8A4A2D;   /* warm rust — placeholder for secondary accent */
+  --color-rule:       #DCDCD4;   /* subtle horizontal rules */
+  --color-code-bg:    #F0F0EA;   /* slightly warm code block background */
+  --color-link:       #2D5F8A;
+
+  /* Typography scale */
+  --font-body:    "Source Serif 4", Georgia, serif;
+  --font-heading: "Raleway", system-ui, sans-serif;
+  --font-code:    "Fira Code", "Courier New", monospace;
+
+  /* Spacing */
+  --content-max-width: 780px;
+  --toc-width:         260px;
+  --line-height-body:  1.75;
+  --line-height-code:  1.5;
+}
+
+/* ============================================================
+   2. RESET & BASE
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 17px;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color:            var(--color-text);
+  font-family:      var(--font-body);
+  font-weight:      400;
+  line-height:      var(--line-height-body);
+  margin:           0;
+  padding:          0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   3. PAGE LAYOUT
+   ============================================================ */
+
+/* Rmarkdown wraps content in .main-container */
+.main-container {
+  max-width:  var(--content-max-width);
+  margin:     0 auto;
+  padding:    2rem 2.5rem 4rem;
+}
+
+/* When TOC is floating, shift main content to make room */
+.tocify-wrapper {
+  top:        80px;
+  width:      var(--toc-width);
+  font-family: var(--font-heading);
+  font-size:  0.78rem;
+  font-weight: 400;
+}
+
+@media (min-width: 1100px) {
+  .main-container {
+    /* Leave room for floated TOC on wide viewports */
+    margin-left: calc(var(--toc-width) + 2rem);
+    max-width:   var(--content-max-width);
+  }
+}
+
+/* ============================================================
+   4. HEADINGS
+   ============================================================ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family:  var(--font-heading);
+  color:        var(--color-heading);
+  line-height:  1.25;
+  margin-top:   2.2rem;
+  margin-bottom: 0.6rem;
+  font-weight:  500;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size:   2.1rem;
+  font-weight: 300;
+  border-bottom: 2px solid var(--color-rule);
+  padding-bottom: 0.4rem;
+  margin-top:  0;
+}
+
+h2 {
+  font-size:   1.6rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--color-rule);
+  padding-bottom: 0.25rem;
+}
+
+h3 {
+  font-size:   1.2rem;
+  font-weight: 700;
+  color:        var(--color-accent);
+}
+
+h4 {
+  font-size:   1.0rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color:        var(--color-accent-alt);
+}
+
+/* Section numbers from number_sections: true */
+.header-section-number {
+  color:       var(--color-accent);
+  margin-right: 0.4em;
+  font-weight:  300;
+}
+
+/* ============================================================
+   5. BODY TEXT & PARAGRAPHS
+   ============================================================ */
+
+p {
+  margin:     0 0 1.2rem;
+  max-width:  65ch;
+}
+
+strong, b {
+  font-weight: 600;
+}
+
+em, i {
+  font-style: italic;
+}
+
+/* Drop cap for first paragraph after h1 — optional, easy to remove */
+h1 + p::first-letter {
+  font-size:   2.6em;
+  font-family: var(--font-heading);
+  font-weight: 300;
+  float:       left;
+  line-height: 0.85;
+  margin-right: 0.08em;
+  margin-top:  0.05em;
+  color:       var(--color-accent);
+}
+
+/* ============================================================
+   6. LINKS
+   ============================================================ */
+
+a {
+  color:           var(--color-link);
+  text-decoration: none;
+  border-bottom:   1px solid transparent;
+  transition:      border-color 0.15s ease;
+}
+
+a:hover,
+a:focus {
+  border-bottom-color: var(--color-link);
+}
+
+/* ============================================================
+   7. HORIZONTAL RULES
+   ============================================================ */
+
+hr {
+  border:     none;
+  border-top: 1px solid var(--color-rule);
+  margin:     2.5rem 0;
+}
+
+/* ============================================================
+   8. LISTS
+   ============================================================ */
+
+ul, ol {
+  margin:       0 0 1.2rem 1.5rem;
+  padding:      0;
+  max-width:    65ch;
+}
+
+li {
+  margin-bottom: 0.35rem;
+  line-height:   var(--line-height-body);
+}
+
+/* ============================================================
+   9. BLOCKQUOTES
+   ============================================================ */
+
+blockquote {
+  margin:       1.5rem 0;
+  padding:      0.8rem 1.2rem 0.8rem 1.4rem;
+  border-left:  3px solid var(--color-accent);
+  background:   var(--color-code-bg);
+  color:        var(--color-text);
+  font-style:   italic;
+  font-size:    0.97rem;
+}
+
+blockquote p {
+  margin:  0;
+}
+
+blockquote p + p {
+  margin-top: 0.6rem;
+}
+
+/* ============================================================
+   10. CODE — INLINE
+   ============================================================ */
+
+code {
+  font-family:          var(--font-code);
+  font-size:            0.84em;
+  font-variant-ligatures: contextual;   /* Fira Code ligatures */
+  background-color:     var(--color-code-bg);
+  color:                var(--color-text);
+  padding:              0.15em 0.35em;
+  border-radius:        3px;
+  border:               1px solid var(--color-rule);
+  white-space:          nowrap;
+}
+
+/* ============================================================
+   11. CODE — BLOCKS (pre)
+   ============================================================ */
+
+pre {
+  font-family:          var(--font-code);
+  font-size:            0.82rem;
+  font-variant-ligatures: contextual;
+  line-height:          var(--line-height-code);
+  background-color:     var(--color-code-bg);
+  border:               1px solid var(--color-rule);
+  border-radius:        4px;
+  padding:              1rem 1.2rem;
+  overflow-x:           auto;
+  margin:               1.2rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+pre code {
+  font-size:    inherit;
+  background:   none;
+  border:       none;
+  padding:      0;
+  white-space:  pre;
+}
+
+/* Code folding button */
+.code-folding-btn {
+  font-family:  var(--font-heading);
+  font-size:    0.75rem;
+  color:        var(--color-accent);
+  border:       1px solid var(--color-rule);
+  border-radius: 3px;
+  background:   transparent;
+  padding:      0.15em 0.5em;
+  cursor:       pointer;
+  float:        right;
+  margin-top:   -0.25rem;
+}
+
+.code-folding-btn:hover {
+  background-color: var(--color-code-bg);
+}
+
+/* ============================================================
+   12. SYNTAX HIGHLIGHTING (R code)
+   Mimics a restrained, warm-toned theme consistent with the
+   overall color palette. Not high-contrast; meant for reading,
+   not terminal use.
+   ============================================================ */
+
+/* Keywords: if, else, for, while, function, return, ... */
+.kw { color: #2D5F8A; font-weight: 600; }
+
+/* Built-in functions: c(), list(), data.frame(), ... */
+.bu { color: #4A7F3A; }
+
+/* Strings */
+.st { color: #8A4A2D; }
+
+/* Numbers */
+.dv, .fl { color: #2D5F8A; }
+
+/* Comments */
+.co { color: #888880; font-style: italic; }
+
+/* Operators */
+.op { color: #1C1C1E; }
+
+/* Function definitions */
+.fu { color: #2D5F8A; }
+
+/* Variable names */
+.va { color: #1C1C1E; }
+
+/* Error and warning */
+.er { color: #C0392B; font-weight: 600; }
+
+/* Highlight.js compatibility overrides */
+.hljs { background: var(--color-code-bg) !important; }
+.hljs-keyword  { color: #2D5F8A; font-weight: 600; }
+.hljs-string   { color: #8A4A2D; }
+.hljs-number   { color: #2D5F8A; }
+.hljs-comment  { color: #888880; font-style: italic; }
+.hljs-built_in { color: #4A7F3A; }
+.hljs-function { color: #2D5F8A; }
+
+/* ============================================================
+   13. TABLES
+   ============================================================ */
+
+table {
+  width:          100%;
+  border-collapse: collapse;
+  margin:         1.5rem 0;
+  font-size:      0.9rem;
+  font-family:    var(--font-body);
+}
+
+thead {
+  border-bottom: 2px solid var(--color-accent);
+}
+
+thead th {
+  font-family:   var(--font-heading);
+  font-weight:   700;
+  font-size:     0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color:         var(--color-accent);
+  padding:       0.5rem 0.8rem;
+  text-align:    left;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--color-rule);
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+tbody tr:nth-child(even) {
+  background-color: var(--color-code-bg);
+}
+
+td {
+  padding:       0.45rem 0.8rem;
+  vertical-align: top;
+}
+
+/* Paged table output (df_print: paged) */
+.pagedtable-wrapper {
+  font-size:  0.85rem;
+  border:     1px solid var(--color-rule);
+  border-radius: 4px;
+  overflow:   hidden;
+  margin:     1.2rem 0;
+}
+
+/* ============================================================
+   14. FIGURES & CAPTIONS
+   ============================================================ */
+
+figure {
+  margin:  1.8rem 0;
+}
+
+img {
+  max-width: 100%;
+  height:    auto;
+  display:   block;
+  margin:    0 auto;
+}
+
+figcaption,
+.caption {
+  font-family:  var(--font-heading);
+  font-weight:  400;
+  font-size:    0.8rem;
+  color:        #555552;
+  text-align:   center;
+  margin-top:   0.5rem;
+  font-style:   italic;
+  max-width:    55ch;
+  margin-left:  auto;
+  margin-right: auto;
+}
+
+/* ============================================================
+   15. TABLE OF CONTENTS (tocify)
+   ============================================================ */
+
+.tocify {
+  border:     1px solid var(--color-rule);
+  border-radius: 4px;
+  background: var(--color-bg);
+  padding:    0.5rem 0;
+  font-size:  0.77rem;
+  line-height: 1.5;
+}
+
+.tocify ul,
+.tocify li {
+  margin:  0;
+  padding: 0;
+  list-style: none;
+}
+
+.tocify a {
+  display:       block;
+  padding:       0.3rem 0.8rem;
+  color:         var(--color-text);
+  border-bottom: none;
+  font-family:   var(--font-heading);
+  font-weight:   400;
+  transition:    background 0.1s ease, color 0.1s ease;
+}
+
+.tocify a:hover {
+  background: var(--color-code-bg);
+  color:      var(--color-accent);
+  border-bottom: none;
+}
+
+.tocify-item.active > a {
+  color:       var(--color-accent);
+  font-weight: 600;
+  background:  var(--color-code-bg);
+  border-left: 3px solid var(--color-accent);
+  padding-left: calc(0.8rem - 3px);
+}
+
+.tocify-subheader {
+  background: transparent !important;
+}
+
+.tocify-subheader .tocify-item > a {
+  padding-left: 1.6rem;
+  font-size:    0.73rem;
+}
+
+.tocify-subheader .tocify-subheader .tocify-item > a {
+  padding-left: 2.4rem;
+  font-size:    0.70rem;
+  color:        #777774;
+}
+
+/* ============================================================
+   16. MATH (MathJax)
+   ============================================================ */
+
+.MathJax_Display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Inline math: ensure it doesn't disrupt line height too badly */
+.MathJax {
+  font-size: 1em !important;
+}
+
+/* ============================================================
+   17. TITLE BLOCK
+   ============================================================ */
+
+.title {
+  font-family:  var(--font-heading);
+  font-weight:  300;
+  font-size:    2.6rem;
+  line-height:  1.15;
+  color:        var(--color-heading);
+  margin-bottom: 0.3rem;
+  margin-top:   0;
+}
+
+.subtitle {
+  font-family:  var(--font-heading);
+  font-weight:  400;
+  font-size:    1.2rem;
+  color:        var(--color-accent);
+  margin-bottom: 0.3rem;
+}
+
+.author,
+.date {
+  font-family:  var(--font-body);
+  font-size:    0.92rem;
+  color:        #777774;
+  margin:       0.1rem 0;
+}
+
+/* ============================================================
+   18. CALLOUT / ASIDE BOXES (for optional material markers)
+   ============================================================ */
+
+.callout-note,
+.extension-note {
+  background:   var(--color-code-bg);
+  border-left:  4px solid var(--color-accent-alt);
+  padding:      0.8rem 1rem;
+  margin:       1.5rem 0;
+  border-radius: 0 4px 4px 0;
+  font-size:    0.9rem;
+}
+
+.callout-note p,
+.extension-note p {
+  margin: 0;
+}
+
+.callout-note strong,
+.extension-note strong {
+  font-family:  var(--font-heading);
+  color:        var(--color-accent-alt);
+  font-weight:  700;
+  font-size:    0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display:      block;
+  margin-bottom: 0.35rem;
+}
+
+/* ============================================================
+   19. PRINT STYLES
+   ============================================================ */
+
+@media print {
+  body {
+    font-size: 11pt;
+    background: #fff;
+  }
+
+  .tocify-wrapper { display: none; }
+
+  .main-container {
+    margin:    0;
+    max-width: 100%;
+    padding:   0;
+  }
+
+  a {
+    color:           var(--color-text);
+    border-bottom:   none;
+    text-decoration: underline;
+  }
+
+  pre, code {
+    font-size: 9pt;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  figure {
+    page-break-inside: avoid;
+  }
+}
+
+/* ============================================================
+   20. RESPONSIVE ADJUSTMENTS
+   ============================================================ */
+
+@media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+
+  .main-container {
+    padding: 1rem 1.2rem 3rem;
+    margin-left: 0;
+  }
+
+  h1 { font-size: 1.7rem; }
+  h2 { font-size: 1.35rem; }
+
+  /* Suppress drop cap on small screens */
+  h1 + p::first-letter {
+    font-size:    inherit;
+    font-weight:  inherit;
+    float:        none;
+    color:        inherit;
+    margin:       0;
+  }
+}
