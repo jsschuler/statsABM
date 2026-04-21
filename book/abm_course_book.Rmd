@@ -1,28 +1,9 @@
 ---
 title: "Agent-Based Modeling for Statisticians"
 subtitle: "A Short Course"
-author: "John Lynham"
-date: "Joint Statistical Meetings, 2025"
+author: "John Schuler"
+date: "Joint Statistical Meetings, 2026"
 output:
-  html_document:
-    toc: true
-    toc_float:
-      collapsed: false
-      smooth_scroll: true
-    toc_depth: 3
-    number_sections: true
-    theme: null
-    css: ["../_theme/fonts.css", "../_theme/custom.css"]
-    highlight: null
-    self_contained: true
-    mathjax: "default"
-    fig_caption: true
-    fig_width: 8
-    fig_height: 5
-    df_print: paged
-    code_folding: show
-    includes:
-      in_header: "../_theme/header.html"
   pdf_document:
     toc: true
     toc_depth: 3
@@ -31,16 +12,42 @@ output:
     fig_width: 7
     fig_height: 4.5
     latex_engine: xelatex
-    keep_tex: false
+    keep_tex: true
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+    theme: "flatly"
+    css: ["../_theme/fonts.css", "../_theme/custom.css"]
+    highlight: null
+    self_contained: false
+    mathjax: "default"
+    fig_caption: true
+    fig_width: 8
+    fig_height: 5
+    df_print: paged
+    code_folding: show
+    includes:
+      in_header: "../_theme/header.html"
 ---
 
 ```{r global-options, include=FALSE}
 knitr::opts_chunk$set(
-  echo    = TRUE,
-  message = FALSE,
-  warning = FALSE,
-  fig.align = "center"
+  echo       = TRUE,
+  message    = FALSE,
+  warning    = FALSE,
+  fig.align  = "center",
+  cache      = TRUE,
+  cache.path = "cache/"
 )
+
+# Enable system fonts in PDF/PNG output devices
+library(showtext)
+showtext_auto()
+showtext_opts(dpi = 300)
 ```
 
 ---
@@ -352,9 +359,15 @@ palette_ch2 <- c(
   recovered   = "#27AE60"
 )
 
-# ODE parameters reused from Chapter 1 for comparison
-# (self-contained: redefined here rather than inherited)
-lv_params_ch2 <- c(alpha = 0.8, beta = 0.4, delta = 0.3, gamma = 0.6)
+# ODE parameters derived directly from the ABM mass-action rates:
+#   alpha = p_birth = 0.15  (per-capita prey birth rate per step)
+#   gamma = p_death = 0.10  (per-capita predator death rate per step)
+#   beta  = k_enc   = 0.00375 (per-pair encounter-kill rate; matches ABM)
+#   delta = k_enc * p_convert = 0.00375 * 0.267 = 0.001 (predator birth rate)
+# Equilibrium: N* = gamma/delta = 100, P* = alpha/beta = 40.
+# Starting at (N=200, P=40): N is above N*, P is at P*, so P rises first
+# while N stays near 200, then both oscillate. Period ≈ 51 steps.
+lv_params_ch2 <- c(alpha = 0.15, beta = 0.00375, delta = 0.001, gamma = 0.10)
 lv_ode_ch2 <- function(t, state, params) {
   with(as.list(c(state, params)), {
     dN <- alpha * N - beta * N * P
@@ -402,15 +415,25 @@ init_lv_abm <- function(n_prey, n_pred) {
   )
 }
 
-step_lv_abm <- function(pop, p_birth = 0.15, p_eat = 0.20, p_death = 0.10) {
-  # One time step of the agent-based LV model
+step_lv_abm <- function(pop, p_birth = 0.15, k_enc = 0.00375, p_convert = 0.267,
+                        p_death = 0.10, max_pop = 5000L) {
+  # One time step of the agent-based LV model.
+  # Encounter mechanism is Poisson mass-action: the expected number of
+  # predator-prey kills per step is k_enc * N * P, matching the beta*N*P term
+  # in the LV ODE exactly. Each kill converts to a new predator with
+  # probability p_convert, so delta = k_enc * p_convert in the ODE.
   prey  <- filter(pop, type == "prey",     alive)
   preds <- filter(pop, type == "predator", alive)
+  N     <- nrow(prey)
+  P     <- nrow(preds)
   max_id <- max(pop$id, 0L)
 
   # --- Prey reproduction ---
-  # Each alive prey reproduces with probability p_birth
-  n_born <- rbinom(1, nrow(prey), p_birth)
+  # Each alive prey reproduces with probability p_birth.
+  # max_pop is a safety cap: births are suppressed when prey exceed this
+  # threshold, preventing runaway population growth in parameter regimes
+  # where predation is temporarily low.
+  n_born <- if (N >= max_pop) 0L else rbinom(1, N, p_birth)
   new_prey <- if (n_born > 0) {
     tibble(id = seq_len(n_born) + max_id, type = "prey", alive = TRUE)
   } else {
@@ -418,20 +441,17 @@ step_lv_abm <- function(pop, p_birth = 0.15, p_eat = 0.20, p_death = 0.10) {
   }
   max_id <- max_id + n_born
 
-  # --- Predator-prey encounters ---
-  # Random pairing of predators and prey; each encounter kills prey with p_eat
-  # and produces a new predator offspring with the same probability
-  n_enc <- min(nrow(prey), nrow(preds))
+  # --- Predator-prey encounters (Poisson mass-action) ---
+  # Number of kills ~ Poisson(k_enc * N * P), capped at N to avoid over-kill.
+  # This is the discrete-time analogue of the beta*N*P term in the LV ODE.
+  # Each kill also produces a new predator with probability p_convert.
+  n_kills <- min(rpois(1L, k_enc * N * P), N)
   dead_prey_ids <- integer(0)
   new_pred_rows <- tibble(id = integer(), type = character(), alive = logical())
 
-  if (n_enc > 0) {
-    p_sample  <- slice_sample(prey,  n = n_enc)
-    pr_sample <- slice_sample(preds, n = n_enc)
-    eaten     <- rbinom(n_enc, 1, p_eat) == 1
-
-    dead_prey_ids <- p_sample$id[eaten]
-    n_new_pred    <- sum(eaten)
+  if (n_kills > 0) {
+    dead_prey_ids <- slice_sample(prey, n = n_kills)$id
+    n_new_pred    <- rbinom(1L, n_kills, p_convert)
 
     if (n_new_pred > 0) {
       new_pred_rows <- tibble(
@@ -478,13 +498,14 @@ run_lv_abm <- function(T = 200, n_prey = 100, n_pred = 20, seed = 42, ...) {
 set.seed(2025)  # master seed for reproducibility
 
 n_reps   <- 10
-T_run    <- 200
+T_run    <- 120   # ~2-3 LV cycles; sufficient to show convergence
 n_prey0  <- 200   # large enough for law-of-large-numbers effects
 n_pred0  <- 40
 
 abm_runs <- map_dfr(1:n_reps, function(rep) {
   run_lv_abm(T = T_run, n_prey = n_prey0, n_pred = n_pred0, seed = rep,
-             p_birth = 0.15, p_eat = 0.20, p_death = 0.10) %>%
+             p_birth = 0.15, k_enc = 0.00375, p_convert = 0.267,
+             p_death = 0.10) %>%
     mutate(rep = rep)
 })
 
@@ -539,19 +560,20 @@ Now reduce the population.
 set.seed(2025)  # reproducibility
 
 n_reps_small <- 15
-T_small      <- 300
+T_small      <- 150
 n_prey_small <- 20   # small enough for demographic stochasticity to matter
 n_pred_small <- 6
 
 abm_small <- map_dfr(1:n_reps_small, function(rep) {
   run_lv_abm(
-    T       = T_small,
-    n_prey  = n_prey_small,
-    n_pred  = n_pred_small,
-    seed    = rep + 100,
-    p_birth = 0.15,
-    p_eat   = 0.20,
-    p_death = 0.10
+    T         = T_small,
+    n_prey    = n_prey_small,
+    n_pred    = n_pred_small,
+    seed      = rep + 100,
+    p_birth   = 0.15,
+    k_enc     = 0.00375,
+    p_convert = 0.267,
+    p_death   = 0.10
   ) %>%
     mutate(rep = rep)
 })
@@ -751,7 +773,7 @@ g_er <- igraph::erdos.renyi.game(N_net, p = avg_deg / (N_net - 1))
 
 # Barabasi-Albert: preferential attachment produces a heavy-tailed degree distribution
 # m = edges added per new node; mean degree ≈ 2m
-g_ba <- igraph::barabasi.albert.game(N_net, m = avg_deg / 2, directed = FALSE)
+g_ba <- igraph::sample_pa(N_net, m = avg_deg / 2, directed = FALSE)
 
 # Verify mean degrees are comparable
 mean_deg_er <- mean(igraph::degree(g_er))
@@ -920,19 +942,17 @@ The ODE cannot express this difference. Not because it has the wrong parameter v
 
 ## The Reduction Theorem {#sec-reduction}
 
-The relationship between the ODE and the ABM is precise and worth stating directly: as population size grows, as mixing becomes increasingly random, as individual heterogeneity averages out, and as the time step grows coarse enough for within-step interactions to average to the mean-field, the ABM converges in distribution to the ODE. The ODE is not wrong — it is a limit. It is what the ABM becomes when the mean-field assumption is exactly satisfied across both its spatial and temporal dimensions.
+The ODE is the ABM under two independent structural restrictions, and stating them precisely matters because the reduction theorem is often misread as a simpler result than it is. The first restriction is agent homogeneity: write each agent's property vector as $\theta_i = \bar\theta + \varepsilon_i$, and set $\varepsilon_i = 0$ for all $i$ — every agent is identical to the population mean. The second is contact structure: write the weighted contact matrix as $W = \bar{W} + \Delta W$ where $\bar{W}$ is the uniform complete graph (the maximum entropy contact structure under fixed mean contact rate), and set $\Delta W = 0$ — every agent contacts every other at the same rate. As population size grows, the law of large numbers suppresses stochastic fluctuations around the mean-field trajectory — but only given that both restrictions hold. Population size alone says nothing about contact structure. A large population interacting on a lattice, or within households, or across a scale-free network, does not approach the ODE as it grows. It approaches a denser version of the same structured system. Convergence to the ODE requires $\Delta W = 0$ as an independent structural condition, not as a consequence of large $n$.
 
-This framing dissolves the apparent competition between the two paradigms. The ODE and the ABM are not two competing theories of the same phenomena, between which a modeler must choose on philosophical grounds. They are a richer language and one of its sublanguages. The ODE is the ABM with an additional constraint — that the interaction structure is fully mixed — imposed silently. Every ABM that includes random mixing as a special case contains the ODE as a theorem.
+There is a second, distinct argument for the mean-field assumption, and its epistemic status is entirely different. When data are recorded at coarse temporal resolution — weekly, quarterly, annually — the sequence of individual interactions within each observation interval is unobservable. Contacts that occurred in a specific order between specific agents are collapsed into a single time step and treated as simultaneous. The mean-field model is the maximum entropy response to this constraint: it makes the least informative claim about within-interval interaction structure consistent with what the data can support. This is a hard epistemological limit in the spirit of the Nyquist theorem — below the observation frequency, no model can be preferred over the mean-field on statistical grounds, because the data do not contain the information needed to distinguish them. The bias this introduces is the price of statistical stability, and it is principled in exactly the maximum entropy sense established in Chapter 1.
 
-When a phenomenon requires the mean-field assumption to be satisfied — when populations are large, mixing is genuinely random, heterogeneity is genuinely negligible, and the observation interval is coarse enough for within-step averaging to hold — the ODE is the right tool, because it is analytically tractable and the additional machinery of the ABM contributes nothing. When a phenomenon depends on features that the mean-field assumption rules out — network topology, spatial structure, heterogeneity, discrete-individual effects like extinction — the ODE cannot reach it, and no calibration of the ODE's parameters will change that.
+These two arguments — the data constraint and the structural claim — are often conflated, and the conflation is the source of much confusion in the debate between ODE and ABM approaches. The data constraint says: at this observation frequency, the data cannot distinguish mean-field from structured interaction. The structural claim says: the phenomenon's natural time scale is slow enough that interactions genuinely randomize between observations — that $\Delta W \approx 0$ is warranted by the system's dynamics, not merely forced by the data. The first is imposed by the observation design. The second is a philosophical contention about the phenomenon. A researcher with high-frequency contact data who nevertheless invokes the mean-field is making the structural claim. A researcher with only low-frequency data who invokes it may be making either — and should say which, because the two have different implications for what could, in principle, falsify the model.
 
-The choice between ODE and ABM is therefore not a choice between simple and complex, or tractable and intractable. It is a choice about which phenomena are in scope. The ABM critic who objects to unnecessary complexity should ask: complexity relative to what problem? If the problem is the epidemic threshold in a large, well-mixed population, the ODE is the right language and adding agent-level detail is indeed unnecessary. If the problem is the effect of household structure on epidemic dynamics, the ODE cannot address it at all, regardless of how aggressively it is simplified.
+Stating the restrictions precisely also clarifies the scope of what the reduction theorem establishes. The theorem says: as $n \to \infty$, as $\varepsilon_i \to 0$ for all $i$, and as $\Delta W \to 0$, the ABM converges in distribution to the ODE. This is a conditional result. It tells you what the ABM becomes when you impose both restrictions simultaneously; it does not tell you that those restrictions are warranted. The ODE is not wrong — it is the correct model when both conditions hold. The question is always whether they hold for the phenomenon at hand. Chapter 4 develops the full implications of this reparametrization: the regularization path that interpolates between the ODE and the full ABM, the sense in which the regularization strengths $\lambda_\theta$ and $\lambda_W$ are hyperparameters governing how strongly to enforce each restriction, and the connection between that choice and the data's capacity to support departures from the mean-field. For now, the notation gives precise names to what the ODE's restrictions actually are.
 
-The complexity objection has a more specific form that deserves a direct answer. The ABM just described has more nominal parameters than the Lotka-Volterra ODE: $p_\text{birth}$, $p_\text{eat}$, $p_\text{death}$, the population size, the details of the pairing mechanism. The ODE has four: $\alpha$, $\beta$, $\delta$, $\gamma$.
+This framing dissolves the apparent competition between system dynamics and agent-based models — the two paradigms that practitioners in computational social science most often treat as alternatives. They are not competing theories. They are a richer language and one of its sublanguages, related by two named restrictions rather than by a vague appeal to complexity or realism. Every ABM that includes random mixing and agent homogeneity as special cases contains the ODE as a theorem. The choice between them is not philosophical. It is a question about which restrictions are warranted for the phenomenon and the data.
 
-Nominal dimensionality is not effective dimensionality. A regression with a thousand predictors may have a sparse solution that uses ten. The other nine hundred and ninety exist — they have coefficients, they occupy the nominal space — but the signal lives on a low-dimensional manifold within that space, and a well-chosen penalty recovers it. The statistician who counts predictors before asking whether the signal is sparse has the analysis backwards. The critic who counts ABM parameters before asking how many degrees of freedom the dynamics of interest actually require has made the same mistake. Most of the ABM's parameter space produces qualitatively identical behavior — cycling that is statistically indistinguishable from the ODE output. The consequential structure — the boundary between cycling and extinction, the dependence of extinction probability on population size — is concentrated on a surface of far lower dimension than the nominal parameter count suggests.
-
-The ODE is the limiting case of this argument. It is the ABM under maximal regularization — a structural restriction so complete that all individual heterogeneity and interaction structure collapses to population totals, leaving four parameters. Whether that is the right level of regularization depends on whether the phenomenon of interest lies within its expressive range. For the epidemic threshold in a large, well-mixed population, it is. For extinction events, it is not. The regularization that produces the ODE's simplicity also removes certain phenomena from its vocabulary, and no amount of careful parameter estimation recovers what that regularization has already discarded.
+The complexity objection has a specific form that deserves a direct answer. The ABM has more nominal parameters than the Lotka-Volterra ODE: $p_\text{birth}$, $p_\text{eat}$, $p_\text{death}$, the population size, the pairing mechanism. The ODE has four: $\alpha$, $\beta$, $\delta$, $\gamma$. Nominal dimensionality is not effective dimensionality. A regression with a thousand predictors may have a sparse solution concentrated on ten. The statistician who counts predictors before asking whether the signal is sparse has the analysis backwards. The critic who counts ABM parameters before asking how many degrees of freedom the dynamics of interest actually require has made the same mistake. Many regions of the ABM's parameter space produce qualitatively identical behavior — cycling statistically indistinguishable from the ODE output. The consequential structure — the boundary between cycling and extinction, the dependence of extinction probability on population size — is low-dimensional relative to the nominal parameter count. The ODE is the ABM under maximal regularization of both $\varepsilon_i$ and $\Delta W$: the restriction that produces its analytical tractability is the same restriction that removes certain phenomena from its vocabulary, and no amount of careful parameter estimation recovers what that regularization has discarded.
 
 ## Spatial Extension (Reference Module) {#sec-spatial}
 
@@ -1238,17 +1258,17 @@ The power law fits the upper tail well. The log-normal fits less cleanly at the 
 
 ## What the Standard Models Cannot Say {#sec-sufficient-stats}
 
-The SIR system tracks three numbers: $S$, $I$, and $R$. The dynamics are fully determined by those totals. This is not merely a modeling convenience — it is a sufficiency claim. Given the compartment counts, the identity of which specific individuals are susceptible or infectious carries no additional information about how the epidemic evolves. The distribution of individual characteristics within compartments is irrelevant. The totals are sufficient.
+The SIR system tracks three numbers: $S$, $I$, and $R$. The dynamics are fully determined by those totals. This is not merely a modeling convenience — it is a claim about the Markov state. Under the mean-field assumption, the future trajectory of the epidemic is conditionally independent of which specific individuals are susceptible or infectious, given the compartment counts. The identity of the individuals does not matter; only their number does. Individual heterogeneity averages out under random mixing, and the law of large numbers makes the aggregate dynamics deterministic functions of population totals alone. The compartment counts are the complete state — not because individual characteristics have been shown to be irrelevant, but because the mean-field assumption has been imposed, and under that assumption they are.
 
-This sufficiency holds exactly when the mean-field assumption holds. Under random mixing, any susceptible is as likely as any other to contact any infectious individual, so only the counts matter. Individual heterogeneity averages out. The law of large numbers makes the aggregate dynamics deterministic functions of population totals alone.
+The same logic, applied to industry dynamics, produces a model that tracks total employment, or average firm size, rather than the distribution of employment across firms. Each firm $i$ has an employment level $\theta_i = \bar\theta + \varepsilon_i$ where $\bar\theta$ is mean employment and $\varepsilon_i$ is the firm's deviation from that mean. Setting $\varepsilon_i = 0$ for all firms — what economists call the representative agent assumption — collapses the entire distribution to a point mass at $\bar\theta$. The distribution of firm sizes ceases to exist as an object of the model. Knowing that one firm employs 200,000 workers and ten thousand firms employ fewer than ten is indistinguishable, within this model, from knowing that all firms employ the mean number — not because the heterogeneity has been shown to be dynamically irrelevant, but because it has been assumed away before the analysis begins.
 
-The same logic, applied to industry dynamics, produces a familiar object: a model that tracks total employment, or average firm size, rather than the distribution of employment across firms. The implicit claim is that the distribution carries no additional information — that knowing mean firm size is sufficient for understanding how the aggregate evolves. Knowing that one firm employs 200,000 workers and ten thousand firms employ fewer than ten is no more informative than knowing that all firms are of mean size. This is the statistical content of what economists call the representative agent: not a modeling shortcut but a sufficiency assumption applied to the distribution of firms.
+The power law distribution is then not merely a poor fit within this framework. It is a property of the non-zero $\varepsilon_i$ distribution — a property of the shape of the deviations from the mean — and a model that sets all $\varepsilon_i$ to zero has no mechanism through which distributional shape could arise. The restriction has eliminated the phenomenon's carrier before estimation begins.
 
-The power law distribution is the empirical refutation of that assumption. A power law has no finite mean when $\alpha \leq 2$, and even when the mean exists, it is a poor summary of the distribution's behavior. The distribution is dominated by its tail. The hundred largest firms in the US economy account for a substantial fraction of private-sector employment; they respond to shocks differently, shape credit conditions differently, and drive aggregate dynamics differently than a population of mean-sized firms would. The sufficiency assumption produces the wrong object of analysis, not an imprecise approximation of the right one.
+The power law distribution is the empirical demonstration that the $\varepsilon_i$ are not zero — that the deviations are not negligible perturbations around a representative mean but the primary structure of the phenomenon. A power law has no finite mean when $\alpha \leq 2$, and even when the mean exists, it is a poor summary of the distribution's behavior. The distribution is dominated by its tail. The hundred largest firms in the US economy account for a substantial fraction of private-sector employment; they respond to shocks differently, shape credit conditions differently, and drive aggregate dynamics differently than a population of mean-sized firms would. The $\varepsilon_i = 0$ restriction produces the wrong object of analysis, not an imprecise approximation of the right one.
 
 This is not a methodological complaint. It is an empirical constraint. The firm size distribution is among the most robustly documented regularities in empirical economics. It appears in every measured economy, at every measured time, in virtually every sector. A model whose language cannot express this regularity is, to that extent, describing a different economy than the one that exists.
 
-The failure is linguistic before it is empirical. A model built on the sufficiency of the mean has no sentence in which "the distribution of firm sizes is a power law" can be written. The distribution is the phenomenon. When the language cannot contain the distribution, you have not approximated the phenomenon poorly. You have excluded it from the territory the model covers.
+The failure is linguistic before it is empirical. A model built on $\varepsilon_i = 0$ has no sentence in which "the distribution of firm sizes is a power law" can be written. The distribution is the phenomenon. When the language cannot contain the distribution, you have not approximated the phenomenon poorly. You have excluded it from the territory the model covers.
 
 ## Axtell's Model: Logic Without Code {#sec-axtell}
 
@@ -1266,15 +1286,15 @@ The model does not explain why individual firms have the sizes they have. It exp
 
 A macro-level regularity is emergent if it satisfies two conditions. It cannot be derived analytically from the micro-level rules — there is no algebraic path from the individual agent's decision problem to the macro distribution. And it arises robustly from the dynamics of agent interaction — not an artifact of specific parameter values or initial conditions, but a structural feature that persists across a wide range of both.
 
-The power law firm size distribution is emergent in this sense. No analysis of an individual agent's effort allocation problem reveals the exponent. The exponent is not a property of any individual; it is a property of the aggregate dynamics that arise from the interaction of many individuals following local rules. And it is robust: Axtell showed that the exponent is insensitive to most parameter choices, which means it is structural rather than calibrated.
+The power law firm size distribution is emergent in this sense. No analysis of an individual agent's effort allocation problem reveals the exponent. The exponent is not a property of any individual; it is a property of the aggregate dynamics that arise from the interaction of many individuals following local rules. And it is robust: Axtell showed that the exponent is insensitive to a wide range of parameter choices, which means it is structural rather than calibrated.
 
 That robustness is more than a convenience result. Axtell's model was not fitted to the power law. The exponent emerged from the dynamics and was then compared to the data. This is not a subtle distinction. Equilibrium models of industry dynamics had the firm size distribution in front of them for decades — the empirical regularity was documented in the 1950s, and the power law form was well established by the 1990s — and could not generate the exponent without external calibration, because the exponent is not a property of any equilibrium. It is a property of the path: the motion of teams forming and dissolving, agents switching affiliations, distributions arising from trajectories that no equilibrium condition pins down. Equilibrium analysis specifies the destination; the distribution lives in the journey.
 
 A model that generates a known regularity without having been calibrated to it has done something that descriptive fitting cannot. It exposes the mechanism. The mechanism can then be interrogated: what changes in the interaction rules would change the exponent? What perturbations to the returns-to-scale structure shift the distribution? These questions only make sense in a language that contains the generative process. A model that describes the distribution after the fact cannot answer them, because it contains no process — only a fit.
 
-The phenomenon is unreachable by any model that assumes mean employment is a sufficient statistic for industry dynamics — in principle, with any parameter choices. Such a model has no dynamics in the relevant sense: it has an equilibrium at which one firm employs a fixed number of workers. There is no process of team formation and dissolution. There is no mechanism through which a distribution could be generated, because the model's language contains no concept of a distribution of firm sizes. The sufficiency assumption has collapsed exactly the dimension of heterogeneity from which the regularity is made.
+The phenomenon is unreachable by any model built on $\varepsilon_i = 0$ — in principle, with any parameter choices. Such a model has no dynamics in the relevant sense: it has an equilibrium at which one firm employs a fixed number of workers. There is no process of team formation and dissolution. There is no mechanism through which a distribution could be generated, because the model's language contains no concept of a distribution of firm sizes. The $\varepsilon_i = 0$ restriction has collapsed exactly the dimension of heterogeneity from which the regularity is made.
 
-Emergence, precisely defined, is a methodological constraint. If the phenomenon is emergent — if no analytical derivation from the micro rules can reach it — then the model must be dynamic, heterogeneous, and process-based. Not because agent-based modeling is philosophically preferable to equilibrium analysis. Because it is the only language in which the generative mechanism can be written.
+Emergence, precisely defined, is a methodological constraint. If the phenomenon is emergent — if no analytical derivation from the micro rules can reach it — then the model must be dynamic, heterogeneous, and process-based. Not because agent-based modeling is philosophically preferable to equilibrium analysis. Because it is the only language in which the generative mechanism can be written. The sufficiency assumption has collapsed exactly the $\varepsilon_i$ dimension from which the regularity is made. No relaxation of the equilibrium condition, no refinement of the production function, no additional sector recovers the power law from a model that sets $\varepsilon_i = 0$ for firms, because the distribution is a property of the non-zero $\varepsilon_i$ tail — a tail the model has eliminated before the analysis begins.
 
 ---
 
@@ -1315,11 +1335,23 @@ Every modeling choice is a choice of resolution — temporal, spectral, expressi
 
 ## The Regularization Unification {#sec-regularization}
 
-The statistician who uses LASSO is making a claim about the world — specifically, about the distribution from which the true coefficients were drawn. A Laplace prior on the coefficients, when you compute the posterior mode, produces the LASSO estimator exactly. This is not an approximation or an analogy. It is an algebraic identity: the L1 penalty $\lambda \sum |\beta_j|$ is the negative log-density of a Laplace prior with scale $1/\lambda$, up to a constant. Minimize the penalized sum of squares, and you have found the posterior mode under that prior. The analyst who tuned $\lambda$ by cross-validation and the Bayesian who specified a Laplace prior and computed the posterior mode are solving the same problem. The difference is in the framing, not the mathematics.
+The connection between regularization and the ODE-ABM relationship is not analogical. It is constructive. Writing it out makes visible something that the course has been approaching from several directions simultaneously.
 
-The same identity holds for ridge regression and the Gaussian prior. The Gaussian prior with variance $\sigma^2_\beta$ corresponds to an L2 penalty of $\lambda = \sigma^2_\epsilon / \sigma^2_\beta$, where $\sigma^2_\epsilon$ is the error variance. The choice between ridge and LASSO is not a choice between two penalty functions. It is a choice between two beliefs about the distribution of coefficients — sparse coefficients clustered near zero versus coefficients shrunk uniformly toward zero. The penalty encodes the prior whether or not the analyst names it as one.
+In an ABM, each agent $i$ carries a property vector $\theta_i$ — a birth rate, a productivity, a threshold for infection. Write $\theta_i = \bar\theta + \varepsilon_i$, where $\bar\theta$ is the population mean and $\varepsilon_i$ is the deviation, centered so that $\sum_i \varepsilon_i = 0$. The ODE is the model that sets $\varepsilon_i = 0$ for every agent — all heterogeneity collapsed to the mean. Nothing about this restriction is forced by the biology or the economics. It is a structural choice about the distribution of agent properties, and that distribution is a point mass at $\bar\theta$. An L2 penalty on $\{\varepsilon_i\}$ shrinks agents toward their mean; as the penalty strength increases, the ABM continuously approaches the ODE. They are not separate models. They are the same model at different positions along a regularization path.
 
-The unification runs further than the Bayesian connection alone. L2 regularization is the limiting case of training on Gaussian-perturbed inputs: as the perturbation variance shrinks to zero, the expected loss over perturbed data converges to the L2-regularized loss on the original data. The distributionally robust optimizer who minimizes worst-case expected loss over all distributions within a Wasserstein ball around the empirical measure recovers regularized estimators as special cases, depending on the geometry of the ball. Bayesian prior, regularization penalty, adversarial perturbation budget — three framings of the same restriction on what the model can express.
+The contact structure submits to the same treatment. Represent it as a weighted adjacency matrix $W$, where $W_{ij} \geq 0$ is the contact rate between agents $i$ and $j$. Every network topology is a special case: $W_{ij} = 0$ removes an edge; a heavy-tailed degree distribution produces the scale-free network from Chapter 2; the lattice concentrates all weight on immediate neighbors. Write the mean-field contact structure as $\bar{W}_{ij} = 1/n$ for all $i \neq j$ — uniform weight, every agent contacting every other at the same rate. This is not a neutral choice made for mathematical convenience. It is the maximum entropy distribution over contact matrices subject to the constraint that each agent's total contact rate is fixed. When you know the average contact rate and nothing else about who contacts whom, $\bar{W}$ is what the principle of maximum ignorance requires. Every departure from $\bar{W}$ is information about contact structure beyond the mean.
+
+Write $W = \bar{W} + \Delta W$. The constraint $W_{ij} \geq 0$ restricts $\Delta W_{ij} \geq -1/n$, which defines a convex feasible region. The ODE corresponds to $\Delta W = 0$. The two reparametrizations together give the unified statement: the ODE is the ABM under simultaneous regularization of agent heterogeneity toward $\bar\theta$ and contact structure toward $\bar{W}$. Formally, consider the objective
+
+$$\mathcal{L}(\{\varepsilon_i\},\, \Delta W) \;+\; \lambda_\theta \sum_i \|\varepsilon_i\|^2 \;+\; \lambda_W \|\Delta W\|_F^2$$
+
+As $\lambda_\theta \to \infty$ and $\lambda_W \to \infty$, the solution forces $\varepsilon_i \to 0$ and $\Delta W \to 0$, recovering the ODE exactly. At finite $\lambda$, the solution interpolates. The regularization strengths are hyperparameters: estimable by cross-validation when individual trajectories are observed, tunable by information criteria when only aggregate data are available. Both L2 and L1 penalties on $\Delta W$ are convex on the feasible region, so the structural regularization problem is convex throughout — a point worth noting to the audience likely to object that ABM calibration is computationally intractable. The non-convexity in ABM calibration comes from the stochastic simulation mapping parameters to outputs, not from the geometry of the parameter space itself.
+
+The choice between L2 and L1 on $\Delta W$ is a choice about what kind of network departure from mean-field is expected. L2 shrinks all edge weights uniformly toward $1/n$ — the contact structure becomes progressively closer to random mixing as $\lambda_W$ increases. L1 produces sparse $\Delta W$: most edges sit near their mean-field weight, a few carry substantial deviations. Sparse positive entries in $\Delta W$ are hubs — agents with far more contacts than the mean-field allocates. This is precisely the Barabási-Albert structure that drove the qualitatively different epidemic dynamics in Chapter 2. The L1 penalty on contact structure selects the epidemiologically consequential nodes, in exactly the sense that LASSO selects the consequential predictors. This is not an analogy. The mathematical operation is the same.
+
+The Bayesian identity sharpens the argument further. A Laplace prior on $\Delta W_{ij}$ produces the L1 penalty at the posterior mode — exactly, not approximately, by the same algebra as for regression coefficients. A Gaussian prior produces L2. The maximum entropy interpretation now closes the loop precisely: a flat prior over contact matrices subject to fixed mean contact rate is a Gaussian centered at $\bar{W}$. Ridge regularization toward $\bar{W}$ is therefore the correct Bayesian update under maximum ignorance about contact structure, starting from a Gaussian prior. When the analyst has no structural knowledge of the contact network beyond its mean, L2 toward the mean-field is the principled choice. L1 is appropriate when the contact network is expected to be sparse — when most agent pairs have no meaningful contact and the interesting structure is concentrated in a few edges. The penalty encodes the prior whether or not the analyst names it as one.
+
+The unification runs further still. L2 regularization is the limiting case of training on Gaussian-perturbed inputs: as the perturbation variance shrinks to zero, the expected loss over perturbed data converges to the L2-penalized loss. The distributionally robust optimizer minimizing worst-case expected loss over a Wasserstein ball around the empirical measure recovers regularized estimators as special cases. Bayesian prior, regularization penalty, adversarial perturbation budget — three framings of the same restriction. The literature on mean-field games formalizes the reparametrization argument at infinite scale: as $n \to \infty$ with individual effects shrinking proportionally, the discrete agent system converges to a continuum PDE — the $\lambda \to \infty$ limit of the regularization path, studied with the tools of optimal control.
 
 ```{r ch4-regularization-geometry, fig.cap="Geometry of regularization. Coefficient contours (ellipses) intersect the constraint region at the regularized solution. L2 (ridge) penalty produces a circular constraint region; the solution is generally interior with all coefficients shrunk toward zero. L1 (LASSO) penalty produces a diamond constraint region; the solution tends to land on a corner, producing sparse solutions with some coefficients exactly zero."}
 # Visualize the geometry of L1 vs L2 regularization
@@ -1411,9 +1443,9 @@ p_l1 <- ggplot() +
 p_l2 + p_l1
 ```
 
-Every model involves two levels of restriction on what it can express, and the unification above illuminates both. The first is the parametric family — the structural commitment that determines what phenomena are in scope. The mean-field ODE is a family: it admits mass-action interactions in continuous time and excludes network structure, spatial heterogeneity, and discrete individual effects entirely. The mean-sufficient model of industry dynamics is a family: it admits dynamics driven by aggregate employment and excludes distributional heterogeneity as a driver. The stationary time series is a family: it admits processes whose spectral structure is constant across time and excludes structural change and regime transitions. These are not parameter choices. They are structural commitments made before any data are consulted, and they determine what the model can say. No amount of data revises them; they are the grammar within which the data are interpreted.
+Every model involves two levels of restriction, and the reparametrization makes both legible. The first is the parametric family — the structural commitment that determines what phenomena are in scope. The mean-field ODE is a family: it fixes $\varepsilon_i = 0$ and $\Delta W = 0$ before any data are seen, admitting mass-action interactions in continuous time and excluding network structure, spatial heterogeneity, and discrete individual effects entirely. The mean-sufficient model of industry dynamics is a family: it admits dynamics driven by aggregate employment and excludes the distributional heterogeneity that generates the power law tail. The stationary time series is a family: it admits processes whose spectral structure is constant across time and excludes regime transitions. These are not parameter choices. They are structural commitments that determine what the model can say, and no quantity of data revises them — they are the grammar within which the data are interpreted.
 
-The second level is the prior distribution on that family — the regularization choice, calibrated to what the data at a particular observation frequency can support. This is where the Bayesian identity established above operates: the choice of penalty function is identical to a choice of prior on the parameter vector of the family. Coarser observation supports stronger regularization; finer observation supports weaker. The ABM critic who objects to parameter proliferation is demanding stronger regularization within a richer family — which is a legitimate demand when the observation frequency cannot distinguish the parameters, and an illegitimate demand when the phenomenon requires the richer family to exist at all. Both levels interact with observation frequency: the family must be appropriate at the resolution of measurement, and the prior on the family must be calibrated to what that resolution makes visible. When the phenomenon is the mean-field limit of large-population, randomly-mixed dynamics, the ODE family is correct and the richness of the ABM contributes nothing. When the phenomenon is the shape of the firm size distribution, the mean-sufficient family does not merely fit poorly — it excludes the phenomenon by design.
+The second level is the prior on that family — the regularization, calibrated to what the data at a particular observation frequency can support. The choice of penalty is a choice of prior, and the prior encodes beliefs about how far the true system sits from the family's anchor point: how heterogeneous the agents are, how far the contact network departs from maximum entropy, how sparse the consequential deviations are. The ABM critic who objects to parameter proliferation is demanding stronger regularization within a richer family — legitimate when the observation frequency cannot distinguish the parameters, illegitimate when the phenomenon requires the richer family to exist at all. Both levels interact with observation frequency: the family must be appropriate at the resolution of measurement, and the prior on the family must be calibrated to what that resolution can support. When the phenomenon is the mean-field limit of large-population randomly-mixed dynamics, the ODE is correct and additional expressiveness contributes nothing. When the phenomenon is the shape of the firm size distribution, or the topology-dependence of an epidemic, the restricted family does not fit poorly — it excludes the phenomenon by design, before estimation begins.
 
 ## Temporal Resolution and Near-Decomposability {#sec-temporal}
 
@@ -1526,6 +1558,101 @@ ggplot(bif_df, aes(x = r, y = x)) +
 
 A time series model calibrated on data from the stable fixed-point regime ($r < 3$) has learned a stationary process. At $r = 3$, the system bifurcates to a period-two cycle. The stationary model has no representation for this — its language contains the word "stationary process" but not the word "bifurcation." The turn is not an outlier that the model underestimates. It is a structural change that moves the system outside the language the model was built in.
 
+## The Epistemology of Turning Points {#sec-turning-points}
+
+Any trend extrapolated far enough produces an absurdity. A bond that compounds at five percent for long enough exceeds global GDP. A population growing at one percent doubles in seventy years and doubles again, until someone notices that the land does not. These projections are not errors of arithmetic. They are accurate outputs of models whose language contains no word for the ceiling. The problem is not extreme extrapolation. It is that any model built from data within a single phase of a cyclical system is, by construction, a model of that phase — and a phase, extrapolated, is infinite.
+
+The observation that human affairs cycle rather than trend is old enough that its antiquity should give pause. Polybius, writing after Carthage, described anacyclosis: the sequence from monarchy through tyranny, from aristocracy through oligarchy, from democracy through mob rule and back to the need for monarchy. The form is not random deterioration but a structured progression, each stage generating the conditions that produce the next. The Platonic version is more pessimistic: the sequence runs in one direction, each form a degradation of the last. What both share, and what matters here, is the structure of the claim. Stability is not neutral. It is generative — of the conditions that will end it.
+
+Ibn Khaldun, writing in the fourteenth century, gave this intuition its first formal treatment. Dynastic power rises on the strength of *asabiyyah* — group solidarity, the capacity for collective action that desert tribes possess in greater abundance than the sedentary populations they displace. Success dilutes it. Urban comfort, internal competition, the purchase of mercenary armies in place of kin-based ones: the mechanisms by which a dynasty's own dominance dissolves its original advantage are detailed, not vague. The cycle has a period: Ibn Khaldun estimated roughly four generations, approximately a century. The model is not falsified by the collapse of any particular dynasty. It is confirmed, because the collapse is what the model predicts.
+
+Nikolai Kondratiev, writing in the 1920s, found a similar structure in industrialized economies. Long waves of approximately fifty years — expansion followed by contraction — seemed to characterize the historical series of prices, output, and interest rates since the beginning of industrial capitalism. Kondratiev did not explain the waves; he identified them. Schumpeter supplied the mechanism. Each wave is driven by a cluster of general-purpose technologies — the steam engine, the railways, electrification, the internal combustion engine — that open new productive frontiers, stimulate investment and employment through the expansion phase, and eventually saturate. The carrying capacity of any particular technological wave is finite. The expansion ends not because demand runs out but because the opportunities the technology created have been realized. The language of the expansion phase, fitted to expansion data, has no parameter for saturation.
+
+Hyman Minsky's version is the sharpest. Stability, he argued, breeds instability — not as metaphor but as mechanism. A period of financial calm licenses leveraged risk-taking: lenders relax standards, borrowers extend, asset prices rise to reflect the expectation that they will continue to rise. The longer the calm persists, the more the system's structure shifts toward fragility, because the calm is evidence — compelling, well-fitted evidence — that leverage is safe. A lender operating from a model calibrated on the calm period is not being irrational. The model is a good fit to the data it was fitted on. It simply has no representation for the regime change that the calm's own dynamics are producing. The Minsky moment, when it comes, is not an outlier the model underweighted. It is a structural change into a regime the model could not express.
+
+Reinhart and Rogoff catalogued eight centuries of financial crises and found the same pattern preceding every one: confident expert opinion that the old rules no longer applied, that this cycle was different, that the leverage was sustainable. This is not irrationality. It is the predictable output of models fitted to pre-crisis data by agents who understood their models perfectly and whose models were right about everything they were capable of saying. The crisis is exterior to the language of the models used to not predict it.
+
+```{r ch4-two-windows, fig.cap="Two observation windows on the same cycle produce opposite extrapolations, both confident, both wrong at the turning point. A linear trend fitted to the expansion phase (blue, left window) predicts continued growth. The same model structure fitted to the contraction phase (red, right window) predicts continued decline. The turn between phases is precisely what neither model can anticipate: it is exterior to the language of any model fitted entirely within one phase. The structure is stylized after Kondratiev long waves, with a period of fifty time units."}
+set.seed(2025)  # reproducibility
+
+# Stylized long-wave cycle: sustained oscillation around a stable mean.
+# Period of 50 units, echoing Kondratiev's empirical estimate.
+t_full    <- seq(0, 130, by = 0.5)
+baseline  <- 100
+amplitude <- 35
+period    <- 50
+signal    <- baseline + amplitude * sin(2 * pi * t_full / period)
+
+# Add a small amount of noise to represent real data
+noise     <- rnorm(length(t_full), 0, 2)
+cycle_df  <- tibble(t = t_full, true = signal, observed = signal + noise)
+
+# Window A: expansion phase — the upswing (t ∈ [5, 20])
+win_a <- filter(cycle_df, t >= 5, t <= 20)
+fit_a <- lm(observed ~ t, data = win_a)
+
+# Window B: contraction phase — the downswing (t ∈ [32, 47])
+win_b <- filter(cycle_df, t >= 32, t <= 47)
+fit_b <- lm(observed ~ t, data = win_b)
+
+# Extrapolate each fit forward to t = 75
+extrap_t <- seq(5, 75, by = 0.5)
+extrap_df <- bind_rows(
+  tibble(t = extrap_t, fit = predict(fit_a, tibble(t = extrap_t)), window = "Expansion fit"),
+  tibble(t = extrap_t, fit = predict(fit_b, tibble(t = extrap_t)), window = "Contraction fit")
+)
+
+# Shade the observation windows
+shade_a <- tibble(xmin = 5,  xmax = 20, ymin = 40, ymax = 165)
+shade_b <- tibble(xmin = 32, xmax = 47, ymin = 40, ymax = 165)
+
+ggplot() +
+  # Shaded observation windows
+  geom_rect(data = shade_a, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = "#2D5F8A", alpha = 0.08) +
+  geom_rect(data = shade_b, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = "#C0392B", alpha = 0.08) +
+  # True cycle (shown after observation period as dotted)
+  geom_line(data = filter(cycle_df, t <= 75),
+            aes(x = t, y = true),
+            color = "#555555", linewidth = 0.8, linetype = "dotted") +
+  # Observed data points in each window
+  geom_point(data = win_a, aes(x = t, y = observed),
+             color = "#2D5F8A", size = 1.5, alpha = 0.8) +
+  geom_point(data = win_b, aes(x = t, y = observed),
+             color = "#C0392B", size = 1.5, alpha = 0.8) +
+  # Extrapolations
+  geom_line(data = extrap_df,
+            aes(x = t, y = fit, color = window, linetype = window),
+            linewidth = 0.85) +
+  scale_color_manual(
+    values = c("Expansion fit" = "#2D5F8A", "Contraction fit" = "#C0392B")
+  ) +
+  scale_linetype_manual(
+    values = c("Expansion fit" = "solid", "Contraction fit" = "solid")
+  ) +
+  annotate("text", x = 12.5, y = 155, label = "Window A\n(expansion)",
+           family = "Source Serif 4", size = 3.0, color = "#2D5F8A") +
+  annotate("text", x = 39.5, y = 155, label = "Window B\n(contraction)",
+           family = "Source Serif 4", size = 3.0, color = "#C0392B") +
+  coord_cartesian(ylim = c(45, 165)) +
+  labs(
+    title    = "Two windows, two extrapolations",
+    subtitle = "Dotted: true cycle. Shaded: observation windows. Solid lines: linear trend extrapolations from each window.",
+    x        = "Time",
+    y        = "Index",
+    color    = NULL,
+    linetype = NULL
+  ) +
+  theme(legend.position = "bottom")
+```
+
+The two extrapolations in that figure are not bad statistical practice. Each is the correct output of a model well-fitted to its observation window. The residuals are small, the fit is good, the extrapolation is what the model implies. The models are wrong about the future not because they are poorly estimated but because they are built in a language that has no representation for the phase transition. More data from the same window would give tighter confidence bands and a more confident wrong answer.
+
+This is the genealogy of the stationarity problem. Stationarity is not an assumption about noise — it is an assumption about regime. It asserts that the data-generating process visible in the observation window persists. When the system has a cyclical structure, this assertion is always temporarily true and permanently misleading: it is true within any phase long enough to fit a model, and it predicts the wrong turn every time. The model inherits nothing from its predecessors across the phase boundary because the phase boundary is precisely what the model cannot see.
+
+The Kondratiev observation, the Minsky mechanism, the Ibn Khaldun genealogy of dynasties — these are all claims that the most important events in the system's history are phase transitions, and that models fitted within a phase are, by construction, blind to them. This is not a counsel of despair about time series modeling. It is a demand for precision about what time series models can and cannot say, and therefore about which questions they can and cannot answer. A model that fits the expansion phase fits the expansion phase. The question of whether the expansion will continue is a question about the regime structure — about where in the cycle the system currently sits, and what conditions govern the transition — and it is exterior to the language of any model that takes the expansion phase as its universe.
+
 ## The Possibility Space {#sec-possibility}
 
 The agent-based model does not produce better point forecasts. It is not a superior extrapolation engine. A model that represents the full heterogeneity of a firm population does not thereby know where the economy will be in ten years with more precision than a model tracking mean firm size does. Forecasting is not the point.
@@ -1600,13 +1727,23 @@ This is what honest cartography looks like. Not "the population will be $K$ at t
 
 ## The Statistician's Checklist {#sec-checklist}
 
-The statistician's instinct toward honest uncertainty quantification is correct. Confidence intervals, posterior distributions, prediction intervals, cross-validation — these are all ways of refusing to report false precision. They are formal structures for saying "I do not know exactly, and here is what I do know about how much I do not know." This course has argued that the same instinct should extend from parameter uncertainty to structural uncertainty: not only "what are the plausible values of this parameter?" but "is this the right language for the question I am asking?"
+The statistician's instinct toward honest uncertainty quantification is correct. Confidence intervals, posterior distributions, prediction intervals, cross-validation — these are all ways of refusing to report false precision. They are formal structures for saying "I do not know exactly, and here is what I do know about how much I do not know." This course has argued that the same instinct should extend from parameter uncertainty to structural uncertainty: not only "what are the plausible values of this parameter?" but "what class of data-generating procedures is consistent with what I observe, and what does each imply for the question I am asking?"
 
-The checklist question is: *at what resolution is this model working, and is the phenomenon I care about expressible at that resolution?*
+This reframe matters. A model is not merely a fitting device. It is a commitment to a class of mechanisms — a claim, made before data are consulted, about the space of DGPs that could have produced the observations. The ODE, equivalently the system dynamics model in the computational social science tradition, is a stock-and-flow structure whose flow equations embed the mean-field assumption: the same differential equations, whether written in mathematical notation or drawn as a Forrester diagram, impose $\varepsilon_i = 0$ and $\Delta W = 0$ before estimation begins. The ABM relaxes those constraints and thereby admits a broader class of DGPs. The apparent competition between system dynamics and agent-based modeling in that literature is the regularization tradeoff made methodological: it is the question of how strongly to constrain the mechanism space given what the data can support, not a disagreement about the underlying reality.
 
-It applies to any regression model: the phenomenon may be a nonlinear threshold effect that a linear model cannot represent, regardless of sample size or estimation efficiency. It applies to any time series model: the phenomenon may be a regime change that a stationary model cannot anticipate, because the change moves the system outside the distribution the model was fitted on. It applies to any compartmental epidemic model: the phenomenon may be hub-driven super-spreading in a heterogeneous contact network, which the mean-field model cannot reach. It applies to any model of industry dynamics: the phenomenon may be the distribution of firm sizes, which a model tracking mean employment cannot express, because the mean is not a sufficient statistic for a power law tail.
+The checklist has two questions, which are two aspects of the same demand for honesty about constraints.
 
-Most phenomena are well-served by the ODE, the linear model, the aggregate mean. Their restrictions are warranted when the phenomena of interest sit inside their expressive range — and very often they do. The checklist is not a case for ABM. It is a case for knowing which language you are speaking and whether the question fits the grammar. The ABM is what you reach for when the answer to the checklist question is no — when the phenomenon requires heterogeneity the model has collapsed, dynamics the model cannot generate, or structure at a resolution the model does not reach. Name the language, identify the boundary, ask the question. The rest follows from the answer.
+*At what resolution is this model working, and is the phenomenon I care about expressible at that resolution?* Stationarity constrains temporal variation to zero across the observation window — the Nyquist limit determines what frequencies are identifiable at all, and the stationarity prior zeros out variation within the identifiable band. A quarterly model cannot express sub-quarterly dynamics. A model fitted in the expansion phase of a long cycle cannot express the turn. When the phenomenon lives at a finer temporal scale, or requires a regime transition the model's prior forbids, additional data within the same resolution does not help: the constraint is structural, not statistical.
+
+*What agent heterogeneity and contact structure has this model regularized to zero, and does the phenomenon require what was regularized away?* The mean-field ODE sets $\varepsilon_i = 0$ for all agents and $\Delta W = 0$ — it constrains every agent to the population mean and every contact pair to the maximum entropy rate. Hub-driven super-spreading lives in the sparse non-zero entries of $\Delta W$: it requires exactly the deviations from maximum entropy contact that the mean-field prior eliminates. The power law firm size distribution lives in the $\varepsilon_i$: it is a property of the full distribution of agent deviations, invisible to a model that has zeroed them out before estimation. The question is not whether the model fits poorly. It is whether the phenomenon exists within the model's feasible set at all.
+
+These two questions share a structure: each asks whether the regularization the model applies — temporal, spatial, structural — is warranted for the phenomenon and the data. The answer depends on both simultaneously, and this is where the bias-variance tradeoff enters in two distinct senses that should not be conflated.
+
+The first is the estimation sense. A richly parameterized ABM fitted to sparse data has high variance: small changes in the data produce large changes in the inferred heterogeneity and contact structure. Regularizing toward mean-field reduces that variance at the cost of bias — the estimates are stably wrong rather than noisily right. Under data sparsity, this is not a failure of the mean-field model. It is the correct conservative response: the model refuses to hallucinate structure the data cannot support, accepting systematic bias in exchange for stability. The ODE's implicit strong regularization is principled when the data is sparse in time or when the observation design cannot distinguish individual-level variation from population-level averages.
+
+The second is the DGP-class sense. A narrow model family — mean-field, stationary, representative agent — has low uncertainty about which class of mechanism is operating, because it has committed strongly. But that commitment carries the risk of excluding the true DGP entirely. A wider family maintains higher uncertainty about the mechanism but lower risk of structural exclusion. These two senses interact but are not identical. A narrow family can have high estimation variance when data is sparse; a wide family can have low estimation variance when data is rich. The ODE advocate who objects to ABM parameter proliferation is speaking in the estimation sense — more parameters, higher variance. The response is in the DGP-class sense — those parameters describe mechanisms the narrow family cannot express, and whether the richer description is warranted depends on what the phenomenon requires and what the data can support. Both objection and response are correct within their own frame. The checklist resolves the apparent conflict by asking the prior question: does the phenomenon live inside the narrow family's feasible set? If it does, the narrow family's low-variance estimates are the right answer. If it does not, the narrow family's estimates are not low-variance approximations to the truth — they are precise answers to a different question.
+
+Many phenomena are well-served by the ODE, the linear model, the stationary time series, the aggregate mean. Their implicit regularizations are warranted when the phenomena of interest sit well within their feasible sets — and many do. The checklist is not a case for ABM. It is a case for knowing which constraints you are applying and whether they are warranted for the phenomenon and the data jointly. When the answer is that the constraint zeros out exactly what the phenomenon requires, the path is not better estimation within the current model. It is a relaxation — a reduction in regularization strength, a richer family, a model that treats the zeroed-out structure as something to be inferred rather than assumed away. Name the constraint, identify what it zeros out, ask whether the phenomenon lives there. The rest follows from the answer.
 
 The tools are harder. The proofs are less clean. The answers are less crisp. They are more likely to be true.
 

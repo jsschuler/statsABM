@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="John Schuler" />
+
+
+<title>Agent-Based Modeling for Statisticians</title>
+
+<script src="abm_course_book_files/header-attrs-2.29/header-attrs.js"></script>
+<script src="abm_course_book_files/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="abm_course_book_files/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="abm_course_book_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="abm_course_book_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="abm_course_book_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="abm_course_book_files/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="abm_course_book_files/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="abm_course_book_files/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="abm_course_book_files/navigation-1.1/tabsets.js"></script>
+<script src="abm_course_book_files/navigation-1.1/codefolding.js"></script>
+<link href="abm_course_book_files/pagedtable-1.1/css/pagedtable.css" rel="stylesheet" />
+<script src="abm_course_book_files/pagedtable-1.1/js/pagedtable.js"></script>
+<!-- header.html — Injected into <head> for the course book -->
+<meta name="author" content="John Lynham">
+<meta name="description" content="Agent-Based Modeling for Statisticians — JSM 2025 Short Course">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+
+
+
+<style type="text/css">
+/* for pandoc --citeproc since 2.11 */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+<link rel="stylesheet" href="../_theme/fonts.css" type="text/css" />
+<link rel="stylesheet" href="../_theme/custom.css" type="text/css" />
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Agent-Based Modeling for Statisticians</h1>
+<h3 class="subtitle">A Short Course</h3>
+<h4 class="author">John Schuler</h4>
+<h4 class="date">Joint Statistical Meetings, 2026</h4>
+
+</div>
+
+
+<hr />
+<div id="ch1" class="section level1" number="1">
+<h1 number="1"><span class="header-section-number">1</span> The Differential Equations of Living Systems</h1>
+<pre class="r"><code># Chapter 1 Setup
+# All packages and global settings for this chapter.
+# This chunk is self-contained — it does not depend on any prior chapter.
+
+library(tidyverse)
+library(deSolve)
+library(patchwork)
+
+theme_set(
+  theme_minimal(base_family = &quot;Source Serif 4&quot;) +
+    theme(
+      plot.title       = element_text(family = &quot;Raleway&quot;, face = &quot;plain&quot;,
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = &quot;Source Serif 4&quot;, size = 11,
+                                      color = &quot;#555555&quot;, margin = margin(b = 12)),
+      axis.title       = element_text(family = &quot;Source Serif 4&quot;, size = 10),
+      legend.position  = &quot;bottom&quot;,
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = &quot;#FAFAF7&quot;, color = NA)
+    )
+)
+
+palette_ch1 &lt;- c(
+  prey        = &quot;#2D5F8A&quot;,
+  predator    = &quot;#8A4A2D&quot;,
+  susceptible = &quot;#2D5F8A&quot;,
+  infectious  = &quot;#C0392B&quot;,
+  recovered   = &quot;#27AE60&quot;
+)</code></pre>
+<p>The simplest living systems defeat the intuitions we bring to them. Not because their rules are complicated — the rules governing a population of rabbits and foxes are not complicated — but because feedback does something to time that our unaided intuition cannot follow. We expect growth to continue or stop; we do not expect it to reverse, gather again, and reverse once more in endless repetition. We expect an epidemic to burn through everyone it can reach. These expectations are wrong, and they are wrong in the same way: we have failed to account for what happens when a process feeds back on the conditions of its own continuation.</p>
+<p>A population of rabbits with unlimited food grows exponentially. Everyone knows this. What is less obvious is that the fox population grows with it — and then the rabbits decline — and then the foxes, deprived of prey, decline in turn — and then the rabbits recover. The system cycles. Not approximately, not with damping toward some equilibrium — it cycles exactly, the same orbit traversed indefinitely, a clock that does not run down. This is genuinely strange. It is the kind of strangeness that deserves an instrument adequate to it.</p>
+<p>The differential equation is that instrument. It does not merely describe change over time; it describes the rate of change as a function of the current state, which is precisely the structure feedback requires. The state determines the rate, the rate changes the state, the new state determines a new rate — the equation captures this self-referential logic and makes it tractable.</p>
+<p>Familiar equations accumulate invisible assumptions. The predator-prey model and the epidemic model are a century old; the choices embedded in their functional forms have had that long to become invisible. What is hiding in those forms — and what it costs to have those things hidden — is what the rest of the day is about.</p>
+<div id="sec-lv" class="section level2" number="1.1">
+<h2 number="1.1"><span class="header-section-number">1.1</span> Predators, Prey, and the Geometry of Cycles</h2>
+<p>Begin with the prey. Absent predators, a prey population grows at a rate proportional to its size — each individual produces offspring at the same per-capita rate <span class="math inline">\(\alpha\)</span>, and the population is not resource-constrained. This gives the exponential growth term <span class="math inline">\(\alpha N\)</span>. Predators, absent prey, decline at a per-capita rate <span class="math inline">\(\gamma\)</span> — they die without food. These are the uncoupled dynamics: rabbits grow, foxes die.</p>
+<p>Coupling enters through encounters. A predator that encounters a prey individual kills it with some probability; the encounter benefits the predator. The rate at which these encounters occur is proportional to the product <span class="math inline">\(NP\)</span>. This deserves a moment’s attention before the equation appears. The product <span class="math inline">\(NP\)</span> says that every predator is equally likely to encounter every prey individual: if there are twice as many prey, encounters double; if there are twice as many predators, encounters double. The encounter rate is the product of the two abundances, multiplied by a rate constant <span class="math inline">\(\beta\)</span> that converts encounters into kills.</p>
+<p><span class="math display">\[\frac{dN}{dt} = \alpha N - \beta N P\]</span></p>
+<p><span class="math display">\[\frac{dP}{dt} = \delta N P - \gamma P\]</span></p>
+<p>The parameter <span class="math inline">\(\alpha\)</span> is the prey birth rate; <span class="math inline">\(\beta\)</span> is the predation rate coefficient — the probability per unit time per predator-prey pair that an encounter results in a kill; <span class="math inline">\(\delta\)</span> is the conversion efficiency, the rate at which prey consumed is converted into predator offspring; <span class="math inline">\(\gamma\)</span> is the predator death rate. Four parameters. Two equations. A complete description of a world with two species and one interaction.</p>
+<p>The nullclines — the curves along which each population is momentarily stationary — divide the phase plane into four regions. The prey nullcline <span class="math inline">\(dN/dt = 0\)</span> requires either <span class="math inline">\(N = 0\)</span> or <span class="math inline">\(P = \alpha/\beta\)</span>: the prey population is constant when the predator population is exactly <span class="math inline">\(\alpha/\beta\)</span>, regardless of how many prey there are. The predator nullcline <span class="math inline">\(dP/dt = 0\)</span> requires either <span class="math inline">\(P = 0\)</span> or <span class="math inline">\(N = \gamma/\delta\)</span>: predators are stationary when prey are at exactly <span class="math inline">\(\gamma/\delta\)</span>. The nontrivial equilibrium is the crossing point: <span class="math inline">\(N^* = \gamma/\delta\)</span>, <span class="math inline">\(P^* = \alpha/\beta\)</span>.</p>
+<p>The trajectories are closed orbits around this equilibrium. Not spiraling inward, not spiraling outward — closed. The system cycles forever without damping or growth. This is the pendulum that never loses energy, a machine that returns to any given state without ever simplifying toward rest. It is geometrically beautiful and physically strange. A physicist would say the system is conservative — it has a constant of motion, a quantity that is preserved along every trajectory. Volterra showed that <span class="math inline">\(\delta N - \gamma \ln N + \beta P - \alpha \ln P\)</span> is constant along solutions of the system. The orbits are the level curves of this conserved quantity.</p>
+<p>Each initial condition <span class="math inline">\((N_0, P_0)\)</span> selects a particular orbit, and the system follows that orbit indefinitely. The interior of each orbit is another orbit; the exterior is another. The equilibrium point is not a fixed point in the attracting sense — it is surrounded by a continuous family of periodic orbits, each one a different amplitude of the same cycle. The phase plane is therefore not a diagram of what the system tends toward; it is a diagram of what the system always does.</p>
+<pre class="r"><code># Lotka-Volterra ODE system
+# set.seed not required here — deSolve is deterministic
+lv_params &lt;- c(alpha = 0.8, beta = 0.4, delta = 0.3, gamma = 0.6)
+lv_state  &lt;- c(N = 10, P = 5)
+
+lv_ode &lt;- function(t, state, params) {
+  with(as.list(c(state, params)), {
+    dN &lt;- alpha * N - beta * N * P
+    dP &lt;- delta * N * P - gamma * P
+    list(c(dN, dP))
+  })
+}
+
+times_lv &lt;- seq(0, 50, by = 0.1)
+lv_out   &lt;- ode(y = lv_state, times = times_lv, func = lv_ode, parms = lv_params)
+
+lv_df &lt;- as_tibble(as.data.frame(lv_out)) %&gt;%
+  pivot_longer(c(N, P), names_to = &quot;species&quot;, values_to = &quot;population&quot;) %&gt;%
+  mutate(species = recode(species, N = &quot;prey&quot;, P = &quot;predator&quot;))
+
+ggplot(lv_df, aes(x = time, y = population, color = species)) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(
+    values = palette_ch1[c(&quot;prey&quot;, &quot;predator&quot;)],
+    labels = c(&quot;prey&quot; = &quot;Prey (N)&quot;, &quot;predator&quot; = &quot;Predator (P)&quot;)
+  ) +
+  labs(
+    title    = &quot;Lotka-Volterra: population time series&quot;,
+    subtitle = expression(alpha == 0.8 ~ &quot;,&quot; ~ beta == 0.4 ~ &quot;,&quot; ~ delta == 0.3 ~ &quot;,&quot; ~ gamma == 0.6),
+    x        = &quot;Time&quot;,
+    y        = &quot;Population&quot;,
+    color    = NULL
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch1-lv-timeseries-1.png" alt="Lotka-Volterra predator-prey dynamics. Prey (blue) and predator (brown) populations cycle indefinitely. Parameters: $\alpha = 0.8$, $\beta = 0.4$, $\delta = 0.3$, $\gamma = 0.6$." width="768" />
+<p class="caption">
+Lotka-Volterra predator-prey dynamics. Prey (blue) and predator (brown) populations cycle indefinitely. Parameters: <span class="math inline">\(\alpha = 0.8\)</span>, <span class="math inline">\(\beta = 0.4\)</span>, <span class="math inline">\(\delta = 0.3\)</span>, <span class="math inline">\(\gamma = 0.6\)</span>.
+</p>
+</div>
+<pre class="r"><code># Phase portrait: multiple initial conditions
+# The system is deterministic; no seed needed
+initial_conditions &lt;- list(
+  c(N = 10, P = 5),
+  c(N = 15, P = 4),
+  c(N = 8,  P = 7),
+  c(N = 20, P = 3),
+  c(N = 6,  P = 9)
+)
+
+orbit_df &lt;- map_dfr(
+  seq_along(initial_conditions),
+  function(i) {
+    out &lt;- ode(
+      y     = initial_conditions[[i]],
+      times = seq(0, 80, by = 0.05),
+      func  = lv_ode,
+      parms = lv_params
+    )
+    as_tibble(as.data.frame(out)) %&gt;%
+      mutate(orbit = factor(i))
+  }
+)
+
+# Equilibrium point
+N_star &lt;- lv_params[&quot;gamma&quot;] / lv_params[&quot;delta&quot;]
+P_star &lt;- lv_params[&quot;alpha&quot;] / lv_params[&quot;beta&quot;]
+
+ggplot(orbit_df, aes(x = N, y = P, color = orbit)) +
+  geom_path(linewidth = 0.7, alpha = 0.8) +
+  annotate(&quot;point&quot;, x = N_star, y = P_star, size = 3, color = &quot;#1C1C1E&quot;) +
+  annotate(&quot;text&quot;, x = N_star + 0.4, y = P_star + 0.3,
+           label = &quot;Equilibrium&quot;, family = &quot;Source Serif 4&quot;, size = 3.5) +
+  scale_color_manual(values = colorRampPalette(c(&quot;#2D5F8A&quot;, &quot;#8A4A2D&quot;))(5)) +
+  guides(color = &quot;none&quot;) +
+  labs(
+    title = &quot;Lotka-Volterra: phase portrait&quot;,
+    subtitle = &quot;Five initial conditions, each tracing a closed orbit&quot;,
+    x = &quot;Prey population (N)&quot;,
+    y = &quot;Predator population (P)&quot;
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch1-lv-phase-1.png" alt="Phase portrait of Lotka-Volterra dynamics. Each curve is a closed orbit corresponding to a different initial condition. The system returns to each point on a given orbit with exact periodicity." width="768" />
+<p class="caption">
+Phase portrait of Lotka-Volterra dynamics. Each curve is a closed orbit corresponding to a different initial condition. The system returns to each point on a given orbit with exact periodicity.
+</p>
+</div>
+</div>
+<div id="sec-meanfield" class="section level2" number="1.2">
+<h2 number="1.2"><span class="header-section-number">1.2</span> The Mean-Field Assumption</h2>
+<p>Something has been hiding in the product term <span class="math inline">\(\beta NP\)</span>, and it has been hiding there in plain sight.</p>
+<p>The expression says that the rate of predator-prey encounters is proportional to the product of population sizes. For this to hold, every predator must be equally likely to encounter every prey individual at every moment. The population is perfectly mixed. Space does not exist. Individuals have no locations, no territories, no persistent relationships. There are no dense patches and no empty expanses. There is no structure at all to the spatial arrangement of individuals — or rather, the assumption is that the spatial arrangement is irrelevant because mixing is instantaneous and complete.</p>
+<p>This is the mean-field assumption. Its name comes from physics, where it appears in the analysis of magnetic systems: the effective field experienced by any one particle is the mean field produced by all the others, rather than the specific field produced by its actual neighbors. In population ecology it enters through the functional form of the interaction term. It is not stated as an assumption in most presentations of Lotka-Volterra. It is embedded in the mathematics. The product <span class="math inline">\(NP\)</span> is not the only way to model predator-prey encounters; it is the way that assumes perfect mixing.</p>
+<p>The mean-field assumption is a parametric family choice: it selects the family of models governed by mass-action kinetics, excluding all others — network models, spatial models, individual-based models — before a single observation is consulted. The product <span class="math inline">\(NP\)</span> is not a parameter to be estimated. It is the choice of family, and that choice determines what phenomena the family can express. Structured populations, spatial aggregations, social networks among individuals, heterogeneous encounter rates — these are not poorly approximated within the family. They are not in the family.</p>
+<p>That family choice is simultaneously a choice about temporal resolution. The ODE family is defined in continuous time — formally, the limit as the time step shrinks to zero. But the interaction term <span class="math inline">\(\beta NP\)</span> is appropriate only when the observation interval is coarse enough for the law of large numbers to operate across interactions within each step. At fine enough temporal resolution the family is misspecified: in any given instant most individuals are not contacting most others, and the product term misrepresents the actual contact process. The mean-field ODE is the right family at temporal resolutions coarse enough for spatial averaging to hold within each step. Whether that condition is satisfied is an empirical question about the system’s contact dynamics — not a modeling convenience.</p>
+<p>The closed-orbit result depends on this assumption. The conserved quantity depends on it. When real predator-prey systems fail to cycle as neatly as the model predicts — and they often do — the mean-field assumption is frequently where the discrepancy originates. Its most important consequences, however, will not come into view until the contrast with agent-based models is drawn.</p>
+</div>
+<div id="sec-sir" class="section level2" number="1.3">
+<h2 number="1.3"><span class="header-section-number">1.3</span> Epidemics and the Threshold Phenomenon</h2>
+<p>The same assumption appears in epidemic modeling, in precisely the same place, governing a different interaction.</p>
+<p>A closed population of <span class="math inline">\(N\)</span> individuals. Each is in one of three states: Susceptible, Infectious, or Recovered (and immune). Infectious individuals shed pathogen; susceptible individuals become infected upon exposure. The rate at which susceptible individuals encounter infectious ones is proportional to <span class="math inline">\(SI\)</span> — the number of susceptibles times the number of infecteds, multiplied by a rate constant <span class="math inline">\(\beta\)</span>. Recovery occurs at per-capita rate <span class="math inline">\(\gamma\)</span>.</p>
+<p><span class="math display">\[\frac{dS}{dt} = -\beta S I\]</span></p>
+<p><span class="math display">\[\frac{dI}{dt} = \beta S I - \gamma I\]</span></p>
+<p><span class="math display">\[\frac{dR}{dt} = \gamma I\]</span></p>
+<p>The mean-field assumption is here again: the contact rate is proportional to the product <span class="math inline">\(SI\)</span>, which assumes that every susceptible individual is equally likely to contact every infectious individual. Human contact, of course, is not structured this way. People have households, workplaces, social networks — structures that make some contacts far more probable than others. The SIR model, like Lotka-Volterra, treats this structure as if it does not exist.</p>
+<p>From the sign of <span class="math inline">\(dI/dt\)</span> at the start of an epidemic, when <span class="math inline">\(S \approx N\)</span>:</p>
+<p><span class="math display">\[\frac{dI}{dt}\bigg|_{t=0} \approx I(\beta N - \gamma) = I \cdot \gamma\left(\frac{\beta N}{\gamma} - 1\right)\]</span></p>
+<p>The epidemic grows if <span class="math inline">\(\beta N / \gamma &gt; 1\)</span> and dies out if <span class="math inline">\(\beta N / \gamma &lt; 1\)</span>. The quantity <span class="math inline">\(\mathcal{R}_0 = \beta N / \gamma\)</span> is the basic reproduction number: the expected number of secondary infections produced by a single infectious individual in a fully susceptible population. It is not a numerical fact to memorize. It is a structural consequence of the model — a ratio between the transmission term and the recovery term, visible directly in the algebra. The epidemic threshold at <span class="math inline">\(\mathcal{R}_0 = 1\)</span> is where the production of new infections exactly balances the removal of current ones.</p>
+<p>The years since 2020 have given most people in the room considerably more opinions about this model than they might have anticipated forming. The herd immunity threshold, the effect of contact reduction, the role of <span class="math inline">\(\mathcal{R}_0\)</span> in policy discussions — these became household concepts in a span of weeks. What remained, for the most part, unstated in those discussions was the mean-field assumption underlying the standard SIR framework: that the contact structure of the population could be adequately represented by the product <span class="math inline">\(SI\)</span>, ignoring the network topology that governs who actually contacts whom.</p>
+<pre class="r"><code># SIR ODE implementation
+sir_params &lt;- c(beta = 0.0003, gamma = 0.1)
+sir_state  &lt;- c(S = 990, I = 10, R = 0)
+N_pop      &lt;- sum(sir_state)
+
+# R0 under these parameters
+R0_base &lt;- sir_params[&quot;beta&quot;] * N_pop / sir_params[&quot;gamma&quot;]
+
+sir_ode &lt;- function(t, state, params) {
+  with(as.list(c(state, params)), {
+    dS &lt;- -beta * S * I
+    dI &lt;-  beta * S * I - gamma * I
+    dR &lt;-  gamma * I
+    list(c(dS, dI, dR))
+  })
+}
+
+times_sir &lt;- seq(0, 200, by = 0.5)
+sir_out   &lt;- ode(y = sir_state, times = times_sir, func = sir_ode, parms = sir_params)
+
+sir_df &lt;- as_tibble(as.data.frame(sir_out)) %&gt;%
+  pivot_longer(c(S, I, R), names_to = &quot;compartment&quot;, values_to = &quot;count&quot;) %&gt;%
+  mutate(
+    compartment = factor(
+      compartment,
+      levels = c(&quot;S&quot;, &quot;I&quot;, &quot;R&quot;),
+      labels = c(&quot;susceptible&quot;, &quot;infectious&quot;, &quot;recovered&quot;)
+    )
+  )
+
+ggplot(sir_df, aes(x = time, y = count, color = compartment)) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(
+    values = palette_ch1[c(&quot;susceptible&quot;, &quot;infectious&quot;, &quot;recovered&quot;)]
+  ) +
+  labs(
+    title    = &quot;SIR epidemic dynamics&quot;,
+    subtitle = bquote(beta == .(sir_params[&quot;beta&quot;]) ~ &quot;,&quot; ~
+                      gamma == .(sir_params[&quot;gamma&quot;]) ~ &quot;,&quot; ~
+                      R[0] == .(round(R0_base, 2))),
+    x        = &quot;Time&quot;,
+    y        = &quot;Count&quot;,
+    color    = NULL
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch1-sir-base-1.png" alt="SIR epidemic dynamics. The epidemic rises, peaks when the susceptible pool is depleted sufficiently, and declines. The herd immunity threshold is reached when enough individuals have recovered that $\mathcal{R}_0 S/N &lt; 1$." width="768" />
+<p class="caption">
+SIR epidemic dynamics. The epidemic rises, peaks when the susceptible pool is depleted sufficiently, and declines. The herd immunity threshold is reached when enough individuals have recovered that <span class="math inline">\(\mathcal{R}_0 S/N &lt; 1\)</span>.
+</p>
+</div>
+<pre class="r"><code># Parameter sweep over R0
+# Vary beta to produce different R0 values; gamma and N fixed
+
+set.seed(2025)  # seed for reproducibility; results are deterministic here, but good practice
+
+R0_values &lt;- c(0.8, 1.2, 1.5, 2.0, 3.0, 5.0)
+gamma_fixed &lt;- 0.1
+N_fixed     &lt;- 1000
+
+sweep_df &lt;- map_dfr(R0_values, function(r0) {
+  beta_val &lt;- r0 * gamma_fixed / N_fixed
+  params_i &lt;- c(beta = beta_val, gamma = gamma_fixed)
+  state_i  &lt;- c(S = N_fixed - 10, I = 10, R = 0)
+  out_i    &lt;- ode(y = state_i, times = seq(0, 250, by = 0.5),
+                  func = sir_ode, parms = params_i)
+  as_tibble(as.data.frame(out_i)) %&gt;%
+    mutate(R0 = r0) %&gt;%
+    select(time, I, R0)
+})
+
+ggplot(sweep_df, aes(x = time, y = I, color = factor(R0), group = factor(R0))) +
+  geom_line(linewidth = 0.85) +
+  scale_color_manual(
+    values = colorRampPalette(c(&quot;#AED6F1&quot;, &quot;#C0392B&quot;))(length(R0_values)),
+    name   = expression(R[0])
+  ) +
+  labs(
+    title = expression(&quot;SIR epidemic curves across values of&quot; ~ R[0]),
+    x     = &quot;Time&quot;,
+    y     = &quot;Infectious individuals (I)&quot;
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch1-sir-sweep-1.png" alt="SIR epidemic curves across values of $\mathcal{R}_0$. Each curve shows the infectious compartment $I(t)$ for a different transmission rate. The epidemic threshold at $\mathcal{R}_0 = 1$ is visible: below it, no outbreak occurs; above it, epidemic size grows with $\mathcal{R}_0$." width="768" />
+<p class="caption">
+SIR epidemic curves across values of <span class="math inline">\(\mathcal{R}_0\)</span>. Each curve shows the infectious compartment <span class="math inline">\(I(t)\)</span> for a different transmission rate. The epidemic threshold at <span class="math inline">\(\mathcal{R}_0 = 1\)</span> is visible: below it, no outbreak occurs; above it, epidemic size grows with <span class="math inline">\(\mathcal{R}_0\)</span>.
+</p>
+</div>
+</div>
+<div id="sec-ch1-language" class="section level2" number="1.4">
+<h2 number="1.4"><span class="header-section-number">1.4</span> What the Language Can Say</h2>
+<p>The ODE is a machine for processing continuous quantities. The prey population <span class="math inline">\(N = 3.7\)</span> is as valid a model state as <span class="math inline">\(N = 37\)</span> or <span class="math inline">\(N = 370\)</span>. This is not an approximation of discrete reality — it is a different ontology. The formalism requires it: a differential equation governing <span class="math inline">\(dN/dt\)</span> must treat <span class="math inline">\(N\)</span> as something smooth enough to differentiate, which means a real number rather than a count. Individuals are absent. Only totals exist.</p>
+<p>Once populations are continuous, they must be homogeneous. The ODE tracks totals; it has no machinery for tracking distributions within compartments. If prey individuals differ in their predation risk, the ODE has nowhere to put this fact — it has only <span class="math inline">\(N\)</span>. The model therefore treats all individuals of the same type as identical: same transmission probability, same predation risk, same birth rate. The distribution of individual characteristics collapses to a point mass. A real fox population contains young foxes and old foxes, healthy and sick, bold hunters and timid ones. The ODE knows none of this, because a total is not a distribution.</p>
+<p>Identical individuals interacting through their totals: this is already the mean-field assumption, arrived at from the inside. If all prey individuals are equivalent, the rate at which any predator encounters prey is proportional to <span class="math inline">\(N\)</span>, independently of where it is or what it has done before. If all predators are likewise equivalent, encounters occur at rate <span class="math inline">\(\beta NP\)</span>. The product term is the consequence of the prior two choices, not a third independent assumption. And with it follows everything else: space does not exist because individuals have no positions; history does not matter because the state at <span class="math inline">\(t\)</span> — two numbers — is all there is. There is nothing to accumulate.</p>
+<p>These are not flaws. They are choices, and they have been scientifically productive for over a century. Lotka-Volterra was formulated in the 1920s; SIR was published in 1927 by Kermack and McKendrick. The models have generated real insight into predator-prey dynamics, epidemic thresholds, herd immunity. The point is not that the choices are wrong. It is that they are a chain — continuity requires homogeneity, homogeneity implies the mean-field, the mean-field excludes position and history — and every link was forged before the modeler wrote the first equation.</p>
+<p>The product term <span class="math inline">\(\beta NP\)</span> is not a neutral functional form. It is a commitment — to uniformity of access, to the irrelevance of position, relationship, and history. When the commitment holds, the model is not merely adequate. It is the right instrument, not an approximation of one. When it fails, the model does not give imprecise answers. It gives precise answers about a world in which individuals have no addresses and no neighbors except everyone.</p>
+<hr />
+</div>
+</div>
+<div id="ch2" class="section level1" number="2">
+<h1 number="2"><span class="header-section-number">2</span> Agents, Networks, and the Geometry of Interaction</h1>
+<pre class="r"><code># Chapter 2 Setup
+# Self-contained — does not depend on Chapter 1.
+
+library(tidyverse)
+library(deSolve)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(gganimate)
+library(patchwork)
+
+theme_set(
+  theme_minimal(base_family = &quot;Source Serif 4&quot;) +
+    theme(
+      plot.title       = element_text(family = &quot;Raleway&quot;, face = &quot;plain&quot;,
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = &quot;Source Serif 4&quot;, size = 11,
+                                      color = &quot;#555555&quot;, margin = margin(b = 12)),
+      axis.title       = element_text(family = &quot;Source Serif 4&quot;, size = 10),
+      legend.position  = &quot;bottom&quot;,
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = &quot;#FAFAF7&quot;, color = NA)
+    )
+)
+
+palette_ch2 &lt;- c(
+  prey        = &quot;#2D5F8A&quot;,
+  predator    = &quot;#8A4A2D&quot;,
+  susceptible = &quot;#2D5F8A&quot;,
+  infectious  = &quot;#C0392B&quot;,
+  recovered   = &quot;#27AE60&quot;
+)
+
+# ODE parameters matched to ABM transition rates.
+# alpha = p_birth, gamma = p_death. beta and delta chosen so equilibrium
+# N* = gamma/delta = 80, P* = alpha/beta = 25 — within the range of the
+# initial conditions (200, 40) but close enough that the orbit stays
+# positive throughout. Using the Ch1 parameters (N*=2, P*=2) with
+# initial conditions of (200, 40) produces an orbit that swings N to
+# ~10^-50, causing the ODE solver to output negative populations.
+lv_params_ch2 &lt;- c(alpha = 0.15, beta = 0.006, delta = 0.00125, gamma = 0.10)
+lv_ode_ch2 &lt;- function(t, state, params) {
+  with(as.list(c(state, params)), {
+    dN &lt;- alpha * N - beta * N * P
+    dP &lt;- delta * N * P - gamma * P
+    list(c(dN, dP))
+  })
+}
+
+sir_params_ch2 &lt;- c(beta = 0.0003, gamma = 0.1)
+sir_ode_ch2 &lt;- function(t, state, params) {
+  with(as.list(c(state, params)), {
+    dS &lt;- -beta * S * I
+    dI &lt;-  beta * S * I - gamma * I
+    dR &lt;-  gamma * I
+    list(c(dS, dI, dR))
+  })
+}</code></pre>
+<div id="sec-agents" class="section level2" number="2.1">
+<h2 number="2.1"><span class="header-section-number">2.1</span> What Is an Agent?</h2>
+<p>The ODE compresses a population of a hundred rabbits to the number 100. Not an approximation of the rabbits — the number, standing in for all of them. The rabbits have no locations, no ages, no histories of particular encounters. Each is identical to every other in every respect the model can represent, which is to say in every respect. The model works with their total, and the total is everything.</p>
+<p>The agent-based model takes those hundred rabbits seriously as a hundred rabbits. Each has a state. Each has a neighborhood: the set of other agents it can actually interact with at this time step. The neighborhood is the structural innovation — the thing the ODE does not have and cannot have.</p>
+<p>In the ODE, the effective neighborhood of every individual is the entire population, weighted by abundance, continuously. This is what the product term <span class="math inline">\(\beta NP\)</span> says: the encounter rate between any predator and any prey is proportional to both population sizes, equally, everywhere, always. The individual’s position in space, its social relationships, its proximity to particular others — these do not exist as model objects. There is only the aggregate.</p>
+<p>Give an agent a neighborhood smaller than the full population, and you give the model a new kind of sentence. The neighborhood can be spatial — the eight cells surrounding a position on a grid. It can be social — the edges of a contact network. Whatever its structure, the moment it differs from “the entire population, uniformly weighted,” the mean-field assumption fails. And with it falls the constraint that has been keeping certain phenomena outside the model’s language.</p>
+</div>
+<div id="sec-abm-lv" class="section level2" number="2.2">
+<h2 number="2.2"><span class="header-section-number">2.2</span> An Agent-Based Lotka-Volterra</h2>
+<p>An agent-based Lotka-Volterra keeps the same biology as the differential equations — prey reproduce, predators hunt, predators die — but represents the population as a collection of discrete individuals rather than a continuous quantity.</p>
+<p>The population is a <code>tibble</code> with one row per individual. Each row carries an identifier, a type (prey or predator), and an alive status. At each discrete time step: each surviving prey individual reproduces with probability <span class="math inline">\(p_\text{birth}\)</span>; each predator is matched with a random prey individual and, if an encounter occurs, kills the prey and may produce offspring with probability <span class="math inline">\(p_\text{eat}\)</span>; each predator dies with probability <span class="math inline">\(p_\text{death}\)</span>. The numbers <span class="math inline">\(p_\text{birth}\)</span>, <span class="math inline">\(p_\text{eat}\)</span>, <span class="math inline">\(p_\text{death}\)</span> correspond, in a loose sense, to the ODE parameters <span class="math inline">\(\alpha\)</span>, <span class="math inline">\(\beta\delta\)</span>, and <span class="math inline">\(\gamma\)</span> — but they now operate at the level of individuals rather than populations.</p>
+<pre class="r"><code># Agent-based Lotka-Volterra
+# Population represented as a tibble with one row per individual
+
+init_lv_abm &lt;- function(n_prey, n_pred) {
+  # Initialize population with prey and predator agents
+  bind_rows(
+    tibble(id = seq_len(n_prey),           type = &quot;prey&quot;,     alive = TRUE),
+    tibble(id = seq_len(n_pred) + n_prey,  type = &quot;predator&quot;, alive = TRUE)
+  )
+}
+
+step_lv_abm &lt;- function(pop, p_birth = 0.15, p_eat = 0.20, p_death = 0.10,
+                        max_pop = 5000L) {
+  # One time step of the agent-based LV model
+  prey  &lt;- filter(pop, type == &quot;prey&quot;,     alive)
+  preds &lt;- filter(pop, type == &quot;predator&quot;, alive)
+  max_id &lt;- max(pop$id, 0L)
+
+  # --- Prey reproduction ---
+  # Each alive prey reproduces with probability p_birth.
+  # max_pop is a safety cap: births are suppressed when prey exceed this
+  # threshold, preventing runaway population growth in parameter regimes
+  # where predation is temporarily low.
+  n_born &lt;- if (nrow(prey) &gt;= max_pop) 0L else rbinom(1, nrow(prey), p_birth)
+  new_prey &lt;- if (n_born &gt; 0) {
+    tibble(id = seq_len(n_born) + max_id, type = &quot;prey&quot;, alive = TRUE)
+  } else {
+    tibble(id = integer(), type = character(), alive = logical())
+  }
+  max_id &lt;- max_id + n_born
+
+  # --- Predator-prey encounters ---
+  # Random pairing of predators and prey; each encounter kills prey with p_eat
+  # and produces a new predator offspring with the same probability
+  n_enc &lt;- min(nrow(prey), nrow(preds))
+  dead_prey_ids &lt;- integer(0)
+  new_pred_rows &lt;- tibble(id = integer(), type = character(), alive = logical())
+
+  if (n_enc &gt; 0) {
+    p_sample  &lt;- slice_sample(prey,  n = n_enc)
+    pr_sample &lt;- slice_sample(preds, n = n_enc)
+    eaten     &lt;- rbinom(n_enc, 1, p_eat) == 1
+
+    dead_prey_ids &lt;- p_sample$id[eaten]
+    n_new_pred    &lt;- sum(eaten)
+
+    if (n_new_pred &gt; 0) {
+      new_pred_rows &lt;- tibble(
+        id    = seq_len(n_new_pred) + max_id,
+        type  = &quot;predator&quot;,
+        alive = TRUE
+      )
+      max_id &lt;- max_id + n_new_pred
+    }
+  }
+
+  # --- Predator natural death ---
+  # Each alive predator dies with probability p_death
+  dead_pred_ids &lt;- preds$id[rbinom(nrow(preds), 1, p_death) == 1]
+
+  # Update population: remove dead agents, add new ones
+  pop_surviving &lt;- pop %&gt;%
+    mutate(alive = alive &amp; !(id %in% c(dead_prey_ids, dead_pred_ids))) %&gt;%
+    filter(alive)
+
+  bind_rows(pop_surviving, new_prey, new_pred_rows)
+}
+
+run_lv_abm &lt;- function(T = 200, n_prey = 100, n_pred = 20, seed = 42, ...) {
+  # Run the ABM for T steps and return a tidy time series
+  set.seed(seed)  # seed for reproducibility; change to explore stochastic variation
+  pop &lt;- init_lv_abm(n_prey, n_pred)
+
+  map_dfr(0:T, function(tt) {
+    if (tt &gt; 0) pop &lt;&lt;- step_lv_abm(pop, ...)
+    tibble(
+      t        = tt,
+      prey     = sum(pop$type == &quot;prey&quot;),
+      predator = sum(pop$type == &quot;predator&quot;)
+    )
+  })
+}</code></pre>
+<pre class="r"><code># Run 10 ABM replications with a large population
+# Each run uses a different seed to show stochastic variation
+
+set.seed(2025)  # master seed for reproducibility
+
+n_reps   &lt;- 10
+T_run    &lt;- 120   # ~2-3 LV cycles; sufficient to show convergence
+n_prey0  &lt;- 200   # large enough for law-of-large-numbers effects
+n_pred0  &lt;- 40
+
+abm_runs &lt;- map_dfr(1:n_reps, function(rep) {
+  run_lv_abm(T = T_run, n_prey = n_prey0, n_pred = n_pred0, seed = rep,
+             p_birth = 0.15, p_eat = 0.20, p_death = 0.10) %&gt;%
+    mutate(rep = rep)
+})
+
+# ODE solution for comparison — scaled to the same initial conditions
+ode_state_ch2 &lt;- c(N = n_prey0, P = n_pred0)
+ode_out_ch2   &lt;- ode(
+  y     = ode_state_ch2,
+  times = seq(0, T_run, by = 1),
+  func  = lv_ode_ch2,
+  parms = lv_params_ch2
+)
+ode_df_ch2 &lt;- as_tibble(as.data.frame(ode_out_ch2)) %&gt;%
+  rename(t = time, prey = N, predator = P)
+
+# Tidy ABM runs for plotting
+abm_long &lt;- abm_runs %&gt;%
+  pivot_longer(c(prey, predator), names_to = &quot;species&quot;, values_to = &quot;count&quot;)
+
+ode_long &lt;- ode_df_ch2 %&gt;%
+  pivot_longer(c(prey, predator), names_to = &quot;species&quot;, values_to = &quot;count&quot;)
+
+ggplot() +
+  geom_line(
+    data = abm_long,
+    aes(x = t, y = count, color = species, group = interaction(rep, species)),
+    alpha = 0.2, linewidth = 0.5
+  ) +
+  geom_line(
+    data = ode_long,
+    aes(x = t, y = count, color = species),
+    linewidth = 1.2
+  ) +
+  scale_color_manual(
+    values = palette_ch2[c(&quot;prey&quot;, &quot;predator&quot;)],
+    labels = c(&quot;prey&quot; = &quot;Prey&quot;, &quot;predator&quot; = &quot;Predator&quot;)
+  ) +
+  labs(
+    title    = &quot;ABM replicates vs. ODE solution&quot;,
+    subtitle = &quot;Translucent lines: 10 stochastic ABM runs. Solid lines: ODE. N = 200 prey, 40 predators.&quot;,
+    x        = &quot;Time step&quot;,
+    y        = &quot;Population count&quot;,
+    color    = NULL
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch2-abm-lv-reduction-1.png" alt="The reduction result: ten stochastic ABM runs (translucent ribbons) overlaid on the ODE solution (solid lines). Under large populations and random mixing, the ABM converges to the ODE. The ODE is not a competing model; it is what the ABM becomes when the mean-field assumption is exactly satisfied." width="768" />
+<p class="caption">
+The reduction result: ten stochastic ABM runs (translucent ribbons) overlaid on the ODE solution (solid lines). Under large populations and random mixing, the ABM converges to the ODE. The ODE is not a competing model; it is what the ABM becomes when the mean-field assumption is exactly satisfied.
+</p>
+</div>
+<p>Under random mixing and large population size, the law of large numbers smooths the stochastic fluctuations, and the average behavior of the ABM approaches the ODE solution. The ODE is a limiting case of the ABM — not a different theory, but the same theory under a specific and identifiable set of conditions: random mixing and large numbers. The mean-field assumption, stated explicitly, is the claim that these conditions hold exactly.</p>
+<p>Now reduce the population.</p>
+<pre class="r"><code># Small-population ABM: extinction is possible
+set.seed(2025)  # reproducibility
+
+n_reps_small &lt;- 15
+T_small      &lt;- 150
+n_prey_small &lt;- 20   # small enough for demographic stochasticity to matter
+n_pred_small &lt;- 6
+
+abm_small &lt;- map_dfr(1:n_reps_small, function(rep) {
+  run_lv_abm(
+    T       = T_small,
+    n_prey  = n_prey_small,
+    n_pred  = n_pred_small,
+    seed    = rep + 100,
+    p_birth = 0.15,
+    p_eat   = 0.20,
+    p_death = 0.10
+  ) %&gt;%
+    mutate(rep = rep)
+})
+
+# ODE solution with the same (small) initial conditions
+ode_small_state &lt;- c(N = n_prey_small, P = n_pred_small)
+ode_small_out   &lt;- ode(
+  y     = ode_small_state,
+  times = seq(0, T_small, by = 1),
+  func  = lv_ode_ch2,
+  parms = lv_params_ch2
+)
+ode_small_df &lt;- as_tibble(as.data.frame(ode_small_out)) %&gt;%
+  rename(t = time, prey = N, predator = P) %&gt;%
+  pivot_longer(c(prey, predator), names_to = &quot;species&quot;, values_to = &quot;count&quot;)
+
+abm_small_long &lt;- abm_small %&gt;%
+  pivot_longer(c(prey, predator), names_to = &quot;species&quot;, values_to = &quot;count&quot;)
+
+# Count extinctions
+extinction_count &lt;- abm_small %&gt;%
+  group_by(rep) %&gt;%
+  summarise(
+    prey_extinct     = any(prey == 0),
+    predator_extinct = any(predator == 0)
+  ) %&gt;%
+  summarise(
+    n_any_extinct = sum(prey_extinct | predator_extinct)
+  ) %&gt;%
+  pull(n_any_extinct)
+
+ggplot() +
+  geom_line(
+    data = abm_small_long,
+    aes(x = t, y = count, color = species, group = interaction(rep, species)),
+    alpha = 0.25, linewidth = 0.5
+  ) +
+  geom_line(
+    data = ode_small_df,
+    aes(x = t, y = count, color = species),
+    linewidth = 1.2, linetype = &quot;dashed&quot;
+  ) +
+  scale_color_manual(
+    values = palette_ch2[c(&quot;prey&quot;, &quot;predator&quot;)],
+    labels = c(&quot;prey&quot; = &quot;Prey&quot;, &quot;predator&quot; = &quot;Predator&quot;)
+  ) +
+  labs(
+    title    = &quot;Small-population ABM: extinction events&quot;,
+    subtitle = paste0(
+      extinction_count, &quot; of &quot;, n_reps_small,
+      &quot; runs reach extinction. Dashed: ODE (cycles forever). N\u2080 = &quot;,
+      n_prey_small, &quot; prey, &quot;, n_pred_small, &quot; predators.&quot;
+    ),
+    x     = &quot;Time step&quot;,
+    y     = &quot;Population count&quot;,
+    color = NULL
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch2-abm-extinction-1.png" alt="The ODE cannot see extinction. With small populations, ABM runs frequently reach zero &lt;U+2014&gt; a state the ODE cannot represent. The ODE orbits forever; the ABM can, and often does, fall to zero and stay there." width="768" />
+<p class="caption">
+The ODE cannot see extinction. With small populations, ABM runs frequently reach zero &lt;U+2014&gt; a state the ODE cannot represent. The ODE orbits forever; the ABM can, and often does, fall to zero and stay there.
+</p>
+</div>
+<p>The ODE orbits forever. For a continuous quantity that obeys a smooth differential equation, there is no path to zero unless you engineer one by hand. The ABM can fall to zero because it represents discrete individuals: when the last prey individual dies, the population is extinguished, and that is a state from which there is no return. The phenomenon of extinction — one of the most consequential events in population biology — is inexpressible in the ODE’s language. Not unlikely. Not improbable. Grammatically forbidden.</p>
+</div>
+<div id="sec-abm-sir" class="section level2" number="2.3">
+<h2 number="2.3"><span class="header-section-number">2.3</span> An Agent-Based SIR</h2>
+<div id="sec-abm-sir-random" class="section level3" number="2.3.1">
+<h3 number="2.3.1"><span class="header-section-number">2.3.1</span> Random Mixing</h3>
+<p>The agent-based SIR under random mixing is the bridge between the ODE model and the network model. It preserves the mean-field assumption — each infectious individual contacts random members of the population — but represents agents as discrete individuals rather than continuous quantities.</p>
+<pre class="r"><code># Agent-based SIR with random mixing
+# Each infectious agent contacts a random subset of the population at each step
+
+run_sir_abm_random &lt;- function(N = 500, I0 = 5, p_infect = 0.05,
+                                p_recover = 0.1, contacts_per_step = 5,
+                                T = 150, seed = 42) {
+  set.seed(seed)  # seed for reproducibility; change to explore variation
+
+  agents &lt;- tibble(
+    id    = seq_len(N),
+    state = c(rep(&quot;I&quot;, I0), rep(&quot;S&quot;, N - I0))
+  )
+
+  map_dfr(0:T, function(tt) {
+    if (tt &gt; 0) {
+      infected_ids &lt;- agents$id[agents$state == &quot;I&quot;]
+
+      # Each infected agent makes contacts with random agents
+      new_infected &lt;- map(infected_ids, function(inf_id) {
+        contacts           &lt;- sample(setdiff(agents$id, inf_id),
+                                     min(contacts_per_step, N - 1),
+                                     replace = FALSE)
+        suscept_contacts   &lt;- contacts[agents$state[contacts] == &quot;S&quot;]
+        if (length(suscept_contacts) == 0) return(integer(0))
+        suscept_contacts[rbinom(length(suscept_contacts), 1, p_infect) == 1]
+      }) %&gt;%
+        unlist() %&gt;%
+        unique()
+
+      # Recovery
+      recovering &lt;- infected_ids[rbinom(length(infected_ids), 1, p_recover) == 1]
+
+      agents &lt;&lt;- agents %&gt;%
+        mutate(state = case_when(
+          id %in% new_infected &amp; state == &quot;S&quot; ~ &quot;I&quot;,
+          id %in% recovering                  ~ &quot;R&quot;,
+          TRUE                                ~ state
+        ))
+    }
+
+    tibble(
+      t = tt,
+      S = sum(agents$state == &quot;S&quot;),
+      I = sum(agents$state == &quot;I&quot;),
+      R = sum(agents$state == &quot;R&quot;)
+    )
+  })
+}</code></pre>
+<pre class="r"><code>set.seed(2025)
+
+N_sir_compare &lt;- 500
+I0_compare    &lt;- 5
+
+# Run ABM replicates
+sir_abm_runs &lt;- map_dfr(1:10, function(rep) {
+  run_sir_abm_random(
+    N = N_sir_compare, I0 = I0_compare,
+    p_infect = 0.05, p_recover = 0.1, contacts_per_step = 5,
+    T = 150, seed = rep + 200
+  ) %&gt;%
+    mutate(rep = rep)
+})
+
+# ODE comparison — match approximate R0
+# R0 ≈ (p_infect * contacts_per_step) / p_recover  (rough approximation)
+approx_R0  &lt;- (0.05 * 5) / 0.1
+beta_match &lt;- approx_R0 * 0.1 / N_sir_compare
+
+sir_ode_state &lt;- c(S = N_sir_compare - I0_compare, I = I0_compare, R = 0)
+sir_ode_out   &lt;- ode(
+  y     = sir_ode_state,
+  times = seq(0, 150, by = 0.5),
+  func  = sir_ode_ch2,
+  parms = c(beta = beta_match, gamma = 0.1)
+)
+sir_ode_compare &lt;- as_tibble(as.data.frame(sir_ode_out)) %&gt;%
+  rename(t = time)
+
+sir_abm_long &lt;- sir_abm_runs %&gt;%
+  pivot_longer(c(S, I, R), names_to = &quot;compartment&quot;, values_to = &quot;count&quot;) %&gt;%
+  mutate(compartment = factor(compartment, levels = c(&quot;S&quot;, &quot;I&quot;, &quot;R&quot;),
+                              labels = c(&quot;susceptible&quot;, &quot;infectious&quot;, &quot;recovered&quot;)))
+
+sir_ode_long &lt;- sir_ode_compare %&gt;%
+  pivot_longer(c(S, I, R), names_to = &quot;compartment&quot;, values_to = &quot;count&quot;) %&gt;%
+  mutate(compartment = factor(compartment, levels = c(&quot;S&quot;, &quot;I&quot;, &quot;R&quot;),
+                              labels = c(&quot;susceptible&quot;, &quot;infectious&quot;, &quot;recovered&quot;)))
+
+ggplot() +
+  geom_line(
+    data = sir_abm_long,
+    aes(x = t, y = count, color = compartment,
+        group = interaction(rep, compartment)),
+    alpha = 0.2, linewidth = 0.4
+  ) +
+  geom_line(
+    data = sir_ode_long,
+    aes(x = t, y = count, color = compartment),
+    linewidth = 1.1
+  ) +
+  scale_color_manual(
+    values = palette_ch2[c(&quot;susceptible&quot;, &quot;infectious&quot;, &quot;recovered&quot;)]
+  ) +
+  labs(
+    title    = &quot;ABM SIR (random mixing) vs. ODE&quot;,
+    subtitle = paste0(&quot;N = &quot;, N_sir_compare, &quot;; 10 stochastic replicates (faint) vs. ODE (solid)&quot;),
+    x        = &quot;Time step&quot;,
+    y        = &quot;Count&quot;,
+    color    = NULL
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch2-sir-random-vs-ode-1.png" alt="Agent-based SIR under random mixing (N = 500, 10 replicates shown as translucent lines) vs. ODE solution (solid lines). Convergence to the ODE is visible: the individual-based model recovers the mean-field dynamics when contacts are drawn uniformly from the population." width="768" />
+<p class="caption">
+Agent-based SIR under random mixing (N = 500, 10 replicates shown as translucent lines) vs. ODE solution (solid lines). Convergence to the ODE is visible: the individual-based model recovers the mean-field dynamics when contacts are drawn uniformly from the population.
+</p>
+</div>
+</div>
+<div id="sec-abm-sir-network" class="section level3" number="2.3.2">
+<h3 number="2.3.2"><span class="header-section-number">2.3.2</span> Network SIR</h3>
+<p>Now give the agents an address.</p>
+<pre class="r"><code>set.seed(2025)  # reproducibility for network generation
+
+N_net   &lt;- 500
+avg_deg &lt;- 6   # target mean degree
+
+# Erdos-Renyi: edges placed independently with fixed probability
+# Mean degree = p * (N - 1) ≈ avg_deg
+g_er &lt;- igraph::erdos.renyi.game(N_net, p = avg_deg / (N_net - 1))
+
+# Barabasi-Albert: preferential attachment produces a heavy-tailed degree distribution
+# m = edges added per new node; mean degree ≈ 2m
+g_ba &lt;- igraph::sample_pa(N_net, m = avg_deg / 2, directed = FALSE)
+
+# Verify mean degrees are comparable
+mean_deg_er &lt;- mean(igraph::degree(g_er))
+mean_deg_ba &lt;- mean(igraph::degree(g_ba))</code></pre>
+<p>The two networks have comparable mean degree — each individual is connected to roughly the same number of others on average. What differs is the distribution of that degree. The Erdős-Rényi graph is the random graph: each pair of nodes is connected independently with fixed probability, and the degree distribution is approximately Poisson. In a Poisson degree distribution, most nodes have degree close to the mean; there are no hubs. The Barabási-Albert graph grows by preferential attachment — new nodes attach to existing nodes in proportion to their current degree, and rich nodes get richer. The result is a scale-free degree distribution: most nodes have few connections, but a small number of hubs have very many. These hubs do not appear in an Erdős-Rényi network with the same mean degree.</p>
+<pre class="r"><code># Network SIR: infection spreads along edges
+# Nodes are infected by each infected neighbor independently with probability p_infect
+
+run_network_sir &lt;- function(g, I0 = 5, p_infect = 0.05, p_recover = 0.1,
+                              T = 100, seed = 42) {
+  set.seed(seed)  # seed for reproducibility
+
+  N     &lt;- igraph::vcount(g)
+  state &lt;- rep(&quot;S&quot;, N)
+  state[sample(N, I0)] &lt;- &quot;I&quot;
+
+  # Precompute adjacency list for fast neighbor lookup
+  adj &lt;- igraph::as_adj_list(g)
+
+  map_dfr(0:T, function(tt) {
+    if (tt &gt; 0) {
+      infected_ids &lt;- which(state == &quot;I&quot;)
+
+      # Collect newly infected nodes
+      new_I &lt;- integer(0)
+      for (v in infected_ids) {
+        nbrs        &lt;- as.integer(adj[[v]])
+        suscept_nbrs &lt;- nbrs[state[nbrs] == &quot;S&quot;]
+        if (length(suscept_nbrs) &gt; 0) {
+          newly  &lt;- suscept_nbrs[rbinom(length(suscept_nbrs), 1, p_infect) == 1]
+          new_I  &lt;- c(new_I, newly)
+        }
+      }
+
+      # Recovery
+      recovering &lt;- infected_ids[rbinom(length(infected_ids), 1, p_recover) == 1]
+
+      # Update states — order matters: infections before recoveries
+      state[unique(new_I)] &lt;&lt;- &quot;I&quot;
+      state[recovering]    &lt;&lt;- &quot;R&quot;
+    }
+
+    tibble(
+      t = tt,
+      S = sum(state == &quot;S&quot;),
+      I = sum(state == &quot;I&quot;),
+      R = sum(state == &quot;R&quot;)
+    )
+  })
+}</code></pre>
+<pre class="r"><code>set.seed(2025)
+
+# Run SIR on both networks with identical parameters
+sir_er &lt;- run_network_sir(g_er, I0 = 5, p_infect = 0.05, p_recover = 0.1,
+                           T = 100, seed = 301)
+sir_ba &lt;- run_network_sir(g_ba, I0 = 5, p_infect = 0.05, p_recover = 0.1,
+                           T = 100, seed = 302)
+
+sir_network_df &lt;- bind_rows(
+  mutate(sir_er, network = &quot;Erdős-Rényi&quot;),
+  mutate(sir_ba, network = &quot;Barabási-Albert&quot;)
+)</code></pre>
+<pre class="r"><code>sir_network_long &lt;- sir_network_df %&gt;%
+  pivot_longer(c(S, I, R), names_to = &quot;compartment&quot;, values_to = &quot;count&quot;) %&gt;%
+  mutate(
+    compartment = factor(compartment, levels = c(&quot;S&quot;, &quot;I&quot;, &quot;R&quot;),
+                         labels = c(&quot;susceptible&quot;, &quot;infectious&quot;, &quot;recovered&quot;))
+  )
+
+ggplot(sir_network_long, aes(x = t, y = count, color = compartment)) +
+  geom_line(linewidth = 0.9) +
+  facet_wrap(~ network, labeller = label_both) +
+  scale_color_manual(values = palette_ch2[c(&quot;susceptible&quot;, &quot;infectious&quot;, &quot;recovered&quot;)]) +
+  labs(
+    title    = &quot;Network SIR: topology changes the epidemic&quot;,
+    subtitle = paste0(&quot;Mean degree ≈ &quot;, round(mean_deg_er, 1),
+                      &quot; (ER) and ≈ &quot;, round(mean_deg_ba, 1), &quot; (BA). Same parameters; different structure.&quot;),
+    x        = &quot;Time step&quot;,
+    y        = &quot;Count&quot;,
+    color    = NULL
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch2-network-sir-plot-1.png" alt="SIR epidemic curves on two networks with the same mean degree. The Barab&lt;U+00E1&gt;si-Albert scale-free network (right) produces faster initial spread through hubs, different peak timing, and a different final epidemic size than the structurally simpler Erd&lt;U+0151&gt;s-R&lt;U+00E9&gt;nyi graph (left). The same transmission parameters; different interaction structures; different epidemics." width="768" />
+<p class="caption">
+SIR epidemic curves on two networks with the same mean degree. The Barab&lt;U+00E1&gt;si-Albert scale-free network (right) produces faster initial spread through hubs, different peak timing, and a different final epidemic size than the structurally simpler Erd&lt;U+0151&gt;s-R&lt;U+00E9&gt;nyi graph (left). The same transmission parameters; different interaction structures; different epidemics.
+</p>
+</div>
+<pre class="r"><code>set.seed(2025)
+
+# Find peak time for each network
+t_peak_er &lt;- sir_er %&gt;% filter(I == max(I)) %&gt;% slice(1) %&gt;% pull(t)
+t_peak_ba &lt;- sir_ba %&gt;% filter(I == max(I)) %&gt;% slice(1) %&gt;% pull(t)
+
+# Helper: get node states at a given time step
+get_states_at_t &lt;- function(g, t_target, I0 = 5, p_infect = 0.05,
+                              p_recover = 0.1, seed = 42) {
+  set.seed(seed)
+  N     &lt;- igraph::vcount(g)
+  state &lt;- rep(&quot;S&quot;, N)
+  state[sample(N, I0)] &lt;- &quot;I&quot;
+  adj   &lt;- igraph::as_adj_list(g)
+
+  for (tt in seq_len(t_target)) {
+    infected_ids &lt;- which(state == &quot;I&quot;)
+    new_I &lt;- integer(0)
+    for (v in infected_ids) {
+      nbrs         &lt;- as.integer(adj[[v]])
+      suscept_nbrs &lt;- nbrs[state[nbrs] == &quot;S&quot;]
+      if (length(suscept_nbrs) &gt; 0) {
+        newly &lt;- suscept_nbrs[rbinom(length(suscept_nbrs), 1, p_infect) == 1]
+        new_I &lt;- c(new_I, newly)
+      }
+    }
+    recovering       &lt;- infected_ids[rbinom(length(infected_ids), 1, p_recover) == 1]
+    state[unique(new_I)] &lt;- &quot;I&quot;
+    state[recovering]    &lt;- &quot;R&quot;
+  }
+  state
+}
+
+states_er &lt;- get_states_at_t(g_er, t_peak_er, seed = 301)
+states_ba &lt;- get_states_at_t(g_ba, t_peak_ba, seed = 302)
+
+# Tidygraph objects for ggraph
+tg_er &lt;- as_tbl_graph(g_er) %&gt;%
+  mutate(compartment = states_er,
+         network     = &quot;Erdős-Rényi&quot;)
+
+tg_ba &lt;- as_tbl_graph(g_ba) %&gt;%
+  mutate(compartment = states_ba,
+         network     = &quot;Barabási-Albert&quot;)
+
+plot_network &lt;- function(tg, title_str, t_peak) {
+  ggraph(tg, layout = &quot;fr&quot;) +
+    geom_edge_link(alpha = 0.05, color = &quot;#888888&quot;) +
+    geom_node_point(aes(color = compartment), size = 1.2, alpha = 0.8) +
+    scale_color_manual(
+      values = c(S = &quot;#2D5F8A&quot;, I = &quot;#C0392B&quot;, R = &quot;#27AE60&quot;),
+      labels = c(S = &quot;susceptible&quot;, I = &quot;infectious&quot;, R = &quot;recovered&quot;),
+      name   = NULL
+    ) +
+    labs(title = title_str,
+         subtitle = paste0(&quot;At peak infectious (t = &quot;, t_peak, &quot;)&quot;)) +
+    theme_void(base_family = &quot;Source Serif 4&quot;) +
+    theme(legend.position = &quot;bottom&quot;,
+          plot.title = element_text(family = &quot;Raleway&quot;, size = 12),
+          plot.background = element_rect(fill = &quot;#FAFAF7&quot;, color = NA))
+}
+
+p_er_net &lt;- plot_network(tg_er, &quot;Erdős-Rényi&quot;, t_peak_er)
+p_ba_net &lt;- plot_network(tg_ba, &quot;Barabási-Albert&quot;, t_peak_ba)
+
+p_er_net + p_ba_net</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch2-network-viz-1.png" alt="Contact network structures at the peak of the epidemic. Node color indicates compartment status: blue = susceptible, red = infectious, green = recovered. Left: Erd&lt;U+0151&gt;s-R&lt;U+00E9&gt;nyi graph, with roughly uniform degree distribution. Right: Barab&lt;U+00E1&gt;si-Albert graph, with visible hub nodes carrying many connections. The hub structure changes the epidemic's geometry." width="768" />
+<p class="caption">
+Contact network structures at the peak of the epidemic. Node color indicates compartment status: blue = susceptible, red = infectious, green = recovered. Left: Erd&lt;U+0151&gt;s-R&lt;U+00E9&gt;nyi graph, with roughly uniform degree distribution. Right: Barab&lt;U+00E1&gt;si-Albert graph, with visible hub nodes carrying many connections. The hub structure changes the epidemic’s geometry.
+</p>
+</div>
+<p>The same <span class="math inline">\(\beta\)</span>. The same <span class="math inline">\(\gamma\)</span>. A different world.</p>
+<p>The ODE cannot express this difference. Not because it has the wrong parameter values — there are no parameter values of the ODE that would reproduce the difference between these two epidemics, because the ODE has no parameter that represents contact network topology. The contact structure is not a parameter of the ODE. It is excluded from its language. The question “what does network topology do to epidemic dynamics?” cannot be asked in the ODE’s vocabulary. The ODE is not giving the wrong answer to that question. It is incapable of posing it.</p>
+</div>
+</div>
+<div id="sec-reduction" class="section level2" number="2.4">
+<h2 number="2.4"><span class="header-section-number">2.4</span> The Reduction Theorem</h2>
+<p>The relationship between the ODE and the ABM is precise and worth stating directly: as population size grows, as mixing becomes increasingly random, as individual heterogeneity averages out, and as the time step grows coarse enough for within-step interactions to average to the mean-field, the ABM converges in distribution to the ODE. The ODE is not wrong — it is a limit. It is what the ABM becomes when the mean-field assumption is exactly satisfied across both its spatial and temporal dimensions.</p>
+<p>This framing dissolves the apparent competition between the two paradigms. The ODE and the ABM are not two competing theories of the same phenomena, between which a modeler must choose on philosophical grounds. They are a richer language and one of its sublanguages. The ODE is the ABM with an additional constraint — that the interaction structure is fully mixed — imposed silently. Every ABM that includes random mixing as a special case contains the ODE as a theorem.</p>
+<p>When a phenomenon requires the mean-field assumption to be satisfied — when populations are large, mixing is genuinely random, heterogeneity is genuinely negligible, and the observation interval is coarse enough for within-step averaging to hold — the ODE is the right tool, because it is analytically tractable and the additional machinery of the ABM contributes nothing. When a phenomenon depends on features that the mean-field assumption rules out — network topology, spatial structure, heterogeneity, discrete-individual effects like extinction — the ODE cannot reach it, and no calibration of the ODE’s parameters will change that.</p>
+<p>The choice between ODE and ABM is therefore not a choice between simple and complex, or tractable and intractable. It is a choice about which phenomena are in scope. The ABM critic who objects to unnecessary complexity should ask: complexity relative to what problem? If the problem is the epidemic threshold in a large, well-mixed population, the ODE is the right language and adding agent-level detail is indeed unnecessary. If the problem is the effect of household structure on epidemic dynamics, the ODE cannot address it at all, regardless of how aggressively it is simplified.</p>
+<p>The complexity objection has a more specific form that deserves a direct answer. The ABM just described has more nominal parameters than the Lotka-Volterra ODE: <span class="math inline">\(p_\text{birth}\)</span>, <span class="math inline">\(p_\text{eat}\)</span>, <span class="math inline">\(p_\text{death}\)</span>, the population size, the details of the pairing mechanism. The ODE has four: <span class="math inline">\(\alpha\)</span>, <span class="math inline">\(\beta\)</span>, <span class="math inline">\(\delta\)</span>, <span class="math inline">\(\gamma\)</span>.</p>
+<p>Nominal dimensionality is not effective dimensionality. A regression with a thousand predictors may have a sparse solution that uses ten. The other nine hundred and ninety exist — they have coefficients, they occupy the nominal space — but the signal lives on a low-dimensional manifold within that space, and a well-chosen penalty recovers it. The statistician who counts predictors before asking whether the signal is sparse has the analysis backwards. The critic who counts ABM parameters before asking how many degrees of freedom the dynamics of interest actually require has made the same mistake. Most of the ABM’s parameter space produces qualitatively identical behavior — cycling that is statistically indistinguishable from the ODE output. The consequential structure — the boundary between cycling and extinction, the dependence of extinction probability on population size — is concentrated on a surface of far lower dimension than the nominal parameter count suggests.</p>
+<p>The ODE is the limiting case of this argument. It is the ABM under maximal regularization — a structural restriction so complete that all individual heterogeneity and interaction structure collapses to population totals, leaving four parameters. Whether that is the right level of regularization depends on whether the phenomenon of interest lies within its expressive range. For the epidemic threshold in a large, well-mixed population, it is. For extinction events, it is not. The regularization that produces the ODE’s simplicity also removes certain phenomena from its vocabulary, and no amount of careful parameter estimation recovers what that regularization has already discarded.</p>
+</div>
+<div id="sec-spatial" class="section level2" number="2.5">
+<h2 number="2.5"><span class="header-section-number">2.5</span> Spatial Extension (Reference Module)</h2>
+<blockquote>
+<p><strong>Note for readers:</strong> This section is provided for self-study and is not covered in the live session. The code below implements a full spatial Lotka-Volterra model on a grid. In the live session, the output animation is shown as a demonstration; the code walkthrough is skipped because the principle has already been established. Students who wish to explore the spatial extension are encouraged to run this code and experiment with the parameters.</p>
+</blockquote>
+<p>The spatial extension moves the Lotka-Volterra dynamics onto a discrete grid. Each cell of the grid can hold prey and predators. Interactions are local: agents interact only with their Moore neighborhood (the eight adjacent cells). The mean-field assumption is replaced by a spatial interaction structure — every individual’s neighborhood is its eight immediate neighbors, not the entire population.</p>
+<p>The consequence is qualitative, not merely quantitative. Spatial structure can sustain populations that the mean-field dynamics would drive to extinction. It can produce spatial pattern formation — spiral waves of prey and predator density rotating through the grid. These patterns are not present in the ODE and cannot be approximated by the ODE, because they are spatial phenomena and the ODE has no spatial dimension. They require the spatial language to exist at all.</p>
+<pre class="r"><code># SELF-STUDY EXTENSION: Spatial Lotka-Volterra on a grid
+# This code is included in the distributed materials for student exploration.
+# The animation requires gifski; rendering may take several minutes.
+# The live session shows a pre-rendered animation; this code is not run live.
+
+set.seed(2025)  # seed for reproducibility; different seeds produce different spiral patterns
+
+GRID_SIZE &lt;- 50
+T_SPATIAL &lt;- 120
+
+# Initialize grid: each cell is a row in a tibble with prey and predator counts
+init_spatial_grid &lt;- function(size = GRID_SIZE, n_prey = 400, n_pred = 80) {
+  grid &lt;- expand.grid(x = 1:size, y = 1:size) %&gt;%
+    as_tibble() %&gt;%
+    mutate(prey = 0L, predator = 0L)
+
+  # Distribute initial agents randomly across cells
+  prey_cells &lt;- sample(nrow(grid), n_prey,  replace = TRUE)
+  pred_cells &lt;- sample(nrow(grid), n_pred, replace = TRUE)
+
+  for (cell in prey_cells) grid$prey[cell]     &lt;- grid$prey[cell]     + 1L
+  for (cell in pred_cells)  grid$predator[cell] &lt;- grid$predator[cell] + 1L
+
+  grid
+}
+
+# Moore neighborhood indices on a toroidal grid (wraps at boundaries)
+moore_nbr_indices &lt;- function(x, y, size, grid_df) {
+  dx &lt;- c(-1L, 0L, 1L, -1L, 1L, -1L, 0L, 1L)
+  dy &lt;- c(-1L, -1L, -1L, 0L, 0L, 1L, 1L, 1L)
+  nx &lt;- ((x + dx - 1L) %% size) + 1L
+  ny &lt;- ((y + dy - 1L) %% size) + 1L
+  # Return row indices into the grid tibble
+  (ny - 1L) * size + nx
+}
+
+# One step of the spatial LV model
+step_spatial_lv &lt;- function(grid, size = GRID_SIZE,
+                              p_birth = 0.25, p_eat = 0.35, p_death = 0.12,
+                              p_move = 0.4) {
+  new_grid &lt;- grid
+
+  for (i in seq_len(nrow(grid))) {
+    x &lt;- grid$x[i]
+    y &lt;- grid$y[i]
+    nbr_idx &lt;- moore_nbr_indices(x, y, size, grid)
+
+    # --- Prey reproduction with offspring dispersal to random neighbor ---
+    if (grid$prey[i] &gt; 0L) {
+      born &lt;- rbinom(1L, grid$prey[i], p_birth)
+      if (born &gt; 0L) {
+        # Offspring land in random neighboring cells
+        targets &lt;- sample(nbr_idx, born, replace = TRUE)
+        for (target in targets) {
+          new_grid$prey[target] &lt;- new_grid$prey[target] + 1L
+        }
+      }
+    }
+
+    # --- Predator-prey encounter: local predation ---
+    if (grid$prey[i] &gt; 0L &amp;&amp; grid$predator[i] &gt; 0L) {
+      encounters &lt;- min(grid$prey[i], grid$predator[i])
+      eaten      &lt;- rbinom(1L, encounters, p_eat)
+      new_grid$prey[i] &lt;- max(0L, new_grid$prey[i] - eaten)
+      # Each kill produces a new predator with probability 0.7
+      offspring &lt;- rbinom(1L, eaten, 0.7)
+      new_grid$predator[i] &lt;- new_grid$predator[i] + offspring
+    }
+
+    # --- Predator natural death ---
+    if (grid$predator[i] &gt; 0L) {
+      dead &lt;- rbinom(1L, grid$predator[i], p_death)
+      new_grid$predator[i] &lt;- max(0L, new_grid$predator[i] - dead)
+    }
+
+    # --- Predator movement toward most prey-dense neighbor ---
+    if (new_grid$predator[i] &gt; 0L &amp;&amp; runif(1L) &lt; p_move) {
+      # Find neighbor with most prey
+      nbr_prey     &lt;- grid$prey[nbr_idx]
+      best_nbr_pos &lt;- which.max(nbr_prey)
+      target_idx   &lt;- nbr_idx[best_nbr_pos]
+
+      # Move a binomial fraction of predators to that neighbor
+      movers &lt;- rbinom(1L, new_grid$predator[i], p_move)
+      new_grid$predator[i]          &lt;- new_grid$predator[i] - movers
+      new_grid$predator[target_idx] &lt;- new_grid$predator[target_idx] + movers
+    }
+  }
+
+  new_grid
+}
+
+# Run the spatial model and collect frames for animation
+spatial_grid   &lt;- init_spatial_grid()
+spatial_frames &lt;- vector(&quot;list&quot;, T_SPATIAL)
+spatial_frames[[1]] &lt;- mutate(spatial_grid, t = 1L)
+
+for (tt in 2:T_SPATIAL) {
+  spatial_grid       &lt;- step_spatial_lv(spatial_grid)
+  spatial_frames[[tt]] &lt;- mutate(spatial_grid, t = as.integer(tt))
+  # Early termination if total population crashes to zero
+  if (sum(spatial_grid$prey) == 0 || sum(spatial_grid$predator) == 0) break
+}
+
+spatial_df &lt;- bind_rows(spatial_frames)
+
+# Prey density animation
+spatial_anim &lt;- ggplot(spatial_df, aes(x = x, y = y, fill = prey)) +
+  geom_tile() +
+  scale_fill_gradient(
+    low  = &quot;#FAFAF7&quot;,
+    high = &quot;#2D5F8A&quot;,
+    name = &quot;Prey count&quot;
+  ) +
+  coord_equal() +
+  labs(
+    title    = &quot;Spatial Lotka-Volterra — prey density&quot;,
+    subtitle = &quot;Time: {as.integer(frame_time)}&quot;
+  ) +
+  theme_void(base_family = &quot;Source Serif 4&quot;) +
+  theme(
+    plot.background = element_rect(fill = &quot;#FAFAF7&quot;, color = NA),
+    plot.title      = element_text(family = &quot;Raleway&quot;, size = 12),
+    legend.position = &quot;right&quot;
+  ) +
+  transition_time(t) +
+  ease_aes(&quot;linear&quot;)
+
+# Uncomment to save the animation (requires gifski package):
+# anim_save(
+#   &quot;spatial_lv.gif&quot;,
+#   animate(spatial_anim, nframes = T_SPATIAL, fps = 10, width = 600, height = 600)
+# )</code></pre>
+<p>The spiral wave patterns that emerge from the spatial model are a dynamical regime without a name in the ODE vocabulary. They require spatial coordinates to exist. The ODE’s world has no place for them, not because they are exotic or unusual, but because the ODE is a language in which spatial position has no representation. The patterns are grammatically inexpressible — not as an approximation error, but as a structural fact about the model’s language.</p>
+<hr />
+</div>
+</div>
+<div id="ch3" class="section level1" number="3">
+<h1 number="3"><span class="header-section-number">3</span> The Size of Firms, and What It Tells Us</h1>
+<pre class="r"><code># Chapter 3 Setup
+# Self-contained — does not depend on prior chapters.
+
+library(tidyverse)
+library(poweRlaw)
+library(broom)
+library(patchwork)
+
+theme_set(
+  theme_minimal(base_family = &quot;Source Serif 4&quot;) +
+    theme(
+      plot.title       = element_text(family = &quot;Raleway&quot;, face = &quot;plain&quot;,
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = &quot;Source Serif 4&quot;, size = 11,
+                                      color = &quot;#555555&quot;, margin = margin(b = 12)),
+      axis.title       = element_text(family = &quot;Source Serif 4&quot;, size = 10),
+      legend.position  = &quot;bottom&quot;,
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = &quot;#FAFAF7&quot;, color = NA)
+    )
+)</code></pre>
+<div id="sec-firmsize" class="section level2" number="3.1">
+<h2 number="3.1"><span class="header-section-number">3.1</span> A Regularity That Refuses to Go Away</h2>
+<p>In virtually every measured economy, at virtually every measured time, the distribution of firm sizes by employment follows a power law. The United States in 1990, France in 2005, India in 2010 — the exponent shifts slightly, the lower bound shifts with institutional definitions of what constitutes a firm, but the power law structure persists. This is among the most robustly documented regularities in empirical economics, and it is one that standard economic models are structurally incapable of reproducing.</p>
+<p>The dynamic range is the first clue that something unusual is happening. The largest firms in the US economy employ hundreds of thousands of workers; the smallest employ one. The ratio between these extremes is on the order of <span class="math inline">\(10^5\)</span> or <span class="math inline">\(10^6\)</span>. A normal distribution cannot span that range without assigning negligible probability to the observed data. A log-normal can span it, and the log-normal has been proposed as an alternative; but the fit is systematically worse in the upper tail, where the data are densest in the logarithmic sense that matters for a power law.</p>
+<p>A power law distribution has the form <span class="math inline">\(P(\text{size} \geq x) \propto x^{-(\alpha - 1)}\)</span> for <span class="math inline">\(x \geq x_\text{min}\)</span>. In logarithmic coordinates, the complementary cumulative distribution function is a straight line with slope <span class="math inline">\(-(\alpha - 1)\)</span>. On a linear scale, the distribution looks like a spike near zero and an invisible tail. The linear plot defeats the intuition; the log-log plot reveals the structure.</p>
+<pre class="r"><code># NOTE: The data below are synthetic, generated from a power law distribution
+# as a placeholder. Substitute US Census Bureau SUSB microdata for real analysis.
+# SUSB data available at: https://www.census.gov/programs-surveys/susb.html
+# The power law exponent (alpha ≈ 2.05) is consistent with published estimates
+# for the US firm size distribution (cf. Axtell 2001, Science).
+
+set.seed(2025)  # seed for reproducibility; change to generate different samples
+
+# Generate synthetic firm size data from a power law distribution
+# rplcon: random draws from a continuous power law with lower bound xmin
+n_firms    &lt;- 5000
+true_alpha &lt;- 2.05   # exponent consistent with Axtell (2001)
+xmin_true  &lt;- 1
+
+firm_sizes_raw &lt;- rplcon(n_firms, xmin = xmin_true, alpha = true_alpha)
+firm_df        &lt;- tibble(employment = pmax(1L, round(firm_sizes_raw)))
+
+# Linear scale histogram
+p_linear &lt;- ggplot(firm_df, aes(x = employment)) +
+  geom_histogram(bins = 60, fill = &quot;#2D5F8A&quot;, alpha = 0.75, color = &quot;white&quot;) +
+  labs(
+    title    = &quot;Firm size distribution: linear scale&quot;,
+    subtitle = &quot;The dynamic range makes the distribution invisible on this scale&quot;,
+    x        = &quot;Employment&quot;,
+    y        = &quot;Count&quot;
+  )
+
+# Log-log CCDF (complementary CDF)
+ccdf_df &lt;- firm_df %&gt;%
+  arrange(employment) %&gt;%
+  mutate(
+    rank = rev(seq_len(n())),
+    ccdf = rank / n()
+  ) %&gt;%
+  distinct(employment, .keep_all = TRUE)
+
+p_loglog &lt;- ggplot(ccdf_df, aes(x = employment, y = ccdf)) +
+  geom_point(color = &quot;#2D5F8A&quot;, size = 0.8, alpha = 0.6) +
+  scale_x_log10(labels = scales::comma) +
+  scale_y_log10(labels = scales::comma) +
+  labs(
+    title    = &quot;Firm size distribution: log-log CCDF&quot;,
+    subtitle = &quot;A straight line on this scale is a power law&quot;,
+    x        = &quot;Employment (log scale)&quot;,
+    y        = &quot;P(size \u2265 x) (log scale)&quot;
+  )
+
+p_linear + p_loglog</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch3-data-1.png" alt="Firm size distribution on a linear scale (left) and log-log scale (right, CCDF). The dynamic range &lt;U+2014&gt; from single-employee firms to corporations employing hundreds of thousands &lt;U+2014&gt; defeats any visualization on a linear scale. The log-log plot reveals the power law: a straight line across many orders of magnitude." width="768" />
+<p class="caption">
+Firm size distribution on a linear scale (left) and log-log scale (right, CCDF). The dynamic range &lt;U+2014&gt; from single-employee firms to corporations employing hundreds of thousands &lt;U+2014&gt; defeats any visualization on a linear scale. The log-log plot reveals the power law: a straight line across many orders of magnitude.
+</p>
+</div>
+<pre class="r"><code># Fit power law via MLE using poweRlaw
+# displ: discrete power law (appropriate for integer employment counts)
+m_pl  &lt;- displ$new(firm_df$employment)
+est   &lt;- estimate_xmin(m_pl)
+m_pl$setXmin(est)
+m_pl$setPars(estimate_pars(m_pl))
+
+alpha_hat &lt;- m_pl$getPars()
+xmin_hat  &lt;- m_pl$getXmin()
+
+# Fit log-normal for comparison (same xmin for fair comparison)
+m_ln &lt;- dislnorm$new(firm_df$employment)
+m_ln$setXmin(xmin_hat)
+m_ln$setPars(estimate_pars(m_ln))
+
+# Compute fitted CCDFs for plotting
+x_seq &lt;- seq(xmin_hat, max(firm_df$employment), length.out = 200)
+
+pl_ccdf_df &lt;- tibble(
+  x    = x_seq,
+  ccdf = (x_seq / xmin_hat)^(-(alpha_hat - 1)),
+  dist = &quot;Power law (MLE)&quot;
+)
+
+# Log-normal CCDF approximation via plnorm
+mu_ln    &lt;- m_ln$getPars()[1]
+sigma_ln &lt;- m_ln$getPars()[2]
+ln_ccdf_df &lt;- tibble(
+  x    = x_seq,
+  ccdf = plnorm(x_seq, meanlog = mu_ln, sdlog = sigma_ln, lower.tail = FALSE) /
+         plnorm(xmin_hat, meanlog = mu_ln, sdlog = sigma_ln, lower.tail = FALSE),
+  dist = &quot;Log-normal&quot;
+)
+
+fit_df &lt;- bind_rows(pl_ccdf_df, ln_ccdf_df)
+
+ggplot() +
+  geom_point(
+    data = filter(ccdf_df, employment &gt;= xmin_hat),
+    aes(x = employment, y = ccdf),
+    color = &quot;#888888&quot;, size = 0.8, alpha = 0.5
+  ) +
+  geom_line(
+    data = fit_df,
+    aes(x = x, y = ccdf, color = dist, linetype = dist),
+    linewidth = 1.0
+  ) +
+  scale_x_log10(labels = scales::comma) +
+  scale_y_log10(labels = scales::comma) +
+  scale_color_manual(values = c(&quot;Power law (MLE)&quot; = &quot;#C0392B&quot;, &quot;Log-normal&quot; = &quot;#2D5F8A&quot;),
+                     name = NULL) +
+  scale_linetype_manual(values = c(&quot;Power law (MLE)&quot; = &quot;solid&quot;, &quot;Log-normal&quot; = &quot;dashed&quot;),
+                        name = NULL) +
+  annotate(&quot;text&quot;, x = xmin_hat * 1.1, y = 0.05,
+           label = paste0(&quot;x\u2098\u1d35\u2099 = &quot;, xmin_hat,
+                          &quot;  \u03b1\u0302 = &quot;, round(alpha_hat, 3)),
+           family = &quot;Source Serif 4&quot;, size = 3.5, hjust = 0, color = &quot;#C0392B&quot;) +
+  labs(
+    title    = &quot;Power law vs. log-normal fit&quot;,
+    subtitle = paste0(&quot;Estimated exponent \u03b1\u0302 = &quot;, round(alpha_hat, 3),
+                      &quot; (synthetic data; substitute SUSB for real analysis)&quot;),
+    x        = &quot;Employment (log scale)&quot;,
+    y        = &quot;P(size \u2265 x) (log scale)&quot;
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch3-powerlaw-fit-1.png" alt="Power law fit (red line) and log-normal comparison (dashed blue) on the log-log CCDF. The power law is estimated via maximum likelihood using the \texttt{poweRlaw} package; $x_{\min}$ is selected by minimizing the Kolmogorov-Smirnov distance between the fitted distribution and the empirical data above the threshold." width="768" />
+<p class="caption">
+Power law fit (red line) and log-normal comparison (dashed blue) on the log-log CCDF. The power law is estimated via maximum likelihood using the  package; <span class="math inline">\(x_{\min}\)</span> is selected by minimizing the Kolmogorov-Smirnov distance between the fitted distribution and the empirical data above the threshold.
+</p>
+</div>
+<p>The power law fits the upper tail well. The log-normal fits less cleanly at the extreme upper end — it decays faster than the empirical distribution demands. This is not a marginal distinction: the upper tail is where the firm size distribution carries its most economically significant content. The hundred largest firms in the US employ a substantial fraction of the private sector workforce. A distribution that mismodels the upper tail mismodels the economy’s employment structure in the sector where concentration, market power, and aggregate dynamics are most consequential.</p>
+</div>
+<div id="sec-sufficient-stats" class="section level2" number="3.2">
+<h2 number="3.2"><span class="header-section-number">3.2</span> What the Standard Models Cannot Say</h2>
+<p>The SIR system tracks three numbers: <span class="math inline">\(S\)</span>, <span class="math inline">\(I\)</span>, and <span class="math inline">\(R\)</span>. The dynamics are fully determined by those totals. This is not merely a modeling convenience — it is a sufficiency claim. Given the compartment counts, the identity of which specific individuals are susceptible or infectious carries no additional information about how the epidemic evolves. The distribution of individual characteristics within compartments is irrelevant. The totals are sufficient.</p>
+<p>This sufficiency holds exactly when the mean-field assumption holds. Under random mixing, any susceptible is as likely as any other to contact any infectious individual, so only the counts matter. Individual heterogeneity averages out. The law of large numbers makes the aggregate dynamics deterministic functions of population totals alone.</p>
+<p>The same logic, applied to industry dynamics, produces a familiar object: a model that tracks total employment, or average firm size, rather than the distribution of employment across firms. The implicit claim is that the distribution carries no additional information — that knowing mean firm size is sufficient for understanding how the aggregate evolves. Knowing that one firm employs 200,000 workers and ten thousand firms employ fewer than ten is no more informative than knowing that all firms are of mean size. This is the statistical content of what economists call the representative agent: not a modeling shortcut but a sufficiency assumption applied to the distribution of firms.</p>
+<p>The power law distribution is the empirical refutation of that assumption. A power law has no finite mean when <span class="math inline">\(\alpha \leq 2\)</span>, and even when the mean exists, it is a poor summary of the distribution’s behavior. The distribution is dominated by its tail. The hundred largest firms in the US economy account for a substantial fraction of private-sector employment; they respond to shocks differently, shape credit conditions differently, and drive aggregate dynamics differently than a population of mean-sized firms would. The sufficiency assumption produces the wrong object of analysis, not an imprecise approximation of the right one.</p>
+<p>This is not a methodological complaint. It is an empirical constraint. The firm size distribution is among the most robustly documented regularities in empirical economics. It appears in every measured economy, at every measured time, in virtually every sector. A model whose language cannot express this regularity is, to that extent, describing a different economy than the one that exists.</p>
+<p>The failure is linguistic before it is empirical. A model built on the sufficiency of the mean has no sentence in which “the distribution of firm sizes is a power law” can be written. The distribution is the phenomenon. When the language cannot contain the distribution, you have not approximated the phenomenon poorly. You have excluded it from the territory the model covers.</p>
+</div>
+<div id="sec-axtell" class="section level2" number="3.3">
+<h2 number="3.3"><span class="header-section-number">3.3</span> Axtell’s Model: Logic Without Code</h2>
+<p>Robert Axtell showed in 2001 that a remarkably simple agent-based model generates the observed US firm size distribution without calibration. The exponent emerges from the dynamics rather than being fitted to the data.</p>
+<p>The model’s logic is spare. Agents allocate their effort between working alone and working as part of a team. Teams are groups of agents who have chosen to coordinate their work. Within a team, returns to scale are locally increasing: a worker who joins a team adds more than their individual marginal product, up to some point. This is not an unusual assumption about firm production — most accounts of the gains from economic organization depend on something similar.</p>
+<p>Agents compare their current payoff within their team to alternative arrangements: a different team, or solo work. When a better option exists, agents move. Teams form when agents find mutually beneficial collaborations; teams dissolve when enough members find better alternatives elsewhere. There is no central planner, no equilibrium condition that pins down firm size, no seed distribution. The model starts from random initial conditions and runs.</p>
+<p>The result is the power law. Not fitted. Generated. The exponent that emerges from the dynamics is consistent with the empirically observed exponent across a wide range of the model’s internal parameters. This robustness is the crucial point: the power law is not an artifact of a particular calibration. It is a structural consequence of the interaction rules — teams forming and dissolving under local increasing returns to scale, with agents choosing based on local information about their available alternatives.</p>
+<p>The model does not explain why individual firms have the sizes they have. It explains why the distribution has the shape it has. The macro regularity — the power law — is not encoded in any individual agent’s rule. No agent knows the distribution. No agent is trying to produce a power law. The distribution arises from the aggregate dynamics of agents following their individual rules, and it is not visible anywhere in those rules.</p>
+</div>
+<div id="sec-emergence" class="section level2" number="3.4">
+<h2 number="3.4"><span class="header-section-number">3.4</span> Emergence</h2>
+<p>A macro-level regularity is emergent if it satisfies two conditions. It cannot be derived analytically from the micro-level rules — there is no algebraic path from the individual agent’s decision problem to the macro distribution. And it arises robustly from the dynamics of agent interaction — not an artifact of specific parameter values or initial conditions, but a structural feature that persists across a wide range of both.</p>
+<p>The power law firm size distribution is emergent in this sense. No analysis of an individual agent’s effort allocation problem reveals the exponent. The exponent is not a property of any individual; it is a property of the aggregate dynamics that arise from the interaction of many individuals following local rules. And it is robust: Axtell showed that the exponent is insensitive to most parameter choices, which means it is structural rather than calibrated.</p>
+<p>That robustness is more than a convenience result. Axtell’s model was not fitted to the power law. The exponent emerged from the dynamics and was then compared to the data. This is not a subtle distinction. Equilibrium models of industry dynamics had the firm size distribution in front of them for decades — the empirical regularity was documented in the 1950s, and the power law form was well established by the 1990s — and could not generate the exponent without external calibration, because the exponent is not a property of any equilibrium. It is a property of the path: the motion of teams forming and dissolving, agents switching affiliations, distributions arising from trajectories that no equilibrium condition pins down. Equilibrium analysis specifies the destination; the distribution lives in the journey.</p>
+<p>A model that generates a known regularity without having been calibrated to it has done something that descriptive fitting cannot. It exposes the mechanism. The mechanism can then be interrogated: what changes in the interaction rules would change the exponent? What perturbations to the returns-to-scale structure shift the distribution? These questions only make sense in a language that contains the generative process. A model that describes the distribution after the fact cannot answer them, because it contains no process — only a fit.</p>
+<p>The phenomenon is unreachable by any model that assumes mean employment is a sufficient statistic for industry dynamics — in principle, with any parameter choices. Such a model has no dynamics in the relevant sense: it has an equilibrium at which one firm employs a fixed number of workers. There is no process of team formation and dissolution. There is no mechanism through which a distribution could be generated, because the model’s language contains no concept of a distribution of firm sizes. The sufficiency assumption has collapsed exactly the dimension of heterogeneity from which the regularity is made.</p>
+<p>Emergence, precisely defined, is a methodological constraint. If the phenomenon is emergent — if no analytical derivation from the micro rules can reach it — then the model must be dynamic, heterogeneous, and process-based. Not because agent-based modeling is philosophically preferable to equilibrium analysis. Because it is the only language in which the generative mechanism can be written.</p>
+<hr />
+</div>
+</div>
+<div id="ch4" class="section level1" number="4">
+<h1 number="4"><span class="header-section-number">4</span> The Possibility Space of Dynamics</h1>
+<pre class="r"><code># Chapter 4 Setup
+# Self-contained — does not depend on prior chapters.
+
+library(tidyverse)
+library(deSolve)
+library(patchwork)
+
+theme_set(
+  theme_minimal(base_family = &quot;Source Serif 4&quot;) +
+    theme(
+      plot.title       = element_text(family = &quot;Raleway&quot;, face = &quot;plain&quot;,
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = &quot;Source Serif 4&quot;, size = 11,
+                                      color = &quot;#555555&quot;, margin = margin(b = 12)),
+      axis.title       = element_text(family = &quot;Source Serif 4&quot;, size = 10),
+      legend.position  = &quot;bottom&quot;,
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = &quot;#FAFAF7&quot;, color = NA)
+    )
+)</code></pre>
+<div id="sec-resolution" class="section level2" number="4.1">
+<h2 number="4.1"><span class="header-section-number">4.1</span> Resolution</h2>
+<p>A model does not merely approximate the world. It defines a language, and that language has an expressive boundary. A phenomenon that requires distinctions the model cannot make is not a failure of fit in the ordinary sense — it is not an error that better data or more careful estimation would reduce. It lies outside the language entirely. When a modeling tradition calls something a paradox or an anomaly, it is often naming a phenomenon that is simply exterior to its formal vocabulary: real, reproducible, and grammatically inexpressible in the available terms.</p>
+<p>The restriction operates on different dimensions in different models, but the consequence is always the same. The mean-field assumption makes network topology and agent heterogeneity inexpressible — not unlikely, not poorly approximated, but absent from the language’s vocabulary entirely. The assumption that aggregate dynamics are determined by mean firm size makes the firm size distribution inexpressible: the distribution requires heterogeneity, and the sufficiency of the mean is the hypothesis that heterogeneity does not matter. The stationarity family makes regime change and bifurcation inexpressible — the language built from data generated before the bifurcation has no vocabulary for the turn. An equilibrium assumption makes path dependence inexpressible: which equilibrium the system reaches is indeterminate, and the assumption selects one by fiat.</p>
+<p>None of these is a failure that better technique remedies. Each is a structural fact about the model’s language. More observations do not add words that the language lacks. More sophisticated estimation does not give the ODE a spatial dimension. The right question is not “can I fit this better?” but “can this language say what I need to say?”</p>
+<p>Every modeling choice is a choice of resolution — temporal, spectral, expressive. The ODE, the sufficiency of the mean, stationarity, equilibrium, regularization penalties, the sampling frequency of a time series — all are restrictions on the language in which the model is written. Each restriction makes some phenomena expressible and others not. The phenomena made inexpressible are not less real than the ones the model can reach. They are simply outside the scope of what was chosen to be said.</p>
+</div>
+<div id="sec-regularization" class="section level2" number="4.2">
+<h2 number="4.2"><span class="header-section-number">4.2</span> The Regularization Unification</h2>
+<p>The connection between regularization and the ODE-ABM relationship is not analogical. It is constructive. Writing it out makes visible something that the course has been approaching from several directions simultaneously.</p>
+<p>In an ABM, each agent <span class="math inline">\(i\)</span> carries a property vector <span class="math inline">\(\theta_i\)</span> — a birth rate, a productivity, a threshold for infection. Write <span class="math inline">\(\theta_i = \bar\theta + \varepsilon_i\)</span>, where <span class="math inline">\(\bar\theta\)</span> is the population mean and <span class="math inline">\(\varepsilon_i\)</span> is the deviation, centered so that <span class="math inline">\(\sum_i \varepsilon_i = 0\)</span>. The ODE is the model that sets <span class="math inline">\(\varepsilon_i = 0\)</span> for every agent — all heterogeneity collapsed to the mean. Nothing about this restriction is forced by the biology or the economics. It is a structural choice about the distribution of agent properties, and that distribution is a point mass at <span class="math inline">\(\bar\theta\)</span>. An L2 penalty on <span class="math inline">\(\{\varepsilon_i\}\)</span> shrinks agents toward their mean; as the penalty strength increases, the ABM continuously approaches the ODE. They are not separate models. They are the same model at different positions along a regularization path.</p>
+<p>The contact structure submits to the same treatment. Represent it as a weighted adjacency matrix <span class="math inline">\(W\)</span>, where <span class="math inline">\(W_{ij} \geq 0\)</span> is the contact rate between agents <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. Every network topology is a special case: <span class="math inline">\(W_{ij} = 0\)</span> removes an edge; a heavy-tailed degree distribution produces the scale-free network from Chapter 2; the lattice concentrates all weight on immediate neighbors. Write the mean-field contact structure as <span class="math inline">\(\bar{W}_{ij} = 1/n\)</span> for all <span class="math inline">\(i \neq j\)</span> — uniform weight, every agent contacting every other at the same rate. This is not a neutral choice made for mathematical convenience. It is the maximum entropy distribution over contact matrices subject to the constraint that each agent’s total contact rate is fixed. When you know the average contact rate and nothing else about who contacts whom, <span class="math inline">\(\bar{W}\)</span> is what the principle of maximum ignorance requires. Every departure from <span class="math inline">\(\bar{W}\)</span> is information about contact structure beyond the mean.</p>
+<p>Write <span class="math inline">\(W = \bar{W} + \Delta W\)</span>. The constraint <span class="math inline">\(W_{ij} \geq 0\)</span> restricts <span class="math inline">\(\Delta W_{ij} \geq -1/n\)</span>, which defines a convex feasible region. The ODE corresponds to <span class="math inline">\(\Delta W = 0\)</span>. The two reparametrizations together give the unified statement: the ODE is the ABM under simultaneous regularization of agent heterogeneity toward <span class="math inline">\(\bar\theta\)</span> and contact structure toward <span class="math inline">\(\bar{W}\)</span>. Formally, consider the objective</p>
+<p><span class="math display">\[\mathcal{L}(\{\varepsilon_i\},\, \Delta W) \;+\; \lambda_\theta \sum_i \|\varepsilon_i\|^2 \;+\; \lambda_W \|\Delta W\|_F^2\]</span></p>
+<p>As <span class="math inline">\(\lambda_\theta \to \infty\)</span> and <span class="math inline">\(\lambda_W \to \infty\)</span>, the solution forces <span class="math inline">\(\varepsilon_i \to 0\)</span> and <span class="math inline">\(\Delta W \to 0\)</span>, recovering the ODE exactly. At finite <span class="math inline">\(\lambda\)</span>, the solution interpolates. The regularization strengths are hyperparameters: estimable by cross-validation when individual trajectories are observed, tunable by information criteria when only aggregate data are available. Both L2 and L1 penalties on <span class="math inline">\(\Delta W\)</span> are convex on the feasible region, so the structural regularization problem is convex throughout — a point worth noting to the audience likely to object that ABM calibration is computationally intractable. The non-convexity in ABM calibration comes from the stochastic simulation mapping parameters to outputs, not from the geometry of the parameter space itself.</p>
+<p>The choice between L2 and L1 on <span class="math inline">\(\Delta W\)</span> is a choice about what kind of network departure from mean-field is expected. L2 shrinks all edge weights uniformly toward <span class="math inline">\(1/n\)</span> — the contact structure becomes progressively closer to random mixing as <span class="math inline">\(\lambda_W\)</span> increases. L1 produces sparse <span class="math inline">\(\Delta W\)</span>: most edges sit near their mean-field weight, a few carry substantial deviations. Sparse positive entries in <span class="math inline">\(\Delta W\)</span> are hubs — agents with far more contacts than the mean-field allocates. This is precisely the Barabási-Albert structure that drove the qualitatively different epidemic dynamics in Chapter 2. The L1 penalty on contact structure selects the epidemiologically consequential nodes, in exactly the sense that LASSO selects the consequential predictors. This is not an analogy. The mathematical operation is the same.</p>
+<p>The Bayesian identity sharpens the argument further. A Laplace prior on <span class="math inline">\(\Delta W_{ij}\)</span> produces the L1 penalty at the posterior mode — exactly, not approximately, by the same algebra as for regression coefficients. A Gaussian prior produces L2. The maximum entropy interpretation now closes the loop precisely: a flat prior over contact matrices subject to fixed mean contact rate is a Gaussian centered at <span class="math inline">\(\bar{W}\)</span>. Ridge regularization toward <span class="math inline">\(\bar{W}\)</span> is therefore the correct Bayesian update under maximum ignorance about contact structure, starting from a Gaussian prior. When the analyst has no structural knowledge of the contact network beyond its mean, L2 toward the mean-field is the principled choice. L1 is appropriate when the contact network is expected to be sparse — when most agent pairs have no meaningful contact and the interesting structure is concentrated in a few edges. The penalty encodes the prior whether or not the analyst names it as one.</p>
+<p>The unification runs further still. L2 regularization is the limiting case of training on Gaussian-perturbed inputs: as the perturbation variance shrinks to zero, the expected loss over perturbed data converges to the L2-penalized loss. The distributionally robust optimizer minimizing worst-case expected loss over a Wasserstein ball around the empirical measure recovers regularized estimators as special cases. Bayesian prior, regularization penalty, adversarial perturbation budget — three framings of the same restriction. The literature on mean-field games formalizes the reparametrization argument at infinite scale: as <span class="math inline">\(n \to \infty\)</span> with individual effects shrinking proportionally, the discrete agent system converges to a continuum PDE — the <span class="math inline">\(\lambda \to \infty\)</span> limit of the regularization path, studied with the tools of optimal control.</p>
+<pre class="r"><code># Visualize the geometry of L1 vs L2 regularization
+# The plot shows coefficient contours and constraint regions
+
+# RSS contours centered at OLS estimate (beta1=1.5, beta2=2.0 for illustration)
+beta1_ols &lt;- 1.5
+beta2_ols &lt;- 2.0
+
+# Grid for contour computation
+b1 &lt;- seq(-2.5, 3, length.out = 300)
+b2 &lt;- seq(-1.5, 3.5, length.out = 300)
+grid_reg &lt;- expand.grid(b1 = b1, b2 = b2) %&gt;% as_tibble()
+
+# RSS surface (simplified: circular contours scaled from OLS)
+# Using anisotropic ellipses to reflect correlated predictors
+grid_reg &lt;- grid_reg %&gt;%
+  mutate(
+    rss = 0.7 * (b1 - beta1_ols)^2 +
+          0.4 * (b2 - beta2_ols)^2 +
+          0.3 * (b1 - beta1_ols) * (b2 - beta2_ols)
+  )
+
+# L2 constraint region: circle of radius r
+r_l2 &lt;- 1.2
+constraint_l2 &lt;- tibble(
+  angle = seq(0, 2*pi, length.out = 300),
+  b1    = r_l2 * cos(angle),
+  b2    = r_l2 * sin(angle)
+)
+
+# L1 constraint region: diamond |b1| + |b2| &lt;= r
+r_l1 &lt;- 1.2
+constraint_l1 &lt;- tibble(
+  b1 = c(r_l1, 0, -r_l1, 0, r_l1),
+  b2 = c(0, r_l1, 0, -r_l1, 0)
+)
+
+# Ridge solution: project OLS onto L2 ball (simple approximation)
+scale_factor_l2 &lt;- r_l2 / sqrt(beta1_ols^2 + beta2_ols^2)
+ridge_soln &lt;- tibble(b1 = beta1_ols * scale_factor_l2,
+                     b2 = beta2_ols * scale_factor_l2,
+                     label = &quot;Ridge solution&quot;)
+
+# LASSO solution: tends toward axis (corner of diamond)
+# Approximate: project onto nearest corner
+if (abs(beta1_ols) &gt; abs(beta2_ols)) {
+  lasso_soln &lt;- tibble(b1 = r_l1, b2 = 0, label = &quot;LASSO solution&quot;)
+} else {
+  lasso_soln &lt;- tibble(b1 = 0, b2 = r_l1, label = &quot;LASSO solution&quot;)
+}
+
+p_l2 &lt;- ggplot() +
+  geom_contour(data = grid_reg, aes(x = b1, y = b2, z = rss),
+               color = &quot;#AAAAAA&quot;, breaks = c(0.5, 1.5, 3.0, 5.5, 9.0)) +
+  geom_path(data = constraint_l2, aes(x = b1, y = b2),
+            color = &quot;#2D5F8A&quot;, linewidth = 1.2) +
+  geom_point(aes(x = beta1_ols, y = beta2_ols), color = &quot;#1C1C1E&quot;, size = 2.5) +
+  geom_point(data = ridge_soln, aes(x = b1, y = b2),
+             color = &quot;#2D5F8A&quot;, size = 3.5, shape = 18) +
+  geom_segment(aes(x = beta1_ols, y = beta2_ols,
+                   xend = ridge_soln$b1, yend = ridge_soln$b2),
+               arrow = arrow(length = unit(0.2, &quot;cm&quot;)), color = &quot;#555555&quot;) +
+  annotate(&quot;text&quot;, x = beta1_ols + 0.15, y = beta2_ols + 0.1,
+           label = &quot;OLS&quot;, family = &quot;Source Serif 4&quot;, size = 3.2) +
+  labs(title = &quot;L2 (Ridge)&quot;,
+       subtitle = &quot;Circular constraint; solution shrinks toward origin&quot;,
+       x = expression(beta[1]), y = expression(beta[2])) +
+  coord_equal(xlim = c(-2.2, 2.8), ylim = c(-1.2, 3.0))
+
+p_l1 &lt;- ggplot() +
+  geom_contour(data = grid_reg, aes(x = b1, y = b2, z = rss),
+               color = &quot;#AAAAAA&quot;, breaks = c(0.5, 1.5, 3.0, 5.5, 9.0)) +
+  geom_polygon(data = constraint_l1, aes(x = b1, y = b2),
+               fill = NA, color = &quot;#8A4A2D&quot;, linewidth = 1.2) +
+  geom_point(aes(x = beta1_ols, y = beta2_ols), color = &quot;#1C1C1E&quot;, size = 2.5) +
+  geom_point(data = lasso_soln, aes(x = b1, y = b2),
+             color = &quot;#8A4A2D&quot;, size = 3.5, shape = 18) +
+  geom_segment(aes(x = beta1_ols, y = beta2_ols,
+                   xend = lasso_soln$b1, yend = lasso_soln$b2),
+               arrow = arrow(length = unit(0.2, &quot;cm&quot;)), color = &quot;#555555&quot;) +
+  annotate(&quot;text&quot;, x = beta1_ols + 0.15, y = beta2_ols + 0.1,
+           label = &quot;OLS&quot;, family = &quot;Source Serif 4&quot;, size = 3.2) +
+  labs(title = &quot;L1 (LASSO)&quot;,
+       subtitle = &quot;Diamond constraint; solution tends to corners (sparsity)&quot;,
+       x = expression(beta[1]), y = expression(beta[2])) +
+  coord_equal(xlim = c(-2.2, 2.8), ylim = c(-1.2, 3.0))
+
+p_l2 + p_l1</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch4-regularization-geometry-1.png" alt="Geometry of regularization. Coefficient contours (ellipses) intersect the constraint region at the regularized solution. L2 (ridge) penalty produces a circular constraint region; the solution is generally interior with all coefficients shrunk toward zero. L1 (LASSO) penalty produces a diamond constraint region; the solution tends to land on a corner, producing sparse solutions with some coefficients exactly zero." width="768" />
+<p class="caption">
+Geometry of regularization. Coefficient contours (ellipses) intersect the constraint region at the regularized solution. L2 (ridge) penalty produces a circular constraint region; the solution is generally interior with all coefficients shrunk toward zero. L1 (LASSO) penalty produces a diamond constraint region; the solution tends to land on a corner, producing sparse solutions with some coefficients exactly zero.
+</p>
+</div>
+<p>Every model involves two levels of restriction, and the reparametrization makes both legible. The first is the parametric family — the structural commitment that determines what phenomena are in scope. The mean-field ODE is a family: it fixes <span class="math inline">\(\varepsilon_i = 0\)</span> and <span class="math inline">\(\Delta W = 0\)</span> before any data are seen, admitting mass-action interactions in continuous time and excluding network structure, spatial heterogeneity, and discrete individual effects entirely. The mean-sufficient model of industry dynamics is a family: it admits dynamics driven by aggregate employment and excludes the distributional heterogeneity that generates the power law tail. The stationary time series is a family: it admits processes whose spectral structure is constant across time and excludes regime transitions. These are not parameter choices. They are structural commitments that determine what the model can say, and no quantity of data revises them — they are the grammar within which the data are interpreted.</p>
+<p>The second level is the prior on that family — the regularization, calibrated to what the data at a particular observation frequency can support. The choice of penalty is a choice of prior, and the prior encodes beliefs about how far the true system sits from the family’s anchor point: how heterogeneous the agents are, how far the contact network departs from maximum entropy, how sparse the consequential deviations are. The ABM critic who objects to parameter proliferation is demanding stronger regularization within a richer family — legitimate when the observation frequency cannot distinguish the parameters, illegitimate when the phenomenon requires the richer family to exist at all. Both levels interact with observation frequency: the family must be appropriate at the resolution of measurement, and the prior on the family must be calibrated to what that resolution can support. When the phenomenon is the mean-field limit of large-population randomly-mixed dynamics, the ODE is correct and additional expressiveness contributes nothing. When the phenomenon is the shape of the firm size distribution, or the topology-dependence of an epidemic, the restricted family does not fit poorly — it excludes the phenomenon by design, before estimation begins.</p>
+</div>
+<div id="sec-temporal" class="section level2" number="4.3">
+<h2 number="4.3"><span class="header-section-number">4.3</span> Temporal Resolution and Near-Decomposability</h2>
+<p>All data is time-indexed. The firm size distribution has a year attached to it. The epidemic curve begins at a date. The regression coefficients are estimated from observations generated over a period. Sometimes the time label is displayed; sometimes it is known and suppressed; sometimes it is genuinely unknown. But the time structure is always present in the data-generating process, and every choice — of parametric family, of prior on that family — is a choice about how to handle it. The parametric family determines which temporal structures are expressible. The prior on the family determines what is estimable at the available observation frequency. Making these choices explicit, rather than allowing them to hide in the model’s functional form, is the discipline the framework demands.</p>
+<p>Herbert Simon observed that complex adaptive systems tend to be nearly decomposable: subsystems interact tightly at fast time scales and loosely at slow ones. A firm coordinates its internal operations at time scales too fast for prices to clear across firms. The economy coordinates across firms at time scales over which transaction costs can be overcome. Each level of organization has its characteristic frequency. The levels are not isolated from each other, but they are not fully coupled either — the fast dynamics within each level are relatively independent of the slow dynamics between levels.</p>
+<p>A model fit at a particular temporal resolution is a low-pass filter. It recovers structure at frequencies below the resolution’s Nyquist limit. Structure at faster frequencies is averaged out — not represented as noise, but absorbed into the model’s coefficients where it leaves no fingerprint. A quarterly macroeconomic model recovers annual and multi-year dynamics. It is linguistically incapable of expressing sub-quarterly phenomena: the model has no time steps at which to represent them. This is not a data limitation in the sense that better data collection would fix it. It is a resolution choice, and the resolution choice has consequences for what the model can say.</p>
+<p>Stationarity is the temporal counterpart of the mean-field assumption — not analogously but structurally, because both are parametric family choices. The mean-field family averages over spatial heterogeneity within each time step, asserting that contact structure is uniform across all pairs of agents. The stationary family averages over temporal heterogeneity across the observation window, asserting that the data-generating process at time <span class="math inline">\(t\)</span> is drawn from the same distribution as at time <span class="math inline">\(t - k\)</span> for all <span class="math inline">\(k\)</span>. One suppresses spatial structure; the other suppresses temporal structure. Both determine what the model can express, and both interact with observation frequency in the same way: the family is appropriate when the dimension being averaged over is genuinely negligible at the relevant resolution, and misspecified when it is not.</p>
+<p>Sampling frequency determines which family choices are testable from the available data. A model estimated at weekly frequency cannot detect dynamics faster than two weeks — the Nyquist limit is a hard constraint on what signal is recoverable at that resolution. The stationary family chosen at weekly resolution is a commitment only about weekly-and-slower structure. Whether the system is stationary at that resolution is a distinct question from whether it is stationary at finer resolutions, and the two questions have different answers whenever the system is nearly decomposable. When the system is capable of bifurcation, the stationary family is misspecified in exactly the way the mean-field family is misspecified when contact structure matters: the family does not have the vocabulary for what is about to happen.</p>
+<pre class="r"><code>set.seed(2025)  # seed for reproducibility
+
+K  &lt;- 1000   # carrying capacity
+r  &lt;- 0.3    # intrinsic growth rate
+N0 &lt;- 10     # initial population
+
+t_full &lt;- seq(0, 50, by = 0.5)
+N_true &lt;- K / (1 + ((K - N0) / N0) * exp(-r * t_full))
+
+logistic_df &lt;- tibble(t = t_full, N = N_true)
+
+# Observed data: only the exponential phase (t &lt;= 10)
+obs_df &lt;- filter(logistic_df, t &lt;= 10)
+
+# Fit a linear model to log(N) ~ t on the observed data
+# This corresponds to fitting an exponential model
+lm_fit  &lt;- lm(log(N) ~ t, data = obs_df)
+r_hat   &lt;- coef(lm_fit)[&quot;t&quot;]
+N0_hat  &lt;- exp(coef(lm_fit)[&quot;(Intercept)&quot;])
+
+# Extrapolate using the fitted exponential
+pred_df &lt;- tibble(t = seq(0, 50, by = 0.5)) %&gt;%
+  mutate(N_pred = N0_hat * exp(r_hat * t))
+
+ggplot() +
+  # True logistic trajectory
+  geom_line(data = logistic_df, aes(x = t, y = N),
+            color = &quot;#2D5F8A&quot;, linewidth = 1.0) +
+  # Exponential extrapolation
+  geom_line(data = pred_df, aes(x = t, y = N_pred),
+            color = &quot;#C0392B&quot;, linewidth = 0.9, linetype = &quot;dashed&quot;) +
+  # Observed data points
+  geom_point(data = obs_df, aes(x = t, y = N),
+             color = &quot;#1C1C1E&quot;, size = 2.0) +
+  # Carrying capacity reference
+  geom_hline(yintercept = K, color = &quot;#888888&quot;, linetype = &quot;dotted&quot;) +
+  annotate(&quot;text&quot;, x = 42, y = K + 30, label = paste0(&quot;K = &quot;, K),
+           family = &quot;Source Serif 4&quot;, size = 3.5, color = &quot;#888888&quot;) +
+  annotate(&quot;text&quot;, x = 12, y = 30,
+           label = &quot;Observations (t \u2264 10)&quot;, size = 3.2,
+           family = &quot;Source Serif 4&quot;, color = &quot;#1C1C1E&quot;) +
+  annotate(&quot;segment&quot;, x = 10, xend = 10, y = 0, yend = K + 50,
+           linetype = &quot;dotted&quot;, color = &quot;#888888&quot;) +
+  scale_y_continuous(labels = scales::comma, limits = c(0, 1600)) +
+  labs(
+    title    = &quot;Logistic growth: what extrapolation cannot see&quot;,
+    subtitle = &quot;Blue: true trajectory. Red dashed: exponential fit to early data. The carrying capacity is invisible from observations in the exponential phase.&quot;,
+    x        = &quot;Time&quot;,
+    y        = &quot;Population&quot;
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch4-logistic-extrapolation-1.png" alt="The extrapolation trap. A logistic growth process observed only in its early exponential phase (solid black points, t $\leq$ 10) yields an exponential fit (dashed red) that projects unbounded growth. The true trajectory (solid blue) reaches a carrying capacity that is invisible from the early data. The turn is not outside the confidence interval of the fit &lt;U+2014&gt; it is outside the language of the model fitted to the early data." width="768" />
+<p class="caption">
+The extrapolation trap. A logistic growth process observed only in its early exponential phase (solid black points, t <span class="math inline">\(\leq\)</span> 10) yields an exponential fit (dashed red) that projects unbounded growth. The true trajectory (solid blue) reaches a carrying capacity that is invisible from the early data. The turn is not outside the confidence interval of the fit &lt;U+2014&gt; it is outside the language of the model fitted to the early data.
+</p>
+</div>
+<p>The logistic example is the stripped-down version of a general problem. Any system capable of bifurcation will defeat stationarity-based extrapolation at the bifurcation point. The early-phase data are generated by one dynamical regime; the post-bifurcation data are generated by another. A model fitted to the early-phase data has learned the parameters of a regime that no longer exists. This is not a statistical point about forecast intervals being too narrow. It is a structural point about the limits of inductive inference from time series in nonlinear systems. The carrying capacity is not a parameter that the exponential model can estimate with more data. It is a parameter that the exponential model does not have.</p>
+<pre class="r"><code>set.seed(2025)  # reproducibility
+
+# Logistic map attractor: iterate the map and collect long-run values
+map_attractor &lt;- function(r_val, n_burn = 500, n_keep = 200) {
+  # n_burn: transient steps discarded before collecting
+  # n_keep: steps collected for plotting
+  x &lt;- 0.5  # initial condition (interior of [0,1])
+  for (i in seq_len(n_burn)) x &lt;- r_val * x * (1 - x)
+  xs &lt;- numeric(n_keep)
+  for (i in seq_len(n_keep)) {
+    x    &lt;- r_val * x * (1 - x)
+    xs[i] &lt;- x
+  }
+  tibble(r = r_val, x = xs)
+}
+
+# Sweep over r values
+bif_df &lt;- map_dfr(
+  seq(2.5, 4.0, length.out = 1200),
+  map_attractor,
+  n_burn = 500,
+  n_keep = 150
+)
+
+ggplot(bif_df, aes(x = r, y = x)) +
+  geom_point(size = 0.05, alpha = 0.3, color = &quot;#2D5F8A&quot;) +
+  geom_vline(xintercept = 3.0, linetype = &quot;dashed&quot;, color = &quot;#C0392B&quot;, linewidth = 0.6) +
+  geom_vline(xintercept = 3.449, linetype = &quot;dashed&quot;, color = &quot;#8A4A2D&quot;,
+             linewidth = 0.6, alpha = 0.7) +
+  annotate(&quot;text&quot;, x = 3.02, y = 0.95, label = &quot;Period 2&quot;,
+           family = &quot;Source Serif 4&quot;, size = 3.0, color = &quot;#C0392B&quot;, hjust = 0) +
+  annotate(&quot;text&quot;, x = 3.47, y = 0.95, label = &quot;Period 4&quot;,
+           family = &quot;Source Serif 4&quot;, size = 3.0, color = &quot;#8A4A2D&quot;, hjust = 0) +
+  labs(
+    title    = &quot;Bifurcation diagram: logistic map&quot;,
+    subtitle = &quot;Long-run attractor values as the growth parameter r increases. The turn into chaos cannot be anticipated from pre-bifurcation data.&quot;,
+    x        = &quot;Growth parameter (r)&quot;,
+    y        = &quot;Long-run attractor value (x)&quot;
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch4-bifurcation-1.png" alt="Bifurcation diagram of the logistic map $x_{t+1} = r x_t(1 - x_t)$. For $r &lt; 3$, the system converges to a single fixed point. At $r = 3$, a period-doubling bifurcation occurs. By $r \approx 3.57$, the system enters chaos. A time series model fitted to data from $r = 2.8$ has no representation for the behavior at $r = 3.5$: the bifurcation is exterior to the language of the stationary model." width="768" />
+<p class="caption">
+Bifurcation diagram of the logistic map <span class="math inline">\(x_{t+1} = r x_t(1 - x_t)\)</span>. For <span class="math inline">\(r &lt; 3\)</span>, the system converges to a single fixed point. At <span class="math inline">\(r = 3\)</span>, a period-doubling bifurcation occurs. By <span class="math inline">\(r \approx 3.57\)</span>, the system enters chaos. A time series model fitted to data from <span class="math inline">\(r = 2.8\)</span> has no representation for the behavior at <span class="math inline">\(r = 3.5\)</span>: the bifurcation is exterior to the language of the stationary model.
+</p>
+</div>
+<p>A time series model calibrated on data from the stable fixed-point regime (<span class="math inline">\(r &lt; 3\)</span>) has learned a stationary process. At <span class="math inline">\(r = 3\)</span>, the system bifurcates to a period-two cycle. The stationary model has no representation for this — its language contains the word “stationary process” but not the word “bifurcation.” The turn is not an outlier that the model underestimates. It is a structural change that moves the system outside the language the model was built in.</p>
+</div>
+<div id="sec-turning-points" class="section level2" number="4.4">
+<h2 number="4.4"><span class="header-section-number">4.4</span> The Epistemology of Turning Points</h2>
+<p>Any trend extrapolated far enough produces an absurdity. A bond that compounds at five percent for long enough exceeds global GDP. A population growing at one percent doubles in seventy years and doubles again, until someone notices that the land does not. These projections are not errors of arithmetic. They are accurate outputs of models whose language contains no word for the ceiling. The problem is not extreme extrapolation. It is that any model built from data within a single phase of a cyclical system is, by construction, a model of that phase — and a phase, extrapolated, is infinite.</p>
+<p>The observation that human affairs cycle rather than trend is old enough that its antiquity should give pause. Polybius, writing after Carthage, described anacyclosis: the sequence from monarchy through tyranny, from aristocracy through oligarchy, from democracy through mob rule and back to the need for monarchy. The form is not random deterioration but a structured progression, each stage generating the conditions that produce the next. The Platonic version is more pessimistic: the sequence runs in one direction, each form a degradation of the last. What both share, and what matters here, is the structure of the claim. Stability is not neutral. It is generative — of the conditions that will end it.</p>
+<p>Ibn Khaldun, writing in the fourteenth century, gave this intuition its first formal treatment. Dynastic power rises on the strength of <em>asabiyyah</em> — group solidarity, the capacity for collective action that desert tribes possess in greater abundance than the sedentary populations they displace. Success dilutes it. Urban comfort, internal competition, the purchase of mercenary armies in place of kin-based ones: the mechanisms by which a dynasty’s own dominance dissolves its original advantage are detailed, not vague. The cycle has a period: Ibn Khaldun estimated roughly four generations, approximately a century. The model is not falsified by the collapse of any particular dynasty. It is confirmed, because the collapse is what the model predicts.</p>
+<p>Nikolai Kondratiev, writing in the 1920s, found a similar structure in industrialized economies. Long waves of approximately fifty years — expansion followed by contraction — seemed to characterize the historical series of prices, output, and interest rates since the beginning of industrial capitalism. Kondratiev did not explain the waves; he identified them. Schumpeter supplied the mechanism. Each wave is driven by a cluster of general-purpose technologies — the steam engine, the railways, electrification, the internal combustion engine — that open new productive frontiers, stimulate investment and employment through the expansion phase, and eventually saturate. The carrying capacity of any particular technological wave is finite. The expansion ends not because demand runs out but because the opportunities the technology created have been realized. The language of the expansion phase, fitted to expansion data, has no parameter for saturation.</p>
+<p>Hyman Minsky’s version is the sharpest. Stability, he argued, breeds instability — not as metaphor but as mechanism. A period of financial calm licenses leveraged risk-taking: lenders relax standards, borrowers extend, asset prices rise to reflect the expectation that they will continue to rise. The longer the calm persists, the more the system’s structure shifts toward fragility, because the calm is evidence — compelling, well-fitted evidence — that leverage is safe. A lender operating from a model calibrated on the calm period is not being irrational. The model is a good fit to the data it was fitted on. It simply has no representation for the regime change that the calm’s own dynamics are producing. The Minsky moment, when it comes, is not an outlier the model underweighted. It is a structural change into a regime the model could not express.</p>
+<p>Reinhart and Rogoff catalogued eight centuries of financial crises and found the same pattern preceding every one: confident expert opinion that the old rules no longer applied, that this cycle was different, that the leverage was sustainable. This is not irrationality. It is the predictable output of models fitted to pre-crisis data by agents who understood their models perfectly and whose models were right about everything they were capable of saying. The crisis is exterior to the language of the models used to not predict it.</p>
+<pre class="r"><code>set.seed(2025)  # reproducibility
+
+# Stylized long-wave cycle: sustained oscillation around a stable mean.
+# Period of 50 units, echoing Kondratiev&#39;s empirical estimate.
+t_full    &lt;- seq(0, 130, by = 0.5)
+baseline  &lt;- 100
+amplitude &lt;- 35
+period    &lt;- 50
+signal    &lt;- baseline + amplitude * sin(2 * pi * t_full / period)
+
+# Add a small amount of noise to represent real data
+noise     &lt;- rnorm(length(t_full), 0, 2)
+cycle_df  &lt;- tibble(t = t_full, true = signal, observed = signal + noise)
+
+# Window A: expansion phase — the upswing (t ∈ [5, 20])
+win_a &lt;- filter(cycle_df, t &gt;= 5, t &lt;= 20)
+fit_a &lt;- lm(observed ~ t, data = win_a)
+
+# Window B: contraction phase — the downswing (t ∈ [32, 47])
+win_b &lt;- filter(cycle_df, t &gt;= 32, t &lt;= 47)
+fit_b &lt;- lm(observed ~ t, data = win_b)
+
+# Extrapolate each fit forward to t = 75
+extrap_t &lt;- seq(5, 75, by = 0.5)
+extrap_df &lt;- bind_rows(
+  tibble(t = extrap_t, fit = predict(fit_a, tibble(t = extrap_t)), window = &quot;Expansion fit&quot;),
+  tibble(t = extrap_t, fit = predict(fit_b, tibble(t = extrap_t)), window = &quot;Contraction fit&quot;)
+)
+
+# Shade the observation windows
+shade_a &lt;- tibble(xmin = 5,  xmax = 20, ymin = 40, ymax = 165)
+shade_b &lt;- tibble(xmin = 32, xmax = 47, ymin = 40, ymax = 165)
+
+ggplot() +
+  # Shaded observation windows
+  geom_rect(data = shade_a, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = &quot;#2D5F8A&quot;, alpha = 0.08) +
+  geom_rect(data = shade_b, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = &quot;#C0392B&quot;, alpha = 0.08) +
+  # True cycle (shown after observation period as dotted)
+  geom_line(data = filter(cycle_df, t &lt;= 75),
+            aes(x = t, y = true),
+            color = &quot;#555555&quot;, linewidth = 0.8, linetype = &quot;dotted&quot;) +
+  # Observed data points in each window
+  geom_point(data = win_a, aes(x = t, y = observed),
+             color = &quot;#2D5F8A&quot;, size = 1.5, alpha = 0.8) +
+  geom_point(data = win_b, aes(x = t, y = observed),
+             color = &quot;#C0392B&quot;, size = 1.5, alpha = 0.8) +
+  # Extrapolations
+  geom_line(data = extrap_df,
+            aes(x = t, y = fit, color = window, linetype = window),
+            linewidth = 0.85) +
+  scale_color_manual(
+    values = c(&quot;Expansion fit&quot; = &quot;#2D5F8A&quot;, &quot;Contraction fit&quot; = &quot;#C0392B&quot;)
+  ) +
+  scale_linetype_manual(
+    values = c(&quot;Expansion fit&quot; = &quot;solid&quot;, &quot;Contraction fit&quot; = &quot;solid&quot;)
+  ) +
+  annotate(&quot;text&quot;, x = 12.5, y = 155, label = &quot;Window A\n(expansion)&quot;,
+           family = &quot;Source Serif 4&quot;, size = 3.0, color = &quot;#2D5F8A&quot;) +
+  annotate(&quot;text&quot;, x = 39.5, y = 155, label = &quot;Window B\n(contraction)&quot;,
+           family = &quot;Source Serif 4&quot;, size = 3.0, color = &quot;#C0392B&quot;) +
+  coord_cartesian(ylim = c(45, 165)) +
+  labs(
+    title    = &quot;Two windows, two extrapolations&quot;,
+    subtitle = &quot;Dotted: true cycle. Shaded: observation windows. Solid lines: linear trend extrapolations from each window.&quot;,
+    x        = &quot;Time&quot;,
+    y        = &quot;Index&quot;,
+    color    = NULL,
+    linetype = NULL
+  ) +
+  theme(legend.position = &quot;bottom&quot;)</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch4-two-windows-1.png" alt="Two observation windows on the same cycle produce opposite extrapolations, both confident, both wrong at the turning point. A linear trend fitted to the expansion phase (blue, left window) predicts continued growth. The same model structure fitted to the contraction phase (red, right window) predicts continued decline. The turn between phases is precisely what neither model can anticipate: it is exterior to the language of any model fitted entirely within one phase. The structure is stylized after Kondratiev long waves, with a period of fifty time units." width="768" />
+<p class="caption">
+Two observation windows on the same cycle produce opposite extrapolations, both confident, both wrong at the turning point. A linear trend fitted to the expansion phase (blue, left window) predicts continued growth. The same model structure fitted to the contraction phase (red, right window) predicts continued decline. The turn between phases is precisely what neither model can anticipate: it is exterior to the language of any model fitted entirely within one phase. The structure is stylized after Kondratiev long waves, with a period of fifty time units.
+</p>
+</div>
+<p>The two extrapolations in that figure are not bad statistical practice. Each is the correct output of a model well-fitted to its observation window. The residuals are small, the fit is good, the extrapolation is what the model implies. The models are wrong about the future not because they are poorly estimated but because they are built in a language that has no representation for the phase transition. More data from the same window would give tighter confidence bands and a more confident wrong answer.</p>
+<p>This is the genealogy of the stationarity problem. Stationarity is not an assumption about noise — it is an assumption about regime. It asserts that the data-generating process visible in the observation window persists. When the system has a cyclical structure, this assertion is always temporarily true and permanently misleading: it is true within any phase long enough to fit a model, and it predicts the wrong turn every time. The model inherits nothing from its predecessors across the phase boundary because the phase boundary is precisely what the model cannot see.</p>
+<p>The Kondratiev observation, the Minsky mechanism, the Ibn Khaldun genealogy of dynasties — these are all claims that the most important events in the system’s history are phase transitions, and that models fitted within a phase are, by construction, blind to them. This is not a counsel of despair about time series modeling. It is a demand for precision about what time series models can and cannot say, and therefore about which questions they can and cannot answer. A model that fits the expansion phase fits the expansion phase. The question of whether the expansion will continue is a question about the regime structure — about where in the cycle the system currently sits, and what conditions govern the transition — and it is exterior to the language of any model that takes the expansion phase as its universe.</p>
+</div>
+<div id="sec-possibility" class="section level2" number="4.5">
+<h2 number="4.5"><span class="header-section-number">4.5</span> The Possibility Space</h2>
+<p>The agent-based model does not produce better point forecasts. It is not a superior extrapolation engine. A model that represents the full heterogeneity of a firm population does not thereby know where the economy will be in ten years with more precision than a model tracking mean firm size does. Forecasting is not the point.</p>
+<p>What the ABM offers is a map of the possibility space — the range of qualitatively distinct behaviors the system is capable of producing, the conditions under which each is realized, and the locations of the boundaries between them. These boundaries are not forecast errors. They are structural features of the system’s dynamics. A map that shows them is a different kind of knowledge than a point forecast, and in many circumstances it is more useful.</p>
+<p>Consider the contrast. A policy advisor working from a single trajectory — “the economy will grow at 2.3% next year, inflation will be 3.1%” — is navigating with a point. The point may be calibrated well or poorly; either way, it is a point. A policy advisor working from a possibility space map knows which dynamical regimes are accessible from the current state, what conditions would trigger a transition between them, and which interventions have leverage at the critical points. The map does not eliminate uncertainty. It characterizes it structurally, rather than reporting a number that suppresses the structure by design.</p>
+<pre class="r"><code>set.seed(2025)  # reproducibility
+
+# Stochastic logistic growth: same starting point, different trajectories
+# Stochasticity comes from demographic noise (discreteness of individuals)
+r_growth &lt;- 0.3
+K_cap    &lt;- 500
+N_start  &lt;- 20
+T_traj   &lt;- 60
+n_traj   &lt;- 30
+
+run_stochastic_logistic &lt;- function(seed, N0, r, K, T) {
+  set.seed(seed)
+  N &lt;- N0
+  traj &lt;- numeric(T + 1)
+  traj[1] &lt;- N
+
+  for (tt in 2:(T + 1)) {
+    # Expected growth rate from logistic equation
+    expected_growth &lt;- r * N * (1 - N / K)
+    # Add demographic stochasticity: births and deaths are Poisson draws
+    births &lt;- rpois(1, max(0, expected_growth))
+    deaths &lt;- rpois(1, max(0, -expected_growth + r * N^2 / K))
+    N      &lt;- max(0, N + births - deaths)
+    traj[tt] &lt;- N
+  }
+
+  tibble(t = 0:T, N = traj, seed = seed)
+}
+
+trajectories_df &lt;- map_dfr(1:n_traj, run_stochastic_logistic,
+                            N0 = N_start, r = r_growth, K = K_cap, T = T_traj)
+
+# Deterministic solution for reference
+t_det &lt;- seq(0, T_traj, by = 0.5)
+N_det &lt;- K_cap / (1 + ((K_cap - N_start) / N_start) * exp(-r_growth * t_det))
+det_df &lt;- tibble(t = t_det, N = N_det)
+
+ggplot() +
+  geom_line(
+    data = trajectories_df,
+    aes(x = t, y = N, group = seed),
+    alpha = 0.2, linewidth = 0.4, color = &quot;#2D5F8A&quot;
+  ) +
+  geom_line(
+    data = det_df,
+    aes(x = t, y = N),
+    color = &quot;#1C1C1E&quot;, linewidth = 1.1
+  ) +
+  geom_hline(yintercept = K_cap, linetype = &quot;dotted&quot;, color = &quot;#888888&quot;) +
+  annotate(&quot;text&quot;, x = T_traj - 3, y = K_cap + 18,
+           label = paste0(&quot;K = &quot;, K_cap), family = &quot;Source Serif 4&quot;,
+           size = 3.2, color = &quot;#888888&quot;) +
+  labs(
+    title    = &quot;Possibility space: stochastic logistic growth&quot;,
+    subtitle = paste0(n_traj, &quot; trajectories from the same initial condition (N\u2080 = &quot;, N_start, &quot;). &quot;,
+                      &quot;Solid: deterministic trajectory.&quot;),
+    x        = &quot;Time&quot;,
+    y        = &quot;Population&quot;
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="abm_course_book_files/figure-html/ch4-possibility-space-1.png" alt="Multiple trajectories from the same initial condition. A stochastic system starting from the same initial state can realize qualitatively different outcomes. The cloud of trajectories is the possibility space &lt;U+2014&gt; not a confidence interval around a single forecast, but a map of qualitatively distinct futures the system can reach. The distinctions that matter are often between qualitative regimes, not between nearby trajectories within the same regime." width="768" />
+<p class="caption">
+Multiple trajectories from the same initial condition. A stochastic system starting from the same initial state can realize qualitatively different outcomes. The cloud of trajectories is the possibility space &lt;U+2014&gt; not a confidence interval around a single forecast, but a map of qualitatively distinct futures the system can reach. The distinctions that matter are often between qualitative regimes, not between nearby trajectories within the same regime.
+</p>
+</div>
+<p>This is what honest cartography looks like. Not “the population will be <span class="math inline">\(K\)</span> at time <span class="math inline">\(T\)</span>” but “these are the trajectories accessible from this starting point, these are the conditions that push toward the upper envelope, and extinction is accessible when the population falls below a certain threshold from which recovery becomes unlikely.” The map and the point forecast are not competing forecasts of the same thing. They are answers to different questions — and the question the map answers is often the more useful one.</p>
+</div>
+<div id="sec-checklist" class="section level2" number="4.6">
+<h2 number="4.6"><span class="header-section-number">4.6</span> The Statistician’s Checklist</h2>
+<p>The statistician’s instinct toward honest uncertainty quantification is correct. Confidence intervals, posterior distributions, prediction intervals, cross-validation — these are all ways of refusing to report false precision. They are formal structures for saying “I do not know exactly, and here is what I do know about how much I do not know.” This course has argued that the same instinct should extend from parameter uncertainty to structural uncertainty: not only “what are the plausible values of this parameter?” but “is this the right language for the question I am asking?”</p>
+<p>The checklist question is: <em>at what resolution is this model working, and is the phenomenon I care about expressible at that resolution?</em></p>
+<p>It applies to any regression model: the phenomenon may be a nonlinear threshold effect that a linear model cannot represent, regardless of sample size or estimation efficiency. It applies to any time series model: the phenomenon may be a regime change that a stationary model cannot anticipate, because the change moves the system outside the distribution the model was fitted on. It applies to any compartmental epidemic model: the phenomenon may be hub-driven super-spreading in a heterogeneous contact network, which the mean-field model cannot reach. It applies to any model of industry dynamics: the phenomenon may be the distribution of firm sizes, which a model tracking mean employment cannot express, because the mean is not a sufficient statistic for a power law tail.</p>
+<p>Most phenomena are well-served by the ODE, the linear model, the aggregate mean. Their restrictions are warranted when the phenomena of interest sit inside their expressive range — and very often they do. The checklist is not a case for ABM. It is a case for knowing which language you are speaking and whether the question fits the grammar. The ABM is what you reach for when the answer to the checklist question is no — when the phenomenon requires heterogeneity the model has collapsed, dynamics the model cannot generate, or structure at a resolution the model does not reach. Name the language, identify the boundary, ask the question. The rest follows from the answer.</p>
+<p>The tools are harder. The proofs are less clean. The answers are less crisp. They are more likely to be true.</p>
+<hr />
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs">
+
+</div>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
