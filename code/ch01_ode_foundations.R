@@ -1,416 +1,290 @@
 # =============================================================================
-# Agent-Based Modeling for Statisticians
-# JSM Short Course — Chapter 1: The Differential Equations of Living Systems
+# Agent-Based Modeling for Statisticians — JSM 2025
+# Chapter 1: The Differential Equations of Living Systems
+# =============================================================================
 #
-# This script implements Lotka-Volterra and SIR models using deSolve and ggplot2.
-# It is the student take-away companion to Chapter 1 of the course book.
+# This script contains all R code from Chapter 1 of the course book.
+# It is self-contained: all required packages are loaded in the setup section.
 #
-# The central purpose is not to solve differential equations. It is to look at
-# two classical models with fresh eyes — to see what assumptions are embedded
-# in their structure, because those assumptions become the argument of the
-# remaining three chapters.
+# Sections:
+#   1. Setup
+#   2. Lotka-Volterra: time series and phase portrait
+#   3. SIR: base epidemic and R0 sweep
 #
-# Author: John Lynham
-# Course: Agent-Based Modeling for Statisticians, JSM 2025
+# Packages required:
+#   tidyverse, deSolve, patchwork
+#
+# GitHub: [course repository]
 # =============================================================================
 
+## ----ch1-setup----------------------------------------------------------------
+# Chapter 1 Setup
+# All packages and global settings for this chapter.
+# This chunk is self-contained — it does not depend on any prior chapter.
 
-# =============================================================================
-# SETUP
-# =============================================================================
+library(tidyverse)
+library(deSolve)
+library(patchwork)
 
-library(tidyverse)   # data manipulation, ggplot2, pivot_longer, etc.
-library(deSolve)     # numerical ODE solvers (lsoda by default)
-library(patchwork)   # combining ggplot2 panels into composite figures
-
-
-# Custom ggplot2 theme ---------------------------------------------------
-# All plots in this course use a common theme for visual consistency.
-# Source Serif 4 is the body font; Raleway is the heading font.
-# If these fonts are not installed locally, substitute "serif" and "sans".
-
-course_theme <- theme_minimal(base_family = "Source Serif 4") +
-  theme(
-    plot.title       = element_text(family = "Raleway", face = "plain",
-                                    size = 14, margin = margin(b = 8)),
-    plot.subtitle    = element_text(family = "Source Serif 4", size = 11,
-                                    color = "#555555", margin = margin(b = 12)),
-    axis.title       = element_text(family = "Source Serif 4", size = 10),
-    legend.position  = "bottom",
-    panel.grid.minor = element_blank(),
-    plot.background  = element_rect(fill = "#FAFAF7", color = NA)
-  )
-
-theme_set(course_theme)
-
-
-# Color palette ----------------------------------------------------------
-# Named vector so colors are referenced by species/compartment, not position.
-# This makes it easy to keep prey blue and predators rust throughout.
+theme_set(
+  theme_minimal(base_family = "Source Serif 4") +
+    theme(
+      plot.title       = element_text(family = "Raleway", face = "plain",
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = "Source Serif 4", size = 11,
+                                      color = "#555555", margin = margin(b = 12)),
+      axis.title       = element_text(family = "Source Serif 4", size = 10),
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = "#FAFAF7", color = NA)
+    )
+)
 
 palette_ch1 <- c(
-  prey        = "#2D5F8A",   # steel blue
-  predator    = "#8A4A2D",   # warm rust
-  susceptible = "#2D5F8A",   # same steel blue for S compartment
-  infectious  = "#C0392B",   # red for I compartment
-  recovered   = "#27AE60"    # green for R compartment
+  prey        = "#2D5F8A",
+  predator    = "#8A4A2D",
+  susceptible = "#2D5F8A",
+  infectious  = "#C0392B",
+  recovered   = "#27AE60"
 )
 
-
-# =============================================================================
-# SECTION 1.1: LOTKA-VOLTERRA
-# =============================================================================
-# The model encodes four verbal assumptions:
-#   1. Prey grow exponentially absent predators.
-#   2. Predators decline exponentially absent prey.
-#   3. Encounters occur at a rate proportional to the *product* N*P.
-#   4. Each encounter kills one prey and, with efficiency delta, produces one predator.
-#
-# The product term N*P is the first hint of what will later be named explicitly
-# as the mean-field assumption: every predator is equally likely to encounter
-# every prey individual at every moment.
-
-# Parameters -------------------------------------------------------------
-lv_params <- c(
-  alpha = 0.8,   # per-capita prey birth rate (absent predators)
-  beta  = 0.4,   # rate at which predator-prey encounters reduce prey
-  delta = 0.3,   # efficiency: fraction of encounters that produce a new predator
-  gamma = 0.6    # per-capita predator death rate (absent prey)
-)
-
-# Initial conditions: 10 prey (N), 5 predators (P)
-lv_state <- c(N = 10, P = 5)
-
-
-# ODE function -----------------------------------------------------------
-# deSolve requires: function(t, state, params) returning a list of derivatives.
+#' 
+#' The simplest living systems defeat the intuitions we bring to them. Not because their rules are complicated — the rules governing a population of rabbits and foxes are not complicated — but because feedback does something to time that our unaided intuition cannot follow. We expect growth to continue or stop; we do not expect it to reverse, gather again, and reverse once more in endless repetition. We expect an epidemic to burn through everyone it can reach. These expectations are wrong, and they are wrong in the same way: we have failed to account for what happens when a process feeds back on the conditions of its own continuation.
+#' 
+#' A population of rabbits with unlimited food grows exponentially. Everyone knows this. What is less obvious is that the fox population grows with it — and then the rabbits decline — and then the foxes, deprived of prey, decline in turn — and then the rabbits recover. The system cycles. Not approximately, not with damping toward some equilibrium — it cycles exactly, the same orbit traversed indefinitely, a clock that does not run down. This is genuinely strange. It is the kind of strangeness that deserves an instrument adequate to it.
+#' 
+#' The differential equation is that instrument. It does not merely describe change over time; it describes the rate of change as a function of the current state, which is precisely the structure feedback requires. The state determines the rate, the rate changes the state, the new state determines a new rate — the equation captures this self-referential logic and makes it tractable.
+#' 
+#' Familiar equations accumulate invisible assumptions. The predator-prey model and the epidemic model are a century old; the choices embedded in their functional forms have had that long to become invisible. What is hiding in those forms — and what it costs to have those things hidden — is what the rest of the day is about.
+#' 
+#' ## Predators, Prey, and the Geometry of Cycles {#sec-lv}
+#' 
+#' Begin with the prey. Absent predators, a prey population grows at a rate proportional to its size — each individual produces offspring at the same per-capita rate $\alpha$, and the population is not resource-constrained. This gives the exponential growth term $\alpha N$. Predators, absent prey, decline at a per-capita rate $\gamma$ — they die without food. These are the uncoupled dynamics: rabbits grow, foxes die.
+#' 
+#' Coupling enters through encounters. A predator that encounters a prey individual kills it with some probability; the encounter benefits the predator. The rate at which these encounters occur is proportional to the product $NP$. This deserves a moment's attention before the equation appears. The product $NP$ says that every predator is equally likely to encounter every prey individual: if there are twice as many prey, encounters double; if there are twice as many predators, encounters double. The encounter rate is the product of the two abundances, multiplied by a rate constant $\beta$ that converts encounters into kills.
+#' 
+#' $$\frac{dN}{dt} = \alpha N - \beta N P$$
+#' 
+#' $$\frac{dP}{dt} = \delta N P - \gamma P$$
+#' 
+#' The parameter $\alpha$ is the prey birth rate; $\beta$ is the predation rate coefficient — the probability per unit time per predator-prey pair that an encounter results in a kill; $\delta$ is the conversion efficiency, the rate at which prey consumed is converted into predator offspring; $\gamma$ is the predator death rate. Four parameters. Two equations. A complete description of a world with two species and one interaction.
+#' 
+#' The nullclines — the curves along which each population is momentarily stationary — divide the phase plane into four regions. The prey nullcline $dN/dt = 0$ requires either $N = 0$ or $P = \alpha/\beta$: the prey population is constant when the predator population is exactly $\alpha/\beta$, regardless of how many prey there are. The predator nullcline $dP/dt = 0$ requires either $P = 0$ or $N = \gamma/\delta$: predators are stationary when prey are at exactly $\gamma/\delta$. The nontrivial equilibrium is the crossing point: $N^* = \gamma/\delta$, $P^* = \alpha/\beta$.
+#' 
+#' The trajectories are closed orbits around this equilibrium. Not spiraling inward, not spiraling outward — closed. The system cycles forever without damping or growth. This is the pendulum that never loses energy, a machine that returns to any given state without ever simplifying toward rest. It is geometrically beautiful and physically strange. A physicist would say the system is conservative — it has a constant of motion, a quantity that is preserved along every trajectory. Volterra showed that $\delta N - \gamma \ln N + \beta P - \alpha \ln P$ is constant along solutions of the system. The orbits are the level curves of this conserved quantity.
+#' 
+#' Each initial condition $(N_0, P_0)$ selects a particular orbit, and the system follows that orbit indefinitely. The interior of each orbit is another orbit; the exterior is another. The equilibrium point is not a fixed point in the attracting sense — it is surrounded by a continuous family of periodic orbits, each one a different amplitude of the same cycle. The phase plane is therefore not a diagram of what the system tends toward; it is a diagram of what the system always does.
+#' 
+## ----ch1-lv-timeseries, fig.cap="Lotka-Volterra predator-prey dynamics. Prey (blue) and predator (brown) populations cycle indefinitely. Parameters: $\\alpha = 0.8$, $\\beta = 0.4$, $\\delta = 0.3$, $\\gamma = 0.6$."----
+# Lotka-Volterra ODE system
+# set.seed not required here — deSolve is deterministic
+lv_params <- c(alpha = 0.8, beta = 0.4, delta = 0.3, gamma = 0.6)
+lv_state  <- c(N = 10, P = 5)
 
 lv_ode <- function(t, state, params) {
   with(as.list(c(state, params)), {
-    # dN/dt = alpha*N - beta*N*P
-    # Prey grow at rate alpha; each encounter (rate beta*N*P) removes one prey.
     dN <- alpha * N - beta * N * P
-
-    # dP/dt = delta*N*P - gamma*P
-    # Predators gain from successful hunts (delta * encounters); die at rate gamma.
     dP <- delta * N * P - gamma * P
-
-    list(c(dN, dP))   # deSolve expects derivatives as a list
+    list(c(dN, dP))
   })
 }
 
+times_lv <- seq(0, 50, by = 0.1)
+lv_out   <- ode(y = lv_state, times = times_lv, func = lv_ode, parms = lv_params)
 
-# Solve the ODE ----------------------------------------------------------
-# seq() defines the output time grid. deSolve interpolates internally with
-# adaptive step size; the grid here is purely for output resolution.
-
-times_lv <- seq(0, 50, by = 0.1)   # 50 time units, output every 0.1
-
-lv_out <- ode(
-  y     = lv_state,    # initial conditions
-  times = times_lv,
-  func  = lv_ode,
-  parms = lv_params
-  # method defaults to "lsoda": stiff/non-stiff adaptive solver
-)
-
-# Convert the deSolve matrix to a tidy tibble for ggplot2.
-# pivot_longer moves N and P from columns to rows, creating a "species" column.
 lv_df <- as_tibble(as.data.frame(lv_out)) %>%
-  pivot_longer(
-    cols      = c(N, P),
-    names_to  = "species",
-    values_to = "population"
-  ) %>%
-  # Map the solver's variable names to the palette's named colors
+  pivot_longer(c(N, P), names_to = "species", values_to = "population") %>%
   mutate(species = recode(species, N = "prey", P = "predator"))
 
-
-# Time series plot -------------------------------------------------------
-# Both species on shared axes. The neutral cycling is the key visual fact:
-# the system oscillates indefinitely without damping or growth.
-
-p_lv_time <- ggplot(lv_df, aes(x = time, y = population,
-                                color = species, linetype = species)) +
+ggplot(lv_df, aes(x = time, y = population, color = species)) +
   geom_line(linewidth = 0.9) +
-  scale_color_manual(values = palette_ch1[c("prey", "predator")],
-                     labels = c("Prey (N)", "Predator (P)")) +
-  scale_linetype_manual(values = c("solid", "dashed"),
-                        labels = c("Prey (N)", "Predator (P)")) +
+  scale_color_manual(
+    values = palette_ch1[c("prey", "predator")],
+    labels = c("prey" = "Prey (N)", "predator" = "Predator (P)")
+  ) +
   labs(
-    title    = "Lotka-Volterra: Population Dynamics",
-    subtitle = "Neutral cycles — a pendulum that never loses energy",
+    title    = "Lotka-Volterra: population time series",
+    subtitle = expression(alpha == 0.8 ~ "," ~ beta == 0.4 ~ "," ~ delta == 0.3 ~ "," ~ gamma == 0.6),
     x        = "Time",
     y        = "Population",
-    color    = NULL,
-    linetype = NULL
+    color    = NULL
   )
 
-print(p_lv_time)
-
-
-# Phase portrait ---------------------------------------------------------
-# The phase portrait plots N against P (eliminating time).
-# Closed orbits confirm the neutral cycling: the system returns exactly
-# to its starting point. Different initial conditions produce different
-# orbits, all centered on the equilibrium (gamma/delta, alpha/beta).
-
-# Equilibrium point: the intersection of the two nullclines.
-# N-nullcline: P = alpha/beta (predator level where dN/dt = 0)
-# P-nullcline: N = gamma/delta (prey level where dP/dt = 0)
-lv_eq_N <- lv_params["gamma"] / lv_params["delta"]   # equilibrium prey
-lv_eq_P <- lv_params["alpha"] / lv_params["beta"]    # equilibrium predator
-
-# Several initial conditions spanning a range of orbit sizes.
-# We loop over them and collect ODE solutions, labeling each orbit.
-lv_ic_list <- list(
-  c(N = 8,  P = 3),
-  c(N = 10, P = 5),    # the base case from above
-  c(N = 14, P = 7),
-  c(N = 18, P = 4)
+#' 
+## ----ch1-lv-phase, fig.cap="Phase portrait of Lotka-Volterra dynamics. Each curve is a closed orbit corresponding to a different initial condition. The system returns to each point on a given orbit with exact periodicity."----
+# Phase portrait: multiple initial conditions
+# The system is deterministic; no seed needed
+initial_conditions <- list(
+  c(N = 10, P = 5),
+  c(N = 15, P = 4),
+  c(N = 8,  P = 7),
+  c(N = 20, P = 3),
+  c(N = 6,  P = 9)
 )
 
-lv_orbits <- map_dfr(
-  seq_along(lv_ic_list),
+orbit_df <- map_dfr(
+  seq_along(initial_conditions),
   function(i) {
-    ic  <- lv_ic_list[[i]]
-    out <- ode(y = ic, times = times_lv, func = lv_ode, parms = lv_params)
+    out <- ode(
+      y     = initial_conditions[[i]],
+      times = seq(0, 80, by = 0.05),
+      func  = lv_ode,
+      parms = lv_params
+    )
     as_tibble(as.data.frame(out)) %>%
-      mutate(orbit = factor(i))   # label each orbit for color/group
+      mutate(orbit = factor(i))
   }
 )
 
-p_lv_phase <- ggplot(lv_orbits, aes(x = N, y = P, group = orbit, color = orbit)) +
+# Equilibrium point
+N_star <- lv_params["gamma"] / lv_params["delta"]
+P_star <- lv_params["alpha"] / lv_params["beta"]
+
+ggplot(orbit_df, aes(x = N, y = P, color = orbit)) +
   geom_path(linewidth = 0.7, alpha = 0.8) +
-  # Mark the equilibrium point
-  annotate("point", x = lv_eq_N, y = lv_eq_P, size = 3, shape = 21,
-           fill = "#FAFAF7", color = "#1C1C1E", stroke = 1.2) +
-  annotate("text", x = lv_eq_N + 0.4, y = lv_eq_P + 0.3,
-           label = "Equilibrium", family = "Source Serif 4", size = 3.2) +
-  scale_color_brewer(palette = "Blues", direction = 1) +
+  annotate("point", x = N_star, y = P_star, size = 3, color = "#1C1C1E") +
+  annotate("text", x = N_star + 0.4, y = P_star + 0.3,
+           label = "Equilibrium", family = "Source Serif 4", size = 3.5) +
+  scale_color_manual(values = colorRampPalette(c("#2D5F8A", "#8A4A2D"))(5)) +
+  guides(color = "none") +
   labs(
-    title    = "Lotka-Volterra: Phase Portrait",
-    subtitle = "Closed orbits for four initial conditions",
-    x        = "Prey (N)",
-    y        = "Predator (P)",
-    color    = "Orbit"
-  ) +
-  theme(legend.position = "none")   # orbits are visual; legend not needed
-
-print(p_lv_phase)
-
-# Combine into a two-panel figure
-p_lv_combined <- p_lv_time + p_lv_phase +
-  plot_annotation(
-    title   = "Lotka-Volterra Predator-Prey System",
-    caption = "ODE solution via deSolve (lsoda). Parameters: α=0.8, β=0.4, δ=0.3, γ=0.6"
+    title = "Lotka-Volterra: phase portrait",
+    subtitle = "Five initial conditions, each tracing a closed orbit",
+    x = "Prey population (N)",
+    y = "Predator population (P)"
   )
 
-print(p_lv_combined)
+#' 
+#' ## The Mean-Field Assumption {#sec-meanfield}
+#' 
+#' Something has been hiding in the product term $\beta NP$, and it has been hiding there in plain sight.
+#' 
+#' The expression says that the rate of predator-prey encounters is proportional to the product of population sizes. For this to hold, every predator must be equally likely to encounter every prey individual at every moment. The population is perfectly mixed. Space does not exist. Individuals have no locations, no territories, no persistent relationships. There are no dense patches and no empty expanses. There is no structure at all to the spatial arrangement of individuals — or rather, the assumption is that the spatial arrangement is irrelevant because mixing is instantaneous and complete.
+#' 
+#' This is the mean-field assumption. Its name comes from physics, where it appears in the analysis of magnetic systems: the effective field experienced by any one particle is the mean field produced by all the others, rather than the specific field produced by its actual neighbors. In population ecology it enters through the functional form of the interaction term. It is not stated as an assumption in most presentations of Lotka-Volterra. It is embedded in the mathematics. The product $NP$ is not the only way to model predator-prey encounters; it is the way that assumes perfect mixing.
+#' 
+#' The mean-field assumption is a parametric family choice: it selects the family of models governed by mass-action kinetics, excluding all others — network models, spatial models, individual-based models — before a single observation is consulted. The product $NP$ is not a parameter to be estimated. It is the choice of family, and that choice determines what phenomena the family can express. Structured populations, spatial aggregations, social networks among individuals, heterogeneous encounter rates — these are not poorly approximated within the family. They are not in the family.
+#' 
+#' That family choice is simultaneously a choice about temporal resolution. The ODE family is defined in continuous time — formally, the limit as the time step shrinks to zero. But the interaction term $\beta NP$ is appropriate only when the observation interval is coarse enough for the law of large numbers to operate across interactions within each step. At fine enough temporal resolution the family is misspecified: in any given instant most individuals are not contacting most others, and the product term misrepresents the actual contact process. The mean-field ODE is the right family at temporal resolutions coarse enough for spatial averaging to hold within each step. Whether that condition is satisfied is an empirical question about the system's contact dynamics — not a modeling convenience.
+#' 
+#' The closed-orbit result depends on this assumption. The conserved quantity depends on it. When real predator-prey systems fail to cycle as neatly as the model predicts — and they often do — the mean-field assumption is frequently where the discrepancy originates. Its most important consequences, however, will not come into view until the contrast with agent-based models is drawn.
+#' 
+#' ## Epidemics and the Threshold Phenomenon {#sec-sir}
+#' 
+#' The same assumption appears in epidemic modeling, in precisely the same place, governing a different interaction.
+#' 
+#' A closed population of $N$ individuals. Each is in one of three states: Susceptible, Infectious, or Recovered (and immune). Infectious individuals shed pathogen; susceptible individuals become infected upon exposure. The rate at which susceptible individuals encounter infectious ones is proportional to $SI$ — the number of susceptibles times the number of infecteds, multiplied by a rate constant $\beta$. Recovery occurs at per-capita rate $\gamma$.
+#' 
+#' $$\frac{dS}{dt} = -\beta S I$$
+#' 
+#' $$\frac{dI}{dt} = \beta S I - \gamma I$$
+#' 
+#' $$\frac{dR}{dt} = \gamma I$$
+#' 
+#' The mean-field assumption is here again: the contact rate is proportional to the product $SI$, which assumes that every susceptible individual is equally likely to contact every infectious individual. Human contact, of course, is not structured this way. People have households, workplaces, social networks — structures that make some contacts far more probable than others. The SIR model, like Lotka-Volterra, treats this structure as if it does not exist.
+#' 
+#' From the sign of $dI/dt$ at the start of an epidemic, when $S \approx N$:
+#' 
+#' $$\frac{dI}{dt}\bigg|_{t=0} \approx I(\beta N - \gamma) = I \cdot \gamma\left(\frac{\beta N}{\gamma} - 1\right)$$
+#' 
+#' The epidemic grows if $\beta N / \gamma > 1$ and dies out if $\beta N / \gamma < 1$. The quantity $\mathcal{R}_0 = \beta N / \gamma$ is the basic reproduction number: the expected number of secondary infections produced by a single infectious individual in a fully susceptible population. It is not a numerical fact to memorize. It is a structural consequence of the model — a ratio between the transmission term and the recovery term, visible directly in the algebra. The epidemic threshold at $\mathcal{R}_0 = 1$ is where the production of new infections exactly balances the removal of current ones.
+#' 
+#' The years since 2020 have given most people in the room considerably more opinions about this model than they might have anticipated forming. The herd immunity threshold, the effect of contact reduction, the role of $\mathcal{R}_0$ in policy discussions — these became household concepts in a span of weeks. What remained, for the most part, unstated in those discussions was the mean-field assumption underlying the standard SIR framework: that the contact structure of the population could be adequately represented by the product $SI$, ignoring the network topology that governs who actually contacts whom.
+#' 
+## ----ch1-sir-base, fig.cap="SIR epidemic dynamics. The epidemic rises, peaks when the susceptible pool is depleted sufficiently, and declines. The herd immunity threshold is reached when enough individuals have recovered that $\\mathcal{R}_0 S/N < 1$."----
+# SIR ODE implementation
+sir_params <- c(beta = 0.0003, gamma = 0.1)
+sir_state  <- c(S = 990, I = 10, R = 0)
+N_pop      <- sum(sir_state)
 
+# R0 under these parameters
+R0_base <- sir_params["beta"] * N_pop / sir_params["gamma"]
 
-# =============================================================================
-# SECTION 1.2: THE MEAN-FIELD ASSUMPTION
-# =============================================================================
-# The product term β*N*P says something precise: every predator is equally
-# likely to encounter every prey at every moment. The population is perfectly
-# mixed. Space does not exist. Individuals have no locations, no persistent
-# relationships, no neighborhoods.
-#
-# This is the mean-field assumption. It is not stated as an assumption in
-# most presentations. It is embedded in the functional form. Naming it now
-# is the setup for everything that follows in Chapters 2 and 3.
-#
-# (No code in this section — the prose carries the argument.)
-
-
-# =============================================================================
-# SECTION 1.3: SIR EPIDEMIC MODEL
-# =============================================================================
-# A closed population of N individuals. Each is Susceptible, Infectious,
-# or Recovered (and immune). The mass-action contact term β*S*I is the
-# mean-field assumption again: every infectious individual is equally likely
-# to contact every susceptible at every moment.
-
-# Parameters -------------------------------------------------------------
-sir_params <- c(
-  beta  = 0.3,   # transmission rate: rate of S->I per S-I pair per unit time
-  gamma = 0.1    # recovery rate: per-capita rate at which I -> R
-)
-
-# Initial conditions: 990 susceptible, 10 infectious, 0 recovered
-sir_state <- c(S = 990, I = 10, R = 0)
-N_total   <- sum(sir_state)   # total population (conserved — no births or deaths)
-
-
-# Compute R0 -------------------------------------------------------------
-# R0 is the expected number of secondary infections from one case in a
-# fully susceptible population. Derived from the sign of dI/dt at t=0:
-#   dI/dt = (beta * S - gamma) * I
-# The epidemic grows iff beta * S > gamma, i.e., beta * N / gamma > 1.
-# R0 = beta * N / gamma is not a numerical fact to memorize — it is visible
-# in the algebra.
-
-R0 <- sir_params["beta"] * N_total / sir_params["gamma"]
-cat("Basic reproduction number R0 =", round(R0, 2), "\n")
-cat("Epidemic threshold: R0 > 1 means the epidemic grows initially.\n")
-
-
-# ODE function -----------------------------------------------------------
 sir_ode <- function(t, state, params) {
   with(as.list(c(state, params)), {
-    # dS/dt: susceptibles leave at rate proportional to S*I encounters
     dS <- -beta * S * I
-
-    # dI/dt: infectious pool grows from S*I contacts, shrinks at recovery rate gamma
     dI <-  beta * S * I - gamma * I
-
-    # dR/dt: recovered accumulate at the recovery rate
     dR <-  gamma * I
-
     list(c(dS, dI, dR))
   })
 }
 
+times_sir <- seq(0, 200, by = 0.5)
+sir_out   <- ode(y = sir_state, times = times_sir, func = sir_ode, parms = sir_params)
 
-# Solve the ODE ----------------------------------------------------------
-times_sir <- seq(0, 160, by = 0.5)   # 160 time units, output every 0.5
-
-sir_out <- ode(
-  y     = sir_state,
-  times = times_sir,
-  func  = sir_ode,
-  parms = sir_params
-)
-
-# Tidy the output for ggplot2
 sir_df <- as_tibble(as.data.frame(sir_out)) %>%
-  pivot_longer(
-    cols      = c(S, I, R),
-    names_to  = "compartment",
-    values_to = "count"
-  ) %>%
+  pivot_longer(c(S, I, R), names_to = "compartment", values_to = "count") %>%
   mutate(
-    # Lowercase for palette lookup
-    compartment = recode(compartment,
-                         S = "susceptible",
-                         I = "infectious",
-                         R = "recovered"),
-    # Ordered factor for legend ordering
-    compartment = factor(compartment,
-                         levels = c("susceptible", "infectious", "recovered"))
-  )
-
-
-# SIR time series plot ---------------------------------------------------
-p_sir_time <- ggplot(sir_df, aes(x = time, y = count,
-                                  color = compartment, linetype = compartment)) +
-  geom_line(linewidth = 0.9) +
-  scale_color_manual(
-    values = palette_ch1[c("susceptible", "infectious", "recovered")],
-    labels = c("Susceptible (S)", "Infectious (I)", "Recovered (R)")
-  ) +
-  scale_linetype_manual(
-    values = c("solid", "dashed", "dotted"),
-    labels = c("Susceptible (S)", "Infectious (I)", "Recovered (R)")
-  ) +
-  labs(
-    title    = "SIR Epidemic Model",
-    subtitle = paste0("β = ", sir_params["beta"],
-                      ", γ = ", sir_params["gamma"],
-                      ", R₀ = ", round(R0, 2)),
-    x        = "Time",
-    y        = "Number of individuals",
-    color    = NULL,
-    linetype = NULL
-  )
-
-print(p_sir_time)
-
-
-# Parameter sweep over R0 ------------------------------------------------
-# Fixing gamma and N, vary beta to trace out different epidemic trajectories.
-# R0 = beta * N / gamma, so beta = R0 * gamma / N.
-# This shows how the epidemic threshold shapes qualitative dynamics —
-# below R0 = 1 there is no epidemic; above it the epidemic size grows
-# continuously with R0.
-
-set.seed(42)   # seed before any stochastic draws; none here, but good practice
-
-r0_values <- c(0.8, 1.2, 1.8, 2.5, 3.5)   # spanning sub- and super-threshold
-
-# For each R0, compute the corresponding beta, solve the ODE, label the run.
-sir_sweep_df <- map_dfr(r0_values, function(r0_val) {
-  beta_val  <- r0_val * sir_params["gamma"] / N_total
-  params_i  <- c(beta = beta_val, gamma = sir_params["gamma"])
-
-  out <- ode(
-    y     = sir_state,
-    times = times_sir,
-    func  = sir_ode,
-    parms = params_i
-  )
-
-  as_tibble(as.data.frame(out)) %>%
-    # Keep only the I compartment for the sweep plot
-    select(time, I) %>%
-    mutate(R0 = paste0("R₀ = ", r0_val))
-})
-
-# Factor R0 label in order for a coherent legend
-sir_sweep_df <- sir_sweep_df %>%
-  mutate(R0 = factor(R0, levels = paste0("R₀ = ", r0_values)))
-
-p_sir_sweep <- ggplot(sir_sweep_df, aes(x = time, y = I,
-                                         color = R0, group = R0)) +
-  geom_line(linewidth = 0.9) +
-  scale_color_brewer(palette = "RdYlBu", direction = -1) +
-  labs(
-    title    = "SIR Parameter Sweep: Effect of R₀",
-    subtitle = "Infectious count over time for varying basic reproduction numbers",
-    x        = "Time",
-    y        = "Infectious (I)",
-    color    = NULL
-  ) +
-  # Vertical reference: R0 = 1 threshold
-  geom_hline(yintercept = 0, color = "#DCDCD4", linewidth = 0.5)
-
-print(p_sir_sweep)
-
-
-# =============================================================================
-# SECTION 1.4: WHAT THE LANGUAGE CAN SAY
-# =============================================================================
-# A brief catalogue of the shared assumptions embedded in both models:
-#
-#   - Populations are continuous: no individuals, no discreteness.
-#   - Populations are homogeneous: every individual is equivalent.
-#   - Mixing is perfect and instantaneous: mass action throughout.
-#   - Space does not exist.
-#   - History does not matter: state at t fully determines state at t+dt.
-#
-# These are not flaws. The Lotka-Volterra and SIR models have been
-# scientifically productive for over a century. The point is that they
-# constitute a language, and every language has an expressive boundary.
-# The phenomena beyond that boundary are the subject of Chapter 2.
-
-
-# =============================================================================
-# SUMMARY FIGURE: all four panels together
-# =============================================================================
-
-p_summary <- (p_lv_time | p_lv_phase) / (p_sir_time | p_sir_sweep) +
-  plot_annotation(
-    title   = "Chapter 1: ODE Foundations",
-    caption = paste0(
-      "Top: Lotka-Volterra predator-prey system. ",
-      "Bottom: SIR epidemic model. ",
-      "All solutions via deSolve (lsoda)."
+    compartment = factor(
+      compartment,
+      levels = c("S", "I", "R"),
+      labels = c("susceptible", "infectious", "recovered")
     )
   )
 
-print(p_summary)
+ggplot(sir_df, aes(x = time, y = count, color = compartment)) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(
+    values = palette_ch1[c("susceptible", "infectious", "recovered")]
+  ) +
+  labs(
+    title    = "SIR epidemic dynamics",
+    subtitle = bquote(beta == .(sir_params["beta"]) ~ "," ~
+                      gamma == .(sir_params["gamma"]) ~ "," ~
+                      R[0] == .(round(R0_base, 2))),
+    x        = "Time",
+    y        = "Count",
+    color    = NULL
+  )
 
-# =============================================================================
-# END OF CHAPTER 1
-# =============================================================================
+#' 
+## ----ch1-sir-sweep, fig.cap="SIR epidemic curves across values of $\\mathcal{R}_0$. Each curve shows the infectious compartment $I(t)$ for a different transmission rate. The epidemic threshold at $\\mathcal{R}_0 = 1$ is visible: below it, no outbreak occurs; above it, epidemic size grows with $\\mathcal{R}_0$."----
+# Parameter sweep over R0
+# Vary beta to produce different R0 values; gamma and N fixed
+
+set.seed(2025)  # seed for reproducibility; results are deterministic here, but good practice
+
+R0_values <- c(0.8, 1.2, 1.5, 2.0, 3.0, 5.0)
+gamma_fixed <- 0.1
+N_fixed     <- 1000
+
+sweep_df <- map_dfr(R0_values, function(r0) {
+  beta_val <- r0 * gamma_fixed / N_fixed
+  params_i <- c(beta = beta_val, gamma = gamma_fixed)
+  state_i  <- c(S = N_fixed - 10, I = 10, R = 0)
+  out_i    <- ode(y = state_i, times = seq(0, 250, by = 0.5),
+                  func = sir_ode, parms = params_i)
+  as_tibble(as.data.frame(out_i)) %>%
+    mutate(R0 = r0) %>%
+    select(time, I, R0)
+})
+
+ggplot(sweep_df, aes(x = time, y = I, color = factor(R0), group = factor(R0))) +
+  geom_line(linewidth = 0.85) +
+  scale_color_manual(
+    values = colorRampPalette(c("#AED6F1", "#C0392B"))(length(R0_values)),
+    name   = expression(R[0])
+  ) +
+  labs(
+    title = expression("SIR epidemic curves across values of" ~ R[0]),
+    x     = "Time",
+    y     = "Infectious individuals (I)"
+  )
+
+#' 
+#' ## What the Language Can Say {#sec-ch1-language}
+#' 
+#' The ODE is a machine for processing continuous quantities. The prey population $N = 3.7$ is as valid a model state as $N = 37$ or $N = 370$. This is not an approximation of discrete reality — it is a different ontology. The formalism requires it: a differential equation governing $dN/dt$ must treat $N$ as something smooth enough to differentiate, which means a real number rather than a count. Individuals are absent. Only totals exist.
+#' 
+#' Once populations are continuous, they must be homogeneous. The ODE tracks totals; it has no machinery for tracking distributions within compartments. If prey individuals differ in their predation risk, the ODE has nowhere to put this fact — it has only $N$. The model therefore treats all individuals of the same type as identical: same transmission probability, same predation risk, same birth rate. The distribution of individual characteristics collapses to a point mass. A real fox population contains young foxes and old foxes, healthy and sick, bold hunters and timid ones. The ODE knows none of this, because a total is not a distribution.
+#' 
+#' Identical individuals interacting through their totals: this is already the mean-field assumption, arrived at from the inside. If all prey individuals are equivalent, the rate at which any predator encounters prey is proportional to $N$, independently of where it is or what it has done before. If all predators are likewise equivalent, encounters occur at rate $\beta NP$. The product term is the consequence of the prior two choices, not a third independent assumption. And with it follows everything else: space does not exist because individuals have no positions; history does not matter because the state at $t$ — two numbers — is all there is. There is nothing to accumulate.
+#' 
+#' These are not flaws. They are choices, and they have been scientifically productive for over a century. Lotka-Volterra was formulated in the 1920s; SIR was published in 1927 by Kermack and McKendrick. The models have generated real insight into predator-prey dynamics, epidemic thresholds, herd immunity. The point is not that the choices are wrong. It is that they are a chain — continuity requires homogeneity, homogeneity implies the mean-field, the mean-field excludes position and history — and every link was forged before the modeler wrote the first equation.
+#' 
+#' The product term $\beta NP$ is not a neutral functional form. It is a commitment — to uniformity of access, to the irrelevance of position, relationship, and history. When the commitment holds, the model is not merely adequate. It is the right instrument, not an approximation of one. When it fails, the model does not give imprecise answers. It gives precise answers about a world in which individuals have no addresses and no neighbors except everyone.
+#' 
+#' ---
+#' 
+#' # Agents, Networks, and the Geometry of Interaction {#ch2}
+#' 

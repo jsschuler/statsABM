@@ -1,7 +1,7 @@
 ---
 title: "Agent-Based Modeling for Statisticians"
 subtitle: "A Short Course"
-author: "John Schuler"
+author: "John S. Schuler"
 date: "Joint Statistical Meetings, 2026"
 output:
   pdf_document:
@@ -20,10 +20,10 @@ output:
       smooth_scroll: true
     toc_depth: 3
     number_sections: true
-    theme: "flatly"
+    theme: null
     css: ["../_theme/fonts.css", "../_theme/custom.css"]
     highlight: null
-    self_contained: false
+    self_contained: true
     mathjax: "default"
     fig_caption: true
     fig_width: 8
@@ -36,7 +36,7 @@ output:
 
 ```{r global-options, include=FALSE}
 knitr::opts_chunk$set(
-  echo       = TRUE,
+  echo       = !knitr::is_latex_output(),
   message    = FALSE,
   warning    = FALSE,
   fig.align  = "center",
@@ -44,8 +44,11 @@ knitr::opts_chunk$set(
   cache.path = "cache/"
 )
 
-# Enable system fonts in PDF/PNG output devices
+# Enable Google Fonts in PDF/PNG output devices via showtext
 library(showtext)
+font_add_google("Source Serif 4", "Source Serif 4")
+font_add_google("Raleway", "Raleway")
+font_add_google("Fira Code", "Fira Code")
 showtext_auto()
 showtext_opts(dpi = 300)
 ```
@@ -399,9 +402,9 @@ Give an agent a neighborhood smaller than the full population, and you give the 
 
 ## An Agent-Based Lotka-Volterra {#sec-abm-lv}
 
-An agent-based Lotka-Volterra keeps the same biology as the differential equations — prey reproduce, predators hunt, predators die — but represents the population as a collection of discrete individuals rather than a continuous quantity.
+The biology is unchanged. Prey reproduce, predators hunt, predators die — the same rules as the differential equations. What changes is the substrate: a population of discrete individuals rather than a continuous quantity.
 
-The population is a `tibble` with one row per individual. Each row carries an identifier, a type (prey or predator), and an alive status. At each discrete time step: each surviving prey individual reproduces with probability $p_\text{birth}$; each predator is matched with a random prey individual and, if an encounter occurs, kills the prey and may produce offspring with probability $p_\text{eat}$; each predator dies with probability $p_\text{death}$. The numbers $p_\text{birth}$, $p_\text{eat}$, $p_\text{death}$ correspond, in a loose sense, to the ODE parameters $\alpha$, $\beta\delta$, and $\gamma$ — but they now operate at the level of individuals rather than populations.
+Each individual is a row in a `tibble` carrying an identifier, a type (prey or predator), and an alive status. At each discrete time step: each surviving prey reproduces with probability $p_\text{birth}$; each predator is matched with a random prey individual and, with probability $p_\text{eat}$, kills it and may produce an offspring; each predator dies with probability $p_\text{death}$. The parameters $p_\text{birth}$, $p_\text{eat}$, $p_\text{death}$ are the individual-level counterparts of $\alpha$, $\beta\delta$, and $\gamma$ — the same rates, acting on the same events, at a different level of description.
 
 ```{r ch2-abm-lv-functions}
 # Agent-based Lotka-Volterra
@@ -551,7 +554,7 @@ ggplot() +
   )
 ```
 
-Under random mixing and large population size, the law of large numbers smooths the stochastic fluctuations, and the average behavior of the ABM approaches the ODE solution. The ODE is a limiting case of the ABM — not a different theory, but the same theory under a specific and identifiable set of conditions: random mixing and large numbers. The mean-field assumption, stated explicitly, is the claim that these conditions hold exactly.
+With large populations and random mixing, the stochastic runs collapse onto the ODE solution. The ODE is a limiting case of the ABM — not a different theory, but the same theory under two conditions that the ODE treats as axioms: random mixing and large numbers. The mean-field assumption, stated precisely, is the claim that both hold exactly.
 
 Now reduce the population.
 
@@ -624,7 +627,7 @@ ggplot() +
     title    = "Small-population ABM: extinction events",
     subtitle = paste0(
       extinction_count, " of ", n_reps_small,
-      " runs reach extinction. Dashed: ODE (cycles forever). N\u2080 = ",
+      " runs reach extinction. Dashed: ODE (cycles forever). N0 = ",
       n_prey_small, " prey, ", n_pred_small, " predators."
     ),
     x     = "Time step",
@@ -639,7 +642,7 @@ The ODE orbits forever. For a continuous quantity that obeys a smooth differenti
 
 ### Random Mixing {#sec-abm-sir-random}
 
-The agent-based SIR under random mixing is the bridge between the ODE model and the network model. It preserves the mean-field assumption — each infectious individual contacts random members of the population — but represents agents as discrete individuals rather than continuous quantities.
+The mean-field assumption can survive the move to discrete individuals. Each infectious agent contacts random members of the population at each step — the contact structure is still fully mixed, still mass-action — but the population is now a collection of persons rather than a continuous quantity. This is the reduction result for epidemics: show that the individual-based model recovers the ODE when the assumption holds, then ask what happens when it doesn't.
 
 ```{r ch2-abm-sir-functions}
 # Agent-based SIR with random mixing
@@ -859,8 +862,8 @@ ggplot(sir_network_long, aes(x = t, y = count, color = compartment)) +
   scale_color_manual(values = palette_ch2[c("susceptible", "infectious", "recovered")]) +
   labs(
     title    = "Network SIR: topology changes the epidemic",
-    subtitle = paste0("Mean degree ≈ ", round(mean_deg_er, 1),
-                      " (ER) and ≈ ", round(mean_deg_ba, 1), " (BA). Same parameters; different structure."),
+    subtitle = paste0("Mean degree ~ ", round(mean_deg_er, 1),
+                      " (ER) and ~ ", round(mean_deg_ba, 1), " (BA). Same parameters; different structure."),
     x        = "Time step",
     y        = "Count",
     color    = NULL
@@ -942,17 +945,136 @@ The ODE cannot express this difference. Not because it has the wrong parameter v
 
 ## The Reduction Theorem {#sec-reduction}
 
-The ODE is the ABM under two independent structural restrictions, and stating them precisely matters because the reduction theorem is often misread as a simpler result than it is. The first restriction is agent homogeneity: write each agent's property vector as $\theta_i = \bar\theta + \varepsilon_i$, and set $\varepsilon_i = 0$ for all $i$ — every agent is identical to the population mean. The second is contact structure: write the weighted contact matrix as $W = \bar{W} + \Delta W$ where $\bar{W}$ is the uniform complete graph (the maximum entropy contact structure under fixed mean contact rate), and set $\Delta W = 0$ — every agent contacts every other at the same rate. As population size grows, the law of large numbers suppresses stochastic fluctuations around the mean-field trajectory — but only given that both restrictions hold. Population size alone says nothing about contact structure. A large population interacting on a lattice, or within households, or across a scale-free network, does not approach the ODE as it grows. It approaches a denser version of the same structured system. Convergence to the ODE requires $\Delta W = 0$ as an independent structural condition, not as a consequence of large $n$.
+The ODE is the ABM under two independent structural restrictions. The first is agent homogeneity: write each agent's property vector as $\theta_i = \bar\theta + \varepsilon_i$, and set $\varepsilon_i = 0$ for all $i$ — every agent is identical to the population mean. The second is contact structure: write the weighted contact matrix as $W = \bar{W} + \Delta W$ where $\bar{W}$ is the uniform complete graph (the maximum entropy contact structure under fixed mean contact rate), and set $\Delta W = 0$ — every agent contacts every other at the same rate. As population size grows, stochastic fluctuations suppress around the mean-field trajectory — but only given that both restrictions hold. Population size alone says nothing about contact structure. A large population interacting on a lattice, or within households, or across a scale-free network, does not approach the ODE as it grows. It approaches a denser version of the same structured system. Convergence to the ODE requires $\Delta W = 0$ as an independent structural condition, not as a consequence of large $n$.
 
-There is a second, distinct argument for the mean-field assumption, and its epistemic status is entirely different. When data are recorded at coarse temporal resolution — weekly, quarterly, annually — the sequence of individual interactions within each observation interval is unobservable. Contacts that occurred in a specific order between specific agents are collapsed into a single time step and treated as simultaneous. The mean-field model is the maximum entropy response to this constraint: it makes the least informative claim about within-interval interaction structure consistent with what the data can support. This is a hard epistemological limit in the spirit of the Nyquist theorem — below the observation frequency, no model can be preferred over the mean-field on statistical grounds, because the data do not contain the information needed to distinguish them. The bias this introduces is the price of statistical stability, and it is principled in exactly the maximum entropy sense established in Chapter 1.
+When data are recorded at coarse temporal resolution — weekly, quarterly, annually — the sequence of individual interactions within each observation interval is unobservable. Contacts that occurred in a specific order between specific agents are collapsed into a single time step and treated as simultaneous. The mean-field model is the maximum entropy response to this constraint: it makes the least informative claim about within-interval interaction structure consistent with what the data can support. Below the observation frequency, no model can be preferred over the mean-field on statistical grounds, because the data do not contain the information needed to distinguish them. This is a hard epistemological limit in the spirit of the Nyquist theorem. The bias this introduces is the price of statistical stability, and it is principled in exactly the maximum entropy sense.
 
-These two arguments — the data constraint and the structural claim — are often conflated, and the conflation is the source of much confusion in the debate between ODE and ABM approaches. The data constraint says: at this observation frequency, the data cannot distinguish mean-field from structured interaction. The structural claim says: the phenomenon's natural time scale is slow enough that interactions genuinely randomize between observations — that $\Delta W \approx 0$ is warranted by the system's dynamics, not merely forced by the data. The first is imposed by the observation design. The second is a philosophical contention about the phenomenon. A researcher with high-frequency contact data who nevertheless invokes the mean-field is making the structural claim. A researcher with only low-frequency data who invokes it may be making either — and should say which, because the two have different implications for what could, in principle, falsify the model.
+The data constraint and the structural claim are not the same argument. The data constraint says: at this observation frequency, the data cannot distinguish mean-field from structured interaction. The structural claim says: the phenomenon's natural time scale is slow enough that interactions genuinely randomize between observations — that $\Delta W \approx 0$ is warranted by the system's dynamics, not merely forced by the data. The first is imposed by the observation design. The second is a philosophical contention about the phenomenon. A researcher with high-frequency contact data who nevertheless invokes the mean-field is making the structural claim. A researcher with only low-frequency data who invokes it may be making either — and should say which, because the two have different implications for what could, in principle, falsify the model.
 
-Stating the restrictions precisely also clarifies the scope of what the reduction theorem establishes. The theorem says: as $n \to \infty$, as $\varepsilon_i \to 0$ for all $i$, and as $\Delta W \to 0$, the ABM converges in distribution to the ODE. This is a conditional result. It tells you what the ABM becomes when you impose both restrictions simultaneously; it does not tell you that those restrictions are warranted. The ODE is not wrong — it is the correct model when both conditions hold. The question is always whether they hold for the phenomenon at hand. Chapter 4 develops the full implications of this reparametrization: the regularization path that interpolates between the ODE and the full ABM, the sense in which the regularization strengths $\lambda_\theta$ and $\lambda_W$ are hyperparameters governing how strongly to enforce each restriction, and the connection between that choice and the data's capacity to support departures from the mean-field. For now, the notation gives precise names to what the ODE's restrictions actually are.
+The theorem: as $n \to \infty$, as $\varepsilon_i \to 0$ for all $i$, and as $\Delta W \to 0$, the ABM converges in distribution to the ODE. This is a conditional result. It says what the ABM becomes when both restrictions are imposed simultaneously; it does not say that those restrictions are warranted. The ODE is not wrong — it is the correct model when both conditions hold. The question is always whether they hold for the phenomenon at hand.
 
-This framing dissolves the apparent competition between system dynamics and agent-based models — the two paradigms that practitioners in computational social science most often treat as alternatives. They are not competing theories. They are a richer language and one of its sublanguages, related by two named restrictions rather than by a vague appeal to complexity or realism. Every ABM that includes random mixing and agent homogeneity as special cases contains the ODE as a theorem. The choice between them is not philosophical. It is a question about which restrictions are warranted for the phenomenon and the data.
+System dynamics and agent-based models are not competing theories. They are a richer language and one of its sublanguages, related by two named restrictions rather than by a vague appeal to complexity or realism. Every ABM that includes random mixing and agent homogeneity as special cases contains the ODE as a theorem. The choice between them is not philosophical. It is a question about which restrictions are warranted for the phenomenon and the data.
 
-The complexity objection has a specific form that deserves a direct answer. The ABM has more nominal parameters than the Lotka-Volterra ODE: $p_\text{birth}$, $p_\text{eat}$, $p_\text{death}$, the population size, the pairing mechanism. The ODE has four: $\alpha$, $\beta$, $\delta$, $\gamma$. Nominal dimensionality is not effective dimensionality. A regression with a thousand predictors may have a sparse solution concentrated on ten. The statistician who counts predictors before asking whether the signal is sparse has the analysis backwards. The critic who counts ABM parameters before asking how many degrees of freedom the dynamics of interest actually require has made the same mistake. Many regions of the ABM's parameter space produce qualitatively identical behavior — cycling statistically indistinguishable from the ODE output. The consequential structure — the boundary between cycling and extinction, the dependence of extinction probability on population size — is low-dimensional relative to the nominal parameter count. The ODE is the ABM under maximal regularization of both $\varepsilon_i$ and $\Delta W$: the restriction that produces its analytical tractability is the same restriction that removes certain phenomena from its vocabulary, and no amount of careful parameter estimation recovers what that regularization has discarded.
+The ABM has more nominal parameters than the Lotka-Volterra ODE: $p_\text{birth}$, $p_\text{eat}$, $p_\text{death}$, the population size, the pairing mechanism. The ODE has four: $\alpha$, $\beta$, $\delta$, $\gamma$. Nominal dimensionality is not effective dimensionality. A regression with a thousand predictors may have a sparse solution concentrated on ten. The statistician who counts predictors before asking whether the signal is sparse has the analysis backwards. The critic who counts ABM parameters before asking how many degrees of freedom the dynamics of interest actually require has made the same mistake. Many regions of the ABM's parameter space produce qualitatively identical behavior — cycling statistically indistinguishable from the ODE output. The consequential structure — the boundary between cycling and extinction, the dependence of extinction probability on population size — is low-dimensional relative to the nominal parameter count. The ODE is the ABM under maximal regularization of both $\varepsilon_i$ and $\Delta W$: the restriction that produces its analytical tractability is the same restriction that removes certain phenomena from its vocabulary, and no amount of careful parameter estimation recovers what that regularization has discarded.
+
+Parameterize the contact matrix as a mixture: with probability $p$, each infected agent contacts a random individual drawn uniformly from the population; with probability $1-p$, it contacts a neighbor from the scale-free network. At $p = 1$, $\Delta W = 0$ exactly — the mean-field. At $p = 0$, $\Delta W$ carries the full network structure. Every intermediate value is a point on the regularization path.
+
+Each curve below is the mean of fifteen stochastic runs. The ODE is parameterized to match: $\gamma = -\log(1 - p_\text{recover})$ converts the ABM's geometric per-step recovery to its continuous-time equivalent, and $\beta$ is scaled to preserve $\mathcal{R}_0 = 3$ under that corrected $\gamma$. A residual gap between the $p = 1$ mean and the ODE dashed line is unavoidable — the ABM operates in discrete time with step size 1, while the ODE is continuous; at unit step size, higher-order discretization terms remain. The gap closes as the step size shrinks. It does not close with more data, more replicates, or better parameter tuning. It is not a calibration failure. It is the boundary between the two languages.
+
+```{r ch2-regularization-path, fig.cap="The regularization path from structured network contact ($p = 0$, full $\\Delta W$) to random mixing ($p = 1$, $\\Delta W = 0$). Each curve shows $I(t)$ for a different value of the mixing probability on the Barabási-Albert network. The ODE (dashed) is the $p = 1$ limit. Dialing $p$ from 0 to 1 shrinks $\\Delta W$ toward zero — the regularization path between the structured ABM and the differential equation."}
+set.seed(2025)  # reproducibility
+
+# Mixed contact SIR: each infected agent makes contacts_per_step contacts per step.
+# Each contact is drawn from the global population with probability p_random,
+# or from the network neighborhood with probability 1 - p_random.
+# Total contact rate is held constant across p_random values, so differences
+# in dynamics are purely structural — a change in Delta W, not in contact rate.
+run_mixed_sir <- function(g, p_random = 0.5, I0 = 5, p_infect = 0.05,
+                           p_recover = 0.1, contacts_per_step = 6,
+                           T = 100, seed = 42) {
+  set.seed(seed)
+  N     <- igraph::vcount(g)
+  state <- rep("S", N)
+  state[sample(N, I0)] <- "I"
+  adj   <- igraph::as_adj_list(g)
+
+  map_dfr(0:T, function(tt) {
+    if (tt > 0) {
+      infected_ids <- which(state == "I")
+      new_I <- integer(0)
+
+      for (v in infected_ids) {
+        # Binomial split: n_rand contacts from global pool, remainder from network
+        n_rand <- rbinom(1, contacts_per_step, p_random)
+        n_net  <- contacts_per_step - n_rand
+
+        contacts <- integer(0)
+        if (n_rand > 0)
+          contacts <- c(contacts,
+                        sample(setdiff(seq_len(N), v), min(n_rand, N - 1),
+                               replace = FALSE))
+        if (n_net > 0) {
+          nbrs <- as.integer(adj[[v]])
+          if (length(nbrs) > 0)
+            contacts <- c(contacts,
+                          sample(nbrs, min(n_net, length(nbrs)), replace = FALSE))
+        }
+
+        suscept <- contacts[state[contacts] == "S"]
+        if (length(suscept) > 0)
+          new_I <- c(new_I, suscept[rbinom(length(suscept), 1, p_infect) == 1])
+      }
+
+      recovering           <- infected_ids[rbinom(length(infected_ids), 1, p_recover) == 1]
+      state[unique(new_I)] <<- "I"
+      state[recovering]    <<- "R"
+    }
+    tibble(t = tt, S = sum(state == "S"), I = sum(state == "I"), R = sum(state == "R"))
+  })
+}
+
+# Five points on the regularization path — 15 replicates each, averaged to
+# reduce stochastic noise so the p=1 mean converges visually to the ODE
+p_values <- c(0, 0.25, 0.5, 0.75, 1.0)
+n_reps   <- 15
+
+mixed_runs <- map_dfr(seq_along(p_values), function(i) {
+  map_dfr(seq_len(n_reps), function(r) {
+    run_mixed_sir(g_ba, p_random = p_values[i], I0 = 5,
+                  p_infect = 0.05, p_recover = 0.1, contacts_per_step = avg_deg,
+                  T = 100, seed = 400 + (i - 1) * n_reps + r) %>%
+      mutate(p_random = p_values[i])
+  })
+}) %>%
+  group_by(p_random, t) %>%
+  summarise(I = mean(I), .groups = "drop")
+
+# ODE overlay. Discrete-to-continuous conversion must correct BOTH parameters
+# jointly to preserve R0. The discrete ABM has R0_disc = p_infect * c / p_recover = 3.
+# The exact continuous equivalents are:
+#   gamma_cont = -log(1 - p_recover)              # geometric → exponential recovery
+#   beta_cont  = R0_disc * gamma_cont / N         # preserves R0 = 3 in continuous ODE
+# Using gamma=0.1 directly (without the correction) lowers the effective continuous
+# R0 to 2.85 and shifts the ODE peak down; correcting only gamma without adjusting
+# beta has the opposite effect. Correcting both holds R0=3.
+gamma_reg <- -log(1 - 0.1)
+beta_reg  <- 3 * gamma_reg / N_net
+ode_reg  <- as_tibble(as.data.frame(
+  ode(y     = c(S = N_net - 5, I = 5, R = 0),
+      times = seq(0, 100, by = 0.5),
+      func  = sir_ode_ch2,
+      parms = c(beta = beta_reg, gamma = gamma_reg))
+)) %>% rename(t = time)
+
+ggplot() +
+  geom_line(
+    data = mixed_runs,
+    aes(x = t, y = I, color = p_random, group = p_random),
+    linewidth = 0.9
+  ) +
+  geom_line(
+    data = ode_reg,
+    aes(x = t, y = I),
+    linetype = "dashed", color = "#1C1C1E", linewidth = 1.0
+  ) +
+  scale_color_gradient(
+    low    = "#8A4A2D",
+    high   = "#2D5F8A",
+    name   = expression(p),
+    breaks = p_values,
+    labels = p_values
+  ) +
+  annotate("text", x = 80, y = max(ode_reg$I) * 1.05,
+           label = "ODE (p = 1 limit)", family = "Source Serif 4",
+           size = 3.2, color = "#1C1C1E", hjust = 0) +
+  labs(
+    title    = "Regularization path: structured contact to mean-field",
+    subtitle = paste0("BA network, N = ", N_net,
+                      ". p = 1: random mixing. p = 0: network-only contact."),
+    x        = "Time step",
+    y        = "Infectious individuals (I)"
+  )
+```
 
 ## Spatial Extension (Reference Module) {#sec-spatial}
 
@@ -1159,7 +1281,7 @@ p_linear <- ggplot(firm_df, aes(x = employment)) +
   geom_histogram(bins = 60, fill = "#2D5F8A", alpha = 0.75, color = "white") +
   labs(
     title    = "Firm size distribution: linear scale",
-    subtitle = "The dynamic range makes the distribution invisible on this scale",
+    subtitle = "Dynamic range defeats linear scale",
     x        = "Employment",
     y        = "Count"
   )
@@ -1179,9 +1301,9 @@ p_loglog <- ggplot(ccdf_df, aes(x = employment, y = ccdf)) +
   scale_y_log10(labels = scales::comma) +
   labs(
     title    = "Firm size distribution: log-log CCDF",
-    subtitle = "A straight line on this scale is a power law",
+    subtitle = "Straight line = power law",
     x        = "Employment (log scale)",
-    y        = "P(size \u2265 x) (log scale)"
+    y        = "P(size >= x) (log scale)"
   )
 
 p_linear + p_loglog
@@ -1243,14 +1365,14 @@ ggplot() +
                         name = NULL) +
   annotate("text", x = xmin_hat * 1.1, y = 0.05,
            label = paste0("x\u2098\u1d35\u2099 = ", xmin_hat,
-                          "  \u03b1\u0302 = ", round(alpha_hat, 3)),
+                          "  alpha = ", round(alpha_hat, 3)),
            family = "Source Serif 4", size = 3.5, hjust = 0, color = "#C0392B") +
   labs(
     title    = "Power law vs. log-normal fit",
-    subtitle = paste0("Estimated exponent \u03b1\u0302 = ", round(alpha_hat, 3),
+    subtitle = paste0("Estimated exponent alpha = ", round(alpha_hat, 3),
                       " (synthetic data; substitute SUSB for real analysis)"),
     x        = "Employment (log scale)",
-    y        = "P(size \u2265 x) (log scale)"
+    y        = "P(size >= x) (log scale)"
   )
 ```
 
@@ -1345,11 +1467,11 @@ Write $W = \bar{W} + \Delta W$. The constraint $W_{ij} \geq 0$ restricts $\Delta
 
 $$\mathcal{L}(\{\varepsilon_i\},\, \Delta W) \;+\; \lambda_\theta \sum_i \|\varepsilon_i\|^2 \;+\; \lambda_W \|\Delta W\|_F^2$$
 
-As $\lambda_\theta \to \infty$ and $\lambda_W \to \infty$, the solution forces $\varepsilon_i \to 0$ and $\Delta W \to 0$, recovering the ODE exactly. At finite $\lambda$, the solution interpolates. The regularization strengths are hyperparameters: estimable by cross-validation when individual trajectories are observed, tunable by information criteria when only aggregate data are available. Both L2 and L1 penalties on $\Delta W$ are convex on the feasible region, so the structural regularization problem is convex throughout — a point worth noting to the audience likely to object that ABM calibration is computationally intractable. The non-convexity in ABM calibration comes from the stochastic simulation mapping parameters to outputs, not from the geometry of the parameter space itself.
+As $\lambda_\theta \to \infty$ and $\lambda_W \to \infty$, the solution forces $\varepsilon_i \to 0$ and $\Delta W \to 0$, recovering the ODE exactly. At finite $\lambda$, the solution interpolates. The regularization strengths are hyperparameters: estimable by cross-validation when individual trajectories are observed, tunable by information criteria when only aggregate data are available. Both L2 and L1 penalties on $\Delta W$ are convex on the feasible region, so the structural regularization problem is convex throughout. The non-convexity in ABM calibration comes from the stochastic simulation mapping parameters to outputs, not from the geometry of the parameter space itself.
 
 The choice between L2 and L1 on $\Delta W$ is a choice about what kind of network departure from mean-field is expected. L2 shrinks all edge weights uniformly toward $1/n$ — the contact structure becomes progressively closer to random mixing as $\lambda_W$ increases. L1 produces sparse $\Delta W$: most edges sit near their mean-field weight, a few carry substantial deviations. Sparse positive entries in $\Delta W$ are hubs — agents with far more contacts than the mean-field allocates. This is precisely the Barabási-Albert structure that drove the qualitatively different epidemic dynamics in Chapter 2. The L1 penalty on contact structure selects the epidemiologically consequential nodes, in exactly the sense that LASSO selects the consequential predictors. This is not an analogy. The mathematical operation is the same.
 
-The Bayesian identity sharpens the argument further. A Laplace prior on $\Delta W_{ij}$ produces the L1 penalty at the posterior mode — exactly, not approximately, by the same algebra as for regression coefficients. A Gaussian prior produces L2. The maximum entropy interpretation now closes the loop precisely: a flat prior over contact matrices subject to fixed mean contact rate is a Gaussian centered at $\bar{W}$. Ridge regularization toward $\bar{W}$ is therefore the correct Bayesian update under maximum ignorance about contact structure, starting from a Gaussian prior. When the analyst has no structural knowledge of the contact network beyond its mean, L2 toward the mean-field is the principled choice. L1 is appropriate when the contact network is expected to be sparse — when most agent pairs have no meaningful contact and the interesting structure is concentrated in a few edges. The penalty encodes the prior whether or not the analyst names it as one.
+The Bayesian identity sharpens the argument further. A Laplace prior on $\Delta W_{ij}$ produces the L1 penalty at the posterior mode — exactly, not approximately, by the same algebra as for regression coefficients. A Gaussian prior produces L2. The maximum entropy interpretation completes the identification: a flat prior over contact matrices subject to fixed mean contact rate is a Gaussian centered at $\bar{W}$. Ridge regularization toward $\bar{W}$ is therefore the correct Bayesian update under maximum ignorance about contact structure, starting from a Gaussian prior. When the analyst has no structural knowledge of the contact network beyond its mean, L2 toward the mean-field is the principled choice. L1 is appropriate when the contact network is expected to be sparse — when most agent pairs have no meaningful contact and the consequential structure is concentrated in a few edges. The penalty encodes the prior whether or not the analyst names it as one.
 
 The unification runs further still. L2 regularization is the limiting case of training on Gaussian-perturbed inputs: as the perturbation variance shrinks to zero, the expected loss over perturbed data converges to the L2-penalized loss. The distributionally robust optimizer minimizing worst-case expected loss over a Wasserstein ball around the empirical measure recovers regularized estimators as special cases. Bayesian prior, regularization penalty, adversarial perturbation budget — three framings of the same restriction. The literature on mean-field games formalizes the reparametrization argument at infinite scale: as $n \to \infty$ with individual effects shrinking proportionally, the discrete agent system converges to a continuum PDE — the $\lambda \to \infty$ limit of the regularization path, studied with the tools of optimal control.
 
@@ -1418,7 +1540,7 @@ p_l2 <- ggplot() +
   annotate("text", x = beta1_ols + 0.15, y = beta2_ols + 0.1,
            label = "OLS", family = "Source Serif 4", size = 3.2) +
   labs(title = "L2 (Ridge)",
-       subtitle = "Circular constraint; solution shrinks toward origin",
+       subtitle = "Solution shrinks toward zero",
        x = expression(beta[1]), y = expression(beta[2])) +
   coord_equal(xlim = c(-2.2, 2.8), ylim = c(-1.2, 3.0))
 
@@ -1436,7 +1558,7 @@ p_l1 <- ggplot() +
   annotate("text", x = beta1_ols + 0.15, y = beta2_ols + 0.1,
            label = "OLS", family = "Source Serif 4", size = 3.2) +
   labs(title = "L1 (LASSO)",
-       subtitle = "Diamond constraint; solution tends to corners (sparsity)",
+       subtitle = "Corner solution forces sparsity",
        x = expression(beta[1]), y = expression(beta[2])) +
   coord_equal(xlim = c(-2.2, 2.8), ylim = c(-1.2, 3.0))
 
@@ -1506,7 +1628,7 @@ ggplot() +
   scale_y_continuous(labels = scales::comma, limits = c(0, 1600)) +
   labs(
     title    = "Logistic growth: what extrapolation cannot see",
-    subtitle = "Blue: true trajectory. Red dashed: exponential fit to early data. The carrying capacity is invisible from observations in the exponential phase.",
+    subtitle = "Blue: true trajectory. Red dashed: exponential fit to early data.",
     x        = "Time",
     y        = "Population"
   )
@@ -1550,7 +1672,7 @@ ggplot(bif_df, aes(x = r, y = x)) +
            family = "Source Serif 4", size = 3.0, color = "#8A4A2D", hjust = 0) +
   labs(
     title    = "Bifurcation diagram: logistic map",
-    subtitle = "Long-run attractor values as the growth parameter r increases. The turn into chaos cannot be anticipated from pre-bifurcation data.",
+    subtitle = "Long-run attractor values as r increases.",
     x        = "Growth parameter (r)",
     y        = "Long-run attractor value (x)"
   )
@@ -1638,7 +1760,7 @@ ggplot() +
   coord_cartesian(ylim = c(45, 165)) +
   labs(
     title    = "Two windows, two extrapolations",
-    subtitle = "Dotted: true cycle. Shaded: observation windows. Solid lines: linear trend extrapolations from each window.",
+    subtitle = "Dotted: true cycle. Shaded: windows. Solid: linear extrapolations.",
     x        = "Time",
     y        = "Index",
     color    = NULL,
@@ -1679,11 +1801,12 @@ run_stochastic_logistic <- function(seed, N0, r, K, T) {
   traj[1] <- N
 
   for (tt in 2:(T + 1)) {
-    # Expected growth rate from logistic equation
-    expected_growth <- r * N * (1 - N / K)
-    # Add demographic stochasticity: births and deaths are Poisson draws
-    births <- rpois(1, max(0, expected_growth))
-    deaths <- rpois(1, max(0, -expected_growth + r * N^2 / K))
+    # Demographic stochasticity: births ~ Poisson(r*N), deaths ~ Poisson(r*N^2/K)
+    # E[births - deaths] = r*N - r*N^2/K = r*N*(1 - N/K) = logistic net growth
+    # This parameterization ensures the deterministic trajectory is the mean of
+    # the stochastic cloud, so the black reference line sits centered in the cloud.
+    births <- rpois(1, r * N)
+    deaths <- rpois(1, r * N^2 / K)
     N      <- max(0, N + births - deaths)
     traj[tt] <- N
   }
@@ -1716,7 +1839,7 @@ ggplot() +
            size = 3.2, color = "#888888") +
   labs(
     title    = "Possibility space: stochastic logistic growth",
-    subtitle = paste0(n_traj, " trajectories from the same initial condition (N\u2080 = ", N_start, "). ",
+    subtitle = paste0(n_traj, " trajectories from the same initial condition (N0 = ", N_start, "). ",
                       "Solid: deterministic trajectory."),
     x        = "Time",
     y        = "Population"
@@ -1759,3 +1882,34 @@ The tools are harder. The proofs are less clean. The answers are less crisp. The
 ```
 
 <div id="refs"></div>
+
+```{r appendix-header, echo=FALSE, results='asis', include=knitr::is_latex_output()}
+cat("\\newpage\n\n# Code Appendix {-}\n\nAll R code from the course book, collected for reference. Code is presented in chapter order; each section corresponds to a named chunk in the source document.\n\n## Chapter 1: ODE Foundations\n\n")
+```
+
+```{r appendix-ch1, ref.label=c('ch1-setup','ch1-lv-timeseries','ch1-lv-phase','ch1-sir-base','ch1-sir-sweep'), echo=TRUE, eval=FALSE, include=knitr::is_latex_output()}
+```
+
+```{r appendix-ch2-header, echo=FALSE, results='asis', include=knitr::is_latex_output()}
+cat("\n\n## Chapter 2: Agents and Networks\n\n")
+```
+
+```{r appendix-ch2a, ref.label=c('ch2-setup','ch2-abm-lv-functions','ch2-abm-lv-reduction','ch2-abm-extinction','ch2-abm-sir-functions','ch2-sir-random-vs-ode'), echo=TRUE, eval=FALSE, include=knitr::is_latex_output()}
+```
+
+```{r appendix-ch2b, ref.label=c('ch2-networks-generate','ch2-network-sir-function','ch2-network-sir-run','ch2-network-sir-plot','ch2-network-viz','ch2-regularization-path','ch2-spatial-lv'), echo=TRUE, eval=FALSE, include=knitr::is_latex_output()}
+```
+
+```{r appendix-ch3-header, echo=FALSE, results='asis', include=knitr::is_latex_output()}
+cat("\n\n## Chapter 3: Axtell Firm Size Empirics\n\n")
+```
+
+```{r appendix-ch3, ref.label=c('ch3-setup','ch3-data','ch3-powerlaw-fit'), echo=TRUE, eval=FALSE, include=knitr::is_latex_output()}
+```
+
+```{r appendix-ch4-header, echo=FALSE, results='asis', include=knitr::is_latex_output()}
+cat("\n\n## Chapter 4: The Possibility Space\n\n")
+```
+
+```{r appendix-ch4, ref.label=c('ch4-setup','ch4-regularization-geometry','ch4-logistic-extrapolation','ch4-bifurcation','ch4-two-windows','ch4-possibility-space'), echo=TRUE, eval=FALSE, include=knitr::is_latex_output()}
+```

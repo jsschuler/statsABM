@@ -1,431 +1,223 @@
 # =============================================================================
-# Agent-Based Modeling for Statisticians
-# JSM Short Course — Chapter 3: The Size of Firms, and What It Tells Us
+# Agent-Based Modeling for Statisticians — JSM 2025
+# Chapter 3: The Size of Firms, and What It Tells Us
+# =============================================================================
 #
-# This script covers the Axtell firm size empirics. No agent-based model
-# is run here. The R code serves a different purpose: to show, with the
-# statistical tools statisticians already trust, that the firm size power
-# law is not merely a poorly-fitting alternative to standard distributions.
-# It is a regularity that standard models cannot generate because it requires
-# a mechanism — heterogeneous agents, local returns to scale, endogenous
-# team formation — that their languages do not contain.
+# This script contains all R code from Chapter 3 of the course book.
+# It is self-contained: all required packages are loaded in the setup section.
 #
-# NOTE ON DATA:
-#   This script uses synthetic firm size data generated from a known power
-#   law distribution as a placeholder. For production use, substitute
-#   US Census Bureau Statistics of US Businesses (SUSB) microdata, available at:
-#     https://www.census.gov/programs-surveys/susb.html
-#   The SUSB provides employment counts by firm for all US establishments.
-#   All analysis below applies unchanged to the real data. The synthetic data
-#   reproduces the qualitative empirical pattern with alpha ~ 2, consistent
-#   with Axtell (2001) and subsequent replication studies.
+# Sections:
+#   1. Setup
+#   2. Firm size data: generate synthetic power-law data (placeholder)
+#      Note: replace with US Census SUSB data for actual empirical analysis.
+#   3. Power law fitting via MLE (poweRlaw package)
 #
-# Key reference:
-#   Axtell, R. L. (2001). Zipf Distribution of U.S. Firm Sizes.
-#   Science, 293(5536), 1818-1820.
+# Packages required:
+#   tidyverse, poweRlaw, broom, patchwork
 #
-# Author: John Lynham
-# Course: Agent-Based Modeling for Statisticians, JSM 2025
+# Data note:
+#   Chapter 3 uses synthetic data generated from a known power law distribution
+#   via poweRlaw::rplcon(). To use real data, download the US Census Bureau
+#   Statistics of US Businesses (SUSB) employment size class tables from:
+#   https://www.census.gov/programs-surveys/susb.html
+#   and substitute the empirical firm employment values for `firm_sizes`.
+#
+# GitHub: [course repository]
 # =============================================================================
 
+## ----ch3-setup----------------------------------------------------------------
+# Chapter 3 Setup
+# Self-contained — does not depend on prior chapters.
 
-# =============================================================================
-# SETUP
-# =============================================================================
+library(tidyverse)
+library(poweRlaw)
+library(broom)
+library(patchwork)
 
-library(tidyverse)   # data manipulation and ggplot2
-library(poweRlaw)    # Clauset-Shalizi-Newman power law fitting and testing
-library(broom)       # tidy model output (used for lognormal comparison)
-library(patchwork)   # compositing multiple ggplot2 panels
+theme_set(
+  theme_minimal(base_family = "Source Serif 4") +
+    theme(
+      plot.title       = element_text(family = "Raleway", face = "plain",
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = "Source Serif 4", size = 11,
+                                      color = "#555555", margin = margin(b = 12)),
+      axis.title       = element_text(family = "Source Serif 4", size = 10),
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = "#FAFAF7", color = NA)
+    )
+)
 
+#' 
+#' ## A Regularity That Refuses to Go Away {#sec-firmsize}
+#' 
+#' In virtually every measured economy, at virtually every measured time, the distribution of firm sizes by employment follows a power law. The United States in 1990, France in 2005, India in 2010 — the exponent shifts slightly, the lower bound shifts with institutional definitions of what constitutes a firm, but the power law structure persists. This is among the most robustly documented regularities in empirical economics, and it is one that standard economic models are structurally incapable of reproducing.
+#' 
+#' The dynamic range is the first clue that something unusual is happening. The largest firms in the US economy employ hundreds of thousands of workers; the smallest employ one. The ratio between these extremes is on the order of $10^5$ or $10^6$. A normal distribution cannot span that range without assigning negligible probability to the observed data. A log-normal can span it, and the log-normal has been proposed as an alternative; but the fit is systematically worse in the upper tail, where the data are densest in the logarithmic sense that matters for a power law.
+#' 
+#' A power law distribution has the form $P(\text{size} \geq x) \propto x^{-(\alpha - 1)}$ for $x \geq x_\text{min}$. In logarithmic coordinates, the complementary cumulative distribution function is a straight line with slope $-(\alpha - 1)$. On a linear scale, the distribution looks like a spike near zero and an invisible tail. The linear plot defeats the intuition; the log-log plot reveals the structure.
+#' 
+## ----ch3-data, fig.cap="Firm size distribution on a linear scale (left) and log-log scale (right, CCDF). The dynamic range — from single-employee firms to corporations employing hundreds of thousands — defeats any visualization on a linear scale. The log-log plot reveals the power law: a straight line across many orders of magnitude."----
+# NOTE: The data below are synthetic, generated from a power law distribution
+# as a placeholder. Substitute US Census Bureau SUSB microdata for real analysis.
+# SUSB data available at: https://www.census.gov/programs-surveys/susb.html
+# The power law exponent (alpha ≈ 2.05) is consistent with published estimates
+# for the US firm size distribution (cf. Axtell 2001, Science).
 
-# Custom theme (self-contained — no dependence on prior chapters)
-course_theme <- theme_minimal(base_family = "Source Serif 4") +
-  theme(
-    plot.title       = element_text(family = "Raleway", face = "plain",
-                                    size = 14, margin = margin(b = 8)),
-    plot.subtitle    = element_text(family = "Source Serif 4", size = 11,
-                                    color = "#555555", margin = margin(b = 12)),
-    axis.title       = element_text(family = "Source Serif 4", size = 10),
-    legend.position  = "bottom",
-    panel.grid.minor = element_blank(),
-    plot.background  = element_rect(fill = "#FAFAF7", color = NA)
-  )
+set.seed(2025)  # seed for reproducibility; change to generate different samples
 
-theme_set(course_theme)
+# Generate synthetic firm size data from a power law distribution
+# rplcon: random draws from a continuous power law with lower bound xmin
+n_firms    <- 5000
+true_alpha <- 2.05   # exponent consistent with Axtell (2001)
+xmin_true  <- 1
 
-
-# =============================================================================
-# SECTION 3.1: GENERATE SYNTHETIC FIRM SIZE DATA
-# =============================================================================
-# rplcon() generates random deviates from a continuous power law with
-# lower cutoff xmin and tail exponent alpha.
-# P(X >= x) ~ x^{-(alpha-1)} for x >= xmin.
-# Alpha ~ 2.06 is the empirical estimate from Axtell (2001) for US firms.
-
-set.seed(2025)   # reproducibility
-
-n_firms    <- 5000   # number of synthetic firms (real SUSB has ~6 million)
-alpha_true <- 2.06   # power law exponent — matches Axtell's empirical estimate
-xmin_true  <- 1      # lower cutoff: smallest firm has at least 1 employee
-
-# Generate from continuous power law, then round to get integer employee counts.
-# In the real data, employment is always integer-valued.
-firm_sizes_raw <- rplcon(n_firms, xmin = xmin_true, alpha = alpha_true)
+firm_sizes_raw <- rplcon(n_firms, xmin = xmin_true, alpha = true_alpha)
 firm_df        <- tibble(employment = pmax(1L, round(firm_sizes_raw)))
 
-cat("Synthetic firm size data:\n")
-cat("  N firms:        ", nrow(firm_df), "\n")
-cat("  Median size:    ", median(firm_df$employment), "employees\n")
-cat("  Mean size:      ", round(mean(firm_df$employment), 1), "employees\n")
-cat("  Max size:       ", max(firm_df$employment), "employees\n")
-cat("  Ratio max/med:  ", round(max(firm_df$employment) / median(firm_df$employment)), "\n")
-# The ratio of max to median is the key visual fact: the dynamic range
-# defeats linear-scale visualization entirely.
-
-
-# =============================================================================
-# SECTION 3.1a: THE DYNAMIC RANGE PROBLEM — LINEAR SCALE
-# =============================================================================
-# Show the histogram on a linear scale first. The dynamic range defeats it.
-# The defeat is instructive: it demonstrates why the normal tools of
-# distributional visualization fail here, and why the log-log scale matters.
-
-p_linear_hist <- ggplot(firm_df, aes(x = employment)) +
-  geom_histogram(
-    bins  = 60,
-    fill  = "#2D5F8A",
-    color = "#FAFAF7",
-    alpha = 0.85
-  ) +
+# Linear scale histogram
+p_linear <- ggplot(firm_df, aes(x = employment)) +
+  geom_histogram(bins = 60, fill = "#2D5F8A", alpha = 0.75, color = "white") +
   labs(
-    title    = "Firm Size Distribution: Linear Scale",
-    subtitle = "The dynamic range makes most of the distribution invisible",
-    x        = "Employment (number of employees)",
+    title    = "Firm size distribution: linear scale",
+    subtitle = "The dynamic range makes the distribution invisible on this scale",
+    x        = "Employment",
     y        = "Count"
   )
 
-print(p_linear_hist)
-
-
-# =============================================================================
-# SECTION 3.1b: LOG-LOG CCDF PLOT
-# =============================================================================
-# The CCDF (complementary cumulative distribution function) P(X >= x) is
-# the natural display for power laws: on log-log axes, a power law
-# P(X >= x) = (x/xmin)^{-(alpha-1)} appears as a straight line.
-# This is both more informative and more honest than a log-log histogram
-# (which is sensitive to bin width choice).
-
-# Compute empirical CCDF: for each unique size x, P(X >= x) = (rank from top) / N
-firm_ccdf <- firm_df %>%
+# Log-log CCDF (complementary CDF)
+ccdf_df <- firm_df %>%
   arrange(employment) %>%
   mutate(
-    rank     = rev(seq_len(n())),     # rank 1 = largest firm
-    ccdf     = rank / n()             # empirical P(X >= x)
-  )
+    rank = rev(seq_len(n())),
+    ccdf = rank / n()
+  ) %>%
+  distinct(employment, .keep_all = TRUE)
 
-p_loglog <- ggplot(firm_ccdf, aes(x = employment, y = ccdf)) +
-  geom_point(size = 0.8, alpha = 0.4, color = "#2D5F8A") +
-  scale_x_log10(
-    labels = scales::label_comma(),
-    name   = "Employment (log scale)"
-  ) +
-  scale_y_log10(
-    labels = scales::label_percent(accuracy = 0.01),
-    name   = "P(X ≥ x) (log scale)"
-  ) +
+p_loglog <- ggplot(ccdf_df, aes(x = employment, y = ccdf)) +
+  geom_point(color = "#2D5F8A", size = 0.8, alpha = 0.6) +
+  scale_x_log10(labels = scales::comma) +
+  scale_y_log10(labels = scales::comma) +
   labs(
-    title    = "Firm Size Distribution: Log-Log CCDF",
-    subtitle = "A straight line on log-log axes is the signature of a power law"
+    title    = "Firm size distribution: log-log CCDF",
+    subtitle = "A straight line on this scale is a power law",
+    x        = "Employment (log scale)",
+    y        = "P(size \u2265 x) (log scale)"
   )
 
-print(p_loglog)
+p_linear + p_loglog
 
+#' 
+## ----ch3-powerlaw-fit, fig.cap="Power law fit (red line) and log-normal comparison (dashed blue) on the log-log CCDF. The power law is estimated via maximum likelihood using the \\texttt{poweRlaw} package; $x_{\\min}$ is selected by minimizing the Kolmogorov-Smirnov distance between the fitted distribution and the empirical data above the threshold."----
+# Fit power law via MLE using poweRlaw
+# displ: discrete power law (appropriate for integer employment counts)
+m_pl  <- displ$new(firm_df$employment)
+est   <- estimate_xmin(m_pl)
+m_pl$setXmin(est)
+m_pl$setPars(estimate_pars(m_pl))
 
-# =============================================================================
-# SECTION 3.2: POWER LAW FITTING VIA MAXIMUM LIKELIHOOD
-# =============================================================================
-# The Clauset, Shalizi, Newman (2009) methodology uses maximum likelihood
-# estimation rather than OLS on a log-log histogram (which gives biased
-# estimates). The poweRlaw package implements this approach.
-#
-# Two steps:
-#   1. Estimate xmin: the lower bound of the power law scaling region.
-#      estimate_xmin() searches over candidate xmin values and selects the
-#      one that minimizes the KS distance between empirical and fitted CCDF.
-#   2. Given xmin, estimate alpha by MLE.
+alpha_hat <- m_pl$getPars()
+xmin_hat  <- m_pl$getXmin()
 
-# Create a discrete power law object (displ = discrete power law)
-# Use displ (discrete) because employment is integer-valued.
-m_pl <- displ$new(firm_df$employment)
+# Fit log-normal for comparison (same xmin for fair comparison)
+m_ln <- dislnorm$new(firm_df$employment)
+m_ln$setXmin(xmin_hat)
+m_ln$setPars(estimate_pars(m_ln))
 
-# Step 1: Estimate xmin
-est_xmin <- estimate_xmin(m_pl)    # finds optimal lower cutoff
-m_pl$setXmin(est_xmin)             # set the estimated xmin on the model object
+# Compute fitted CCDFs for plotting
+x_seq <- seq(xmin_hat, max(firm_df$employment), length.out = 200)
 
-# Step 2: Estimate alpha given xmin
-m_pl$setPars(estimate_pars(m_pl))  # MLE of alpha, using data >= xmin
-
-# Report estimates
-cat("\nPower law fit (Clauset-Shalizi-Newman method):\n")
-cat("  Estimated x_min (lower cutoff):  ", m_pl$getXmin(), "\n")
-cat("  Estimated alpha (tail exponent): ", round(m_pl$getPars(), 4), "\n")
-cat("  True alpha (data-generating):   ", alpha_true, "\n")
-cat("  N obs. in scaling region:        ",
-    sum(firm_df$employment >= m_pl$getXmin()), "\n")
-
-# Standard error via bootstrap (takes ~ 30s; reduce no_of_sims for speed)
-# Uncomment to run:
-# bs_result <- bootstrap(m_pl, no_of_sims = 100, threads = 1)
-# cat("  Bootstrap SE of alpha: ",
-#     round(sd(bs_result$bootstraps$pars), 4), "\n")
-
-
-# =============================================================================
-# SECTION 3.2a: FITTED LINE ON LOG-LOG PLOT
-# =============================================================================
-# Add the MLE-fitted power law CCDF to the empirical log-log plot.
-# The fitted line should track the empirical points in the scaling region
-# (employment >= xmin).
-
-# Generate the theoretical CCDF from the fitted model for x in the scaling region
-x_seq    <- seq(m_pl$getXmin(), max(firm_df$employment), length.out = 300)
-ccdf_fit <- (x_seq / m_pl$getXmin())^(-(m_pl$getPars() - 1))   # power law CCDF formula
-
-fit_line_df <- tibble(employment = x_seq, ccdf_fitted = ccdf_fit)
-
-# Scale the fitted CCDF to match the empirical tail probability at xmin
-# (the fitted line is a conditional probability; we need to anchor it)
-empirical_tail_prob <- mean(firm_df$employment >= m_pl$getXmin())
-fit_line_df <- fit_line_df %>%
-  mutate(ccdf_fitted = ccdf_fitted * empirical_tail_prob)
-
-p_loglog_fit <- p_loglog +
-  geom_line(
-    data    = fit_line_df,
-    mapping = aes(x = employment, y = ccdf_fitted),
-    color   = "#8A4A2D",
-    linewidth = 1.1
-  ) +
-  # Vertical line at xmin to show where the scaling region begins
-  geom_vline(
-    xintercept = m_pl$getXmin(),
-    linetype   = "dotted",
-    color      = "#555555",
-    linewidth  = 0.7
-  ) +
-  annotate(
-    "text",
-    x     = m_pl$getXmin() * 1.3,
-    y     = 0.003,
-    label = paste0("x_min = ", m_pl$getXmin()),
-    hjust = 0,
-    family = "Source Serif 4",
-    size   = 3.2,
-    color  = "#555555"
-  ) +
-  labs(
-    subtitle = paste0(
-      "MLE-fitted power law (rust line), α̂ = ",
-      round(m_pl$getPars(), 3),
-      ". Dotted line: estimated x_min."
-    )
-  )
-
-print(p_loglog_fit)
-
-
-# =============================================================================
-# SECTION 3.2b: LOGNORMAL COMPARISON
-# =============================================================================
-# The lognormal distribution is a natural alternative to the power law for
-# right-skewed size distributions — it arises from multiplicative random
-# growth (Gibrat's law). A power law and a lognormal can look similar over
-# a limited range on a log-log plot. We distinguish them rigorously.
-#
-# Approach: fit a lognormal to the same truncated data (x >= xmin) and
-# compare log-likelihoods. The poweRlaw package supports this via
-# compare_distributions().
-
-# Fit lognormal to data in the same scaling region
-m_ln <- dislnorm$new(firm_df$employment)     # discrete lognormal object
-m_ln$setXmin(m_pl$getXmin())                 # same xmin as power law fit
-m_ln$setPars(estimate_pars(m_ln))            # MLE of (meanlog, sdlog)
-
-cat("\nLognormal fit parameters (discrete, x >= xmin):\n")
-cat("  mu_log    =", round(m_ln$getPars()[1], 4), "\n")
-cat("  sigma_log =", round(m_ln$getPars()[2], 4), "\n")
-
-# Log-likelihood comparison
-ll_pl <- dist_ll(m_pl)   # log-likelihood of power law fit
-ll_ln <- dist_ll(m_ln)   # log-likelihood of lognormal fit
-
-cat("\nLog-likelihood comparison (truncated to x >= xmin):\n")
-cat("  Power law log-likelihood:  ", round(ll_pl, 2), "\n")
-cat("  Lognormal log-likelihood:  ", round(ll_ln, 2), "\n")
-cat("  Difference (PL - LN):      ", round(ll_pl - ll_ln, 2), "\n")
-cat("  Positive favors power law; negative favors lognormal.\n")
-
-# Vuong-style likelihood ratio test (compare_distributions computes this)
-vuong_test <- compare_distributions(m_pl, m_ln)
-cat("\nVuong test for non-nested distribution comparison:\n")
-cat("  Test statistic: ", round(vuong_test$test_statistic, 4), "\n")
-cat("  p-value:        ", round(vuong_test$p_two_sided, 4), "\n")
-cat("  (p < 0.05 with positive test stat favors power law over lognormal)\n")
-
-
-# =============================================================================
-# SECTION 3.3: WHAT THE STANDARD MODELS CANNOT SAY
-# =============================================================================
-# A model that treats mean firm size as a sufficient statistic for aggregate
-# dynamics produces a distribution with a characteristic scale — a typical
-# firm size around which variation is distributed. An ODE of industry dynamics
-# produces smooth trajectories toward equilibrium. Neither generates a power
-# law, because neither contains the mechanism: heterogeneous agents, local
-# increasing returns to scale, endogenous team formation and dissolution.
-#
-# The sufficiency assumption applied to the distribution of firms is the
-# mean-field assumption operating at the level of firm characteristics rather
-# than interactions. It collapses the entire heterogeneity to a point mass —
-# the distribution is replaced by its mean.
-#
-# To make this concrete: show what a mean-sufficient model "predicts" about
-# the firm size distribution — namely, a bell-shaped distribution around the
-# mean, with thin tails.
-
-# Illustrate: what the mean-sufficient model predicts about firm size distribution
-# vs. what the data shows.
-
-# Simulate a Gaussian / characteristic-scale distribution (what RA models imply)
-set.seed(2025)
-ra_pred_df <- tibble(
-  employment = pmax(1, round(rnorm(n_firms,
-                                   mean = mean(firm_df$employment),
-                                   sd   = mean(firm_df$employment) * 0.3)))
+pl_ccdf_df <- tibble(
+  x    = x_seq,
+  ccdf = (x_seq / xmin_hat)^(-(alpha_hat - 1)),
+  dist = "Power law (MLE)"
 )
 
-# Compare CCDFs: empirical power law vs. mean-sufficient model prediction
-firm_ccdf_ra <- ra_pred_df %>%
-  arrange(employment) %>%
-  mutate(rank = rev(seq_len(n())), ccdf = rank / n(), source = "Mean-sufficient prediction")
+# Log-normal CCDF approximation via plnorm
+mu_ln    <- m_ln$getPars()[1]
+sigma_ln <- m_ln$getPars()[2]
+ln_ccdf_df <- tibble(
+  x    = x_seq,
+  ccdf = plnorm(x_seq, meanlog = mu_ln, sdlog = sigma_ln, lower.tail = FALSE) /
+         plnorm(xmin_hat, meanlog = mu_ln, sdlog = sigma_ln, lower.tail = FALSE),
+  dist = "Log-normal"
+)
 
-firm_ccdf_pl <- firm_df %>%
-  arrange(employment) %>%
-  mutate(rank = rev(seq_len(n())), ccdf = rank / n(), source = "Empirical (power law)")
+fit_df <- bind_rows(pl_ccdf_df, ln_ccdf_df)
 
-ccdf_compare <- bind_rows(firm_ccdf_ra, firm_ccdf_pl)
-
-p_compare <- ggplot(ccdf_compare, aes(x = employment, y = ccdf,
-                                       color = source, shape = source)) +
-  geom_point(size = 0.8, alpha = 0.35) +
-  scale_x_log10(labels = scales::label_comma(), name = "Employment (log scale)") +
-  scale_y_log10(labels = scales::label_percent(accuracy = 0.01),
-                name = "P(X ≥ x) (log scale)") +
-  scale_color_manual(
-    values = c("Empirical (power law)"      = "#2D5F8A",
-               "Mean-sufficient prediction" = "#8A4A2D")
+ggplot() +
+  geom_point(
+    data = filter(ccdf_df, employment >= xmin_hat),
+    aes(x = employment, y = ccdf),
+    color = "#888888", size = 0.8, alpha = 0.5
   ) +
-  scale_shape_manual(
-    values = c("Empirical (power law)"      = 16,
-               "Mean-sufficient prediction" = 17)
+  geom_line(
+    data = fit_df,
+    aes(x = x, y = ccdf, color = dist, linetype = dist),
+    linewidth = 1.0
   ) +
+  scale_x_log10(labels = scales::comma) +
+  scale_y_log10(labels = scales::comma) +
+  scale_color_manual(values = c("Power law (MLE)" = "#C0392B", "Log-normal" = "#2D5F8A"),
+                     name = NULL) +
+  scale_linetype_manual(values = c("Power law (MLE)" = "solid", "Log-normal" = "dashed"),
+                        name = NULL) +
+  annotate("text", x = xmin_hat * 1.1, y = 0.05,
+           label = paste0("x\u2098\u1d35\u2099 = ", xmin_hat,
+                          "  \u03b1\u0302 = ", round(alpha_hat, 3)),
+           family = "Source Serif 4", size = 3.5, hjust = 0, color = "#C0392B") +
   labs(
-    title    = "Power law vs. mean-sufficient model prediction",
-    subtitle = "The sufficiency assumption has no words for the upper tail",
-    color    = NULL,
-    shape    = NULL
+    title    = "Power law vs. log-normal fit",
+    subtitle = paste0("Estimated exponent \u03b1\u0302 = ", round(alpha_hat, 3),
+                      " (synthetic data; substitute SUSB for real analysis)"),
+    x        = "Employment (log scale)",
+    y        = "P(size \u2265 x) (log scale)"
   )
 
-print(p_compare)
-
-
-# =============================================================================
-# SECTION 3.4: AXTELL'S MODEL — EMERGENCE
-# =============================================================================
-# No code runs the Axtell model here — that would require hours of simulation.
-# Instead, this section documents the qualitative logic in comments,
-# and visualizes the key empirical property: the power law exponent is
-# structurally robust across parameter variations.
-#
-# Axtell's model rules (qualitative):
-#   - Agents allocate effort between solitary work and team membership.
-#   - Teams form when agents find collaborations that increase their returns
-#     under local increasing returns to scale.
-#   - Teams dissolve when agents find better alternatives elsewhere.
-#   - No central planner. No equilibrium assumption. No assumption that the mean is sufficient.
-#
-# The power law emerges from the dynamics of team formation and dissolution.
-# It is not calibrated — it is a structural consequence of the interaction rules.
-# The exponent is not sensitive to most parameter choices. This is the
-# canonical social science example of emergence: a macro regularity that is
-# not in the rules but is generated by them.
-
-# Visualize exponent robustness: show that alpha estimates are stable
-# across different synthetic datasets (simulating what Axtell found across
-# different parameter regimes and historical periods).
-
-# Fit power law to several synthetic datasets with slightly different
-# data-generating alpha values, and show the estimates cluster.
-
-set.seed(999)
-alpha_inputs  <- seq(1.9, 2.3, by = 0.1)   # range of "true" alphas
-n_reps_robust <- 5   # replications per alpha value
-
-robustness_df <- map_dfr(alpha_inputs, function(alpha_in) {
-  map_dfr(seq_len(n_reps_robust), function(rep_i) {
-    # Generate synthetic data for this alpha
-    sz <- rplcon(2000, xmin = 1, alpha = alpha_in)
-    sz <- pmax(1L, round(sz))
-
-    # Fit power law
-    m    <- displ$new(sz)
-    xest <- estimate_xmin(m)
-    m$setXmin(xest)
-    m$setPars(estimate_pars(m))
-
-    tibble(
-      alpha_true     = alpha_in,
-      alpha_estimate = m$getPars(),
-      xmin_estimate  = m$getXmin(),
-      rep            = rep_i
-    )
-  })
-})
-
-p_robustness <- ggplot(robustness_df,
-                       aes(x = factor(alpha_true), y = alpha_estimate)) +
-  geom_boxplot(fill = "#2D5F8A", color = "#1C1C1E", alpha = 0.7,
-               outlier.shape = 16, outlier.size = 1.5) +
-  geom_hline(yintercept = alpha_inputs,
-             linetype = "dotted", color = "#8A4A2D", linewidth = 0.5) +
-  labs(
-    title    = "Power Law Exponent: Estimation Robustness",
-    subtitle = "Boxplots of estimated α across 5 replications per true α value",
-    x        = "True α (data-generating)",
-    y        = "Estimated α̂ (MLE)",
-    caption  = "In Axtell's model, the exponent is structurally determined — not calibrated."
-  )
-
-print(p_robustness)
-
-
-# =============================================================================
-# SUMMARY: FOUR-PANEL OVERVIEW FIGURE
-# =============================================================================
-
-p_ch3_summary <- (p_linear_hist | p_loglog_fit) / (p_compare | p_robustness) +
-  plot_annotation(
-    title   = "Chapter 3: Firm Size and the Limits of Standard Models",
-    caption = paste0(
-      "Synthetic data (N = ", n_firms, " firms) from Pareto distribution with α = ", alpha_true, ". ",
-      "Substitute SUSB microdata for production analysis. ",
-      "Power law fit: Clauset-Shalizi-Newman (2009) MLE method."
-    )
-  )
-
-print(p_ch3_summary)
-
-# =============================================================================
-# END OF CHAPTER 3
-# =============================================================================
+#' 
+#' The power law fits the upper tail well. The log-normal fits less cleanly at the extreme upper end — it decays faster than the empirical distribution demands. This is not a marginal distinction: the upper tail is where the firm size distribution carries its most economically significant content. The hundred largest firms in the US employ a substantial fraction of the private sector workforce. A distribution that mismodels the upper tail mismodels the economy's employment structure in the sector where concentration, market power, and aggregate dynamics are most consequential.
+#' 
+#' ## What the Standard Models Cannot Say {#sec-sufficient-stats}
+#' 
+#' The SIR system tracks three numbers: $S$, $I$, and $R$. The dynamics are fully determined by those totals. This is not merely a modeling convenience — it is a claim about the Markov state. Under the mean-field assumption, the future trajectory of the epidemic is conditionally independent of which specific individuals are susceptible or infectious, given the compartment counts. The identity of the individuals does not matter; only their number does. Individual heterogeneity averages out under random mixing, and the law of large numbers makes the aggregate dynamics deterministic functions of population totals alone. The compartment counts are the complete state — not because individual characteristics have been shown to be irrelevant, but because the mean-field assumption has been imposed, and under that assumption they are.
+#' 
+#' The same logic, applied to industry dynamics, produces a model that tracks total employment, or average firm size, rather than the distribution of employment across firms. Each firm $i$ has an employment level $\theta_i = \bar\theta + \varepsilon_i$ where $\bar\theta$ is mean employment and $\varepsilon_i$ is the firm's deviation from that mean. Setting $\varepsilon_i = 0$ for all firms — what economists call the representative agent assumption — collapses the entire distribution to a point mass at $\bar\theta$. The distribution of firm sizes ceases to exist as an object of the model. Knowing that one firm employs 200,000 workers and ten thousand firms employ fewer than ten is indistinguishable, within this model, from knowing that all firms employ the mean number — not because the heterogeneity has been shown to be dynamically irrelevant, but because it has been assumed away before the analysis begins.
+#' 
+#' The power law distribution is then not merely a poor fit within this framework. It is a property of the non-zero $\varepsilon_i$ distribution — a property of the shape of the deviations from the mean — and a model that sets all $\varepsilon_i$ to zero has no mechanism through which distributional shape could arise. The restriction has eliminated the phenomenon's carrier before estimation begins.
+#' 
+#' The power law distribution is the empirical demonstration that the $\varepsilon_i$ are not zero — that the deviations are not negligible perturbations around a representative mean but the primary structure of the phenomenon. A power law has no finite mean when $\alpha \leq 2$, and even when the mean exists, it is a poor summary of the distribution's behavior. The distribution is dominated by its tail. The hundred largest firms in the US economy account for a substantial fraction of private-sector employment; they respond to shocks differently, shape credit conditions differently, and drive aggregate dynamics differently than a population of mean-sized firms would. The $\varepsilon_i = 0$ restriction produces the wrong object of analysis, not an imprecise approximation of the right one.
+#' 
+#' This is not a methodological complaint. It is an empirical constraint. The firm size distribution is among the most robustly documented regularities in empirical economics. It appears in every measured economy, at every measured time, in virtually every sector. A model whose language cannot express this regularity is, to that extent, describing a different economy than the one that exists.
+#' 
+#' The failure is linguistic before it is empirical. A model built on $\varepsilon_i = 0$ has no sentence in which "the distribution of firm sizes is a power law" can be written. The distribution is the phenomenon. When the language cannot contain the distribution, you have not approximated the phenomenon poorly. You have excluded it from the territory the model covers.
+#' 
+#' ## Axtell's Model: Logic Without Code {#sec-axtell}
+#' 
+#' Robert Axtell showed in 2001 that a remarkably simple agent-based model generates the observed US firm size distribution without calibration. The exponent emerges from the dynamics rather than being fitted to the data.
+#' 
+#' The model's logic is spare. Agents allocate their effort between working alone and working as part of a team. Teams are groups of agents who have chosen to coordinate their work. Within a team, returns to scale are locally increasing: a worker who joins a team adds more than their individual marginal product, up to some point. This is not an unusual assumption about firm production — most accounts of the gains from economic organization depend on something similar.
+#' 
+#' Agents compare their current payoff within their team to alternative arrangements: a different team, or solo work. When a better option exists, agents move. Teams form when agents find mutually beneficial collaborations; teams dissolve when enough members find better alternatives elsewhere. There is no central planner, no equilibrium condition that pins down firm size, no seed distribution. The model starts from random initial conditions and runs.
+#' 
+#' The result is the power law. Not fitted. Generated. The exponent that emerges from the dynamics is consistent with the empirically observed exponent across a wide range of the model's internal parameters. This robustness is the crucial point: the power law is not an artifact of a particular calibration. It is a structural consequence of the interaction rules — teams forming and dissolving under local increasing returns to scale, with agents choosing based on local information about their available alternatives.
+#' 
+#' The model does not explain why individual firms have the sizes they have. It explains why the distribution has the shape it has. The macro regularity — the power law — is not encoded in any individual agent's rule. No agent knows the distribution. No agent is trying to produce a power law. The distribution arises from the aggregate dynamics of agents following their individual rules, and it is not visible anywhere in those rules.
+#' 
+#' ## Emergence {#sec-emergence}
+#' 
+#' A macro-level regularity is emergent if it satisfies two conditions. It cannot be derived analytically from the micro-level rules — there is no algebraic path from the individual agent's decision problem to the macro distribution. And it arises robustly from the dynamics of agent interaction — not an artifact of specific parameter values or initial conditions, but a structural feature that persists across a wide range of both.
+#' 
+#' The power law firm size distribution is emergent in this sense. No analysis of an individual agent's effort allocation problem reveals the exponent. The exponent is not a property of any individual; it is a property of the aggregate dynamics that arise from the interaction of many individuals following local rules. And it is robust: Axtell showed that the exponent is insensitive to a wide range of parameter choices, which means it is structural rather than calibrated.
+#' 
+#' That robustness is more than a convenience result. Axtell's model was not fitted to the power law. The exponent emerged from the dynamics and was then compared to the data. This is not a subtle distinction. Equilibrium models of industry dynamics had the firm size distribution in front of them for decades — the empirical regularity was documented in the 1950s, and the power law form was well established by the 1990s — and could not generate the exponent without external calibration, because the exponent is not a property of any equilibrium. It is a property of the path: the motion of teams forming and dissolving, agents switching affiliations, distributions arising from trajectories that no equilibrium condition pins down. Equilibrium analysis specifies the destination; the distribution lives in the journey.
+#' 
+#' A model that generates a known regularity without having been calibrated to it has done something that descriptive fitting cannot. It exposes the mechanism. The mechanism can then be interrogated: what changes in the interaction rules would change the exponent? What perturbations to the returns-to-scale structure shift the distribution? These questions only make sense in a language that contains the generative process. A model that describes the distribution after the fact cannot answer them, because it contains no process — only a fit.
+#' 
+#' The phenomenon is unreachable by any model built on $\varepsilon_i = 0$ — in principle, with any parameter choices. Such a model has no dynamics in the relevant sense: it has an equilibrium at which one firm employs a fixed number of workers. There is no process of team formation and dissolution. There is no mechanism through which a distribution could be generated, because the model's language contains no concept of a distribution of firm sizes. The $\varepsilon_i = 0$ restriction has collapsed exactly the dimension of heterogeneity from which the regularity is made.
+#' 
+#' Emergence, precisely defined, is a methodological constraint. If the phenomenon is emergent — if no analytical derivation from the micro rules can reach it — then the model must be dynamic, heterogeneous, and process-based. Not because agent-based modeling is philosophically preferable to equilibrium analysis. Because it is the only language in which the generative mechanism can be written. The sufficiency assumption has collapsed exactly the $\varepsilon_i$ dimension from which the regularity is made. No relaxation of the equilibrium condition, no refinement of the production function, no additional sector recovers the power law from a model that sets $\varepsilon_i = 0$ for firms, because the distribution is a property of the non-zero $\varepsilon_i$ tail — a tail the model has eliminated before the analysis begins.
+#' 
+#' ---
+#' 
+#' # The Possibility Space of Dynamics {#ch4}
+#' 

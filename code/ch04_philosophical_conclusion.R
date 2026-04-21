@@ -1,557 +1,473 @@
 # =============================================================================
-# Agent-Based Modeling for Statisticians
-# JSM Short Course — Chapter 4: The Possibility Space of Dynamics
+# Agent-Based Modeling for Statisticians — JSM 2025
+# Chapter 4: The Possibility Space of Dynamics
+# =============================================================================
 #
-# This script illustrates the philosophical arguments of the course's
-# concluding chapter with R visualizations. There is almost no new modeling
-# apparatus — the tools here are in service of an argument about what all
-# the preceding models share, and what that implies for how statisticians
-# should think about the scope of any model's conclusions.
+# This script contains all R code from Chapter 4 of the course book.
+# It is self-contained: all required packages are loaded in the setup section.
 #
-# Three visualizations:
-#   1. Regularization unification: ridge (L2) and LASSO (L1) penalty geometry
-#      as Gaussian and Laplace priors — the same restriction, three descriptions.
-#   2. Stationarity as a prior: logistic growth with a naive extrapolation
-#      that cannot see the carrying capacity.
-#   3. Bifurcation diagram of the logistic map: the possibility space
-#      visible in the parameter dimension.
+# Sections:
+#   1. Setup
+#   2. Regularization geometry (L1 vs L2 constraint regions)
+#   3. Logistic extrapolation trap
+#   4. Bifurcation diagram (logistic map)
+#   5. Two-window extrapolation (Kondratiev-style cycle)
+#   6. Possibility space (multiple stochastic trajectories)
 #
-# Author: John Lynham
-# Course: Agent-Based Modeling for Statisticians, JSM 2025
+# Packages required:
+#   tidyverse, deSolve, patchwork
+#
+# GitHub: [course repository]
 # =============================================================================
 
+## ----ch4-setup----------------------------------------------------------------
+# Chapter 4 Setup
+# Self-contained — does not depend on prior chapters.
 
-# =============================================================================
-# SETUP
-# =============================================================================
+library(tidyverse)
+library(deSolve)
+library(patchwork)
 
-library(tidyverse)   # data manipulation and ggplot2
-library(deSolve)     # ODE solver (logistic growth)
-library(patchwork)   # compositing multiple ggplot2 panels
-
-
-# Custom theme (self-contained)
-course_theme <- theme_minimal(base_family = "Source Serif 4") +
-  theme(
-    plot.title       = element_text(family = "Raleway", face = "plain",
-                                    size = 14, margin = margin(b = 8)),
-    plot.subtitle    = element_text(family = "Source Serif 4", size = 11,
-                                    color = "#555555", margin = margin(b = 12)),
-    axis.title       = element_text(family = "Source Serif 4", size = 10),
-    legend.position  = "bottom",
-    panel.grid.minor = element_blank(),
-    plot.background  = element_rect(fill = "#FAFAF7", color = NA)
-  )
-
-theme_set(course_theme)
-
-
-# =============================================================================
-# SECTION 4.2: THE REGULARIZATION UNIFICATION
-# =============================================================================
-# A Gaussian prior on regression coefficients produces ridge regression exactly.
-# A Laplace prior produces LASSO exactly. These are not analogies — they are
-# the same constraint written in two languages.
-#
-# The geometry makes this concrete: on a 2D coefficient plane, the feasible
-# region defined by an L2 penalty (||beta||_2 <= t) is a disk (Gaussian prior
-# contours); the feasible region defined by an L1 penalty (||beta||_1 <= t)
-# is a diamond (Laplace prior contours). The L1 diamond has corners on the axes,
-# which is why LASSO produces sparse solutions — the constraint is more likely
-# to touch the loss contours at a corner, where one coefficient is zero.
-#
-# This is not a new observation. But naming it — every modeling assumption is
-# a prior, every prior restricts expressive complexity — is the bridge from
-# the statistical toolbox to the ABM framework.
-
-# Build a grid of (beta1, beta2) values for visualizing penalty contours
-
-beta_grid <- expand.grid(
-  beta1 = seq(-2, 2, length.out = 300),
-  beta2 = seq(-2, 2, length.out = 300)
-) %>%
-  as_tibble() %>%
-  mutate(
-    l1_norm = abs(beta1) + abs(beta2),     # L1 (LASSO / Laplace prior)
-    l2_norm = sqrt(beta1^2 + beta2^2),     # L2 (Ridge / Gaussian prior)
-    # Posterior density contours for visualization
-    # Gaussian prior: log-density proportional to -lambda * (beta1^2 + beta2^2)
-    log_gaussian = -(beta1^2 + beta2^2),
-    # Laplace prior: log-density proportional to -lambda * (|beta1| + |beta2|)
-    log_laplace  = -(abs(beta1) + abs(beta2))
-  )
-
-# Constraint boundary values (penalty budget)
-# These define the feasible sets for ridge and LASSO at the same "budget" t
-t_ridge <- 1.2   # L2 constraint: ||beta||_2 <= t_ridge (disk)
-t_lasso <- 1.2   # L1 constraint: ||beta||_1 <= t_lasso (diamond)
-
-# Build the constraint boundary curves explicitly
-# Ridge (L2): a circle of radius t_ridge
-theta_seq <- seq(0, 2 * pi, length.out = 500)
-ridge_boundary <- tibble(
-  beta1 = t_ridge * cos(theta_seq),
-  beta2 = t_ridge * sin(theta_seq),
-  type  = "Ridge (L2 / Gaussian prior)"
-)
-
-# LASSO (L1): a diamond (rotated square) with vertices at (+/-t_lasso, 0) and (0, +/-t_lasso)
-# Parameterize using the L1 unit ball corners
-lasso_boundary <- tibble(
-  beta1 = c( t_lasso,  0,        -t_lasso,  0,         t_lasso),
-  beta2 = c( 0,        t_lasso,   0,        -t_lasso,   0),
-  type  = "LASSO (L1 / Laplace prior)"
-)
-
-# Construct a hypothetical loss function (OLS sum-of-squares ellipse)
-# centered away from origin to make the geometry visible
-# Loss: (beta1 - 1.8)^2 / 0.4 + (beta2 - 1.2)^2 / 0.15
-beta_grid <- beta_grid %>%
-  mutate(
-    loss = (beta1 - 1.8)^2 / 0.4 + (beta2 - 1.2)^2 / 0.15
-  )
-
-# Loss contour values for display
-loss_levels <- c(4, 7, 12, 20)
-
-# -- Ridge plot --
-p_ridge <- ggplot() +
-  # Loss function contours (the OLS ellipses)
-  geom_contour(
-    data    = beta_grid,
-    mapping = aes(x = beta1, y = beta2, z = loss),
-    breaks  = loss_levels,
-    color   = "#AAAAAA",
-    linewidth = 0.5
-  ) +
-  # Ridge constraint: filled disk
-  geom_polygon(
-    data    = ridge_boundary,
-    mapping = aes(x = beta1, y = beta2),
-    fill    = "#2D5F8A",
-    alpha   = 0.18,
-    color   = "#2D5F8A",
-    linewidth = 1.0
-  ) +
-  # Mark origin (the "all-zero" solution)
-  annotate("point", x = 0, y = 0, size = 2, shape = 21,
-           fill = "#FAFAF7", color = "#1C1C1E", stroke = 1) +
-  # The solution (where the constraint boundary touches the innermost loss contour)
-  # For ridge: the tangency point is typically NOT on an axis
-  annotate("point", x = t_ridge * 0.62, y = t_ridge * 0.78, size = 3,
-           color = "#2D5F8A") +
-  annotate("text",  x = t_ridge * 0.62 + 0.18, y = t_ridge * 0.78 + 0.12,
-           label = "solution\n(not sparse)", hjust = 0,
-           family = "Source Serif 4", size = 2.8, color = "#2D5F8A") +
-  coord_equal(xlim = c(-2, 2.2), ylim = c(-2, 2.2)) +
-  labs(
-    title    = "Ridge Regression (L2 / Gaussian Prior)",
-    subtitle = "Circular constraint: solution rarely on an axis",
-    x        = expression(beta[1]),
-    y        = expression(beta[2])
-  )
-
-# -- LASSO plot --
-p_lasso <- ggplot() +
-  # Loss function contours
-  geom_contour(
-    data    = beta_grid,
-    mapping = aes(x = beta1, y = beta2, z = loss),
-    breaks  = loss_levels,
-    color   = "#AAAAAA",
-    linewidth = 0.5
-  ) +
-  # LASSO constraint: diamond
-  geom_polygon(
-    data    = lasso_boundary,
-    mapping = aes(x = beta1, y = beta2),
-    fill    = "#8A4A2D",
-    alpha   = 0.18,
-    color   = "#8A4A2D",
-    linewidth = 1.0
-  ) +
-  annotate("point", x = 0, y = 0, size = 2, shape = 21,
-           fill = "#FAFAF7", color = "#1C1C1E", stroke = 1) +
-  # The LASSO solution tends to land at a corner (one coefficient = 0)
-  annotate("point", x = t_lasso, y = 0, size = 3, color = "#8A4A2D") +
-  annotate("text",  x = t_lasso + 0.1, y = 0.18,
-           label = "solution\n(sparse: β₂ = 0)", hjust = 0,
-           family = "Source Serif 4", size = 2.8, color = "#8A4A2D") +
-  coord_equal(xlim = c(-2, 2.2), ylim = c(-2, 2.2)) +
-  labs(
-    title    = "LASSO (L1 / Laplace Prior)",
-    subtitle = "Diamond constraint: solution often at a corner (sparsity)",
-    x        = expression(beta[1]),
-    y        = expression(beta[2])
-  )
-
-p_regularization <- p_ridge + p_lasso +
-  plot_annotation(
-    title   = "The Regularization Unification",
-    caption = paste0(
-      "The Gaussian prior IS ridge regression (posterior mode = ridge estimator). ",
-      "The Laplace prior IS LASSO. ",
-      "Every modeling assumption is a prior; every prior restricts expressive complexity."
+theme_set(
+  theme_minimal(base_family = "Source Serif 4") +
+    theme(
+      plot.title       = element_text(family = "Raleway", face = "plain",
+                                      size = 14, margin = margin(b = 8)),
+      plot.subtitle    = element_text(family = "Source Serif 4", size = 11,
+                                      color = "#555555", margin = margin(b = 12)),
+      axis.title       = element_text(family = "Source Serif 4", size = 10),
+      legend.position  = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.background  = element_rect(fill = "#FAFAF7", color = NA)
     )
-  )
-
-print(p_regularization)
-
-
-# =============================================================================
-# SECTION 4.3: STATIONARITY AS A PRIOR — THE LOGISTIC GROWTH FAILURE
-# =============================================================================
-# Stationarity is a prior. It asserts that the spectral structure of the
-# data-generating process is stable across time — that the past is informative
-# about the future in a particular strong sense. When the system is capable
-# of bifurcation, this prior is miscalibrated in exactly the way a Gaussian
-# prior is miscalibrated when the true signal is sparse: the language simply
-# does not have the words for what is about to happen.
-#
-# The logistic growth example makes this concrete. A process in its
-# exponential phase looks like unbounded growth to any stationary time series
-# model. The carrying capacity is exterior to the model's language — not
-# uncertain, not unestimated, but grammatically forbidden by the stationarity
-# assumption.
-
-set.seed(2025)   # seed before any stochastic draws
-
-K  <- 1000   # carrying capacity (the ceiling the naive model cannot see)
-r  <- 0.3    # intrinsic growth rate
-N0 <- 10     # initial population size
-
-# Time grid for full logistic trajectory
-times_logistic <- seq(0, 50, by = 0.5)
-
-# Analytic solution: N(t) = K / (1 + ((K - N0)/N0) * exp(-r*t))
-# No need for ODE solver here — the logistic has a closed form.
-N_logistic <- K / (1 + ((K - N0) / N0) * exp(-r * times_logistic))
-
-logistic_df <- tibble(t = times_logistic, N = N_logistic, source = "True trajectory")
-
-
-# "Observe" only the first 10 time units (the exponential phase).
-# In this window the growth looks linear on a log scale, and the carrying
-# capacity is invisible — it has not yet constrained the dynamics.
-obs_window <- 10
-obs_df     <- filter(logistic_df, t <= obs_window)
-
-cat("Logistic growth — observed window (t <= ", obs_window, "):\n")
-cat("  Min N: ", round(min(obs_df$N), 1), "\n")
-cat("  Max N: ", round(max(obs_df$N), 1), "\n")
-cat("  As fraction of K:", round(max(obs_df$N) / K, 3), "\n")
-# The system has barely begun to decelerate — a stationary log-linear model
-# will estimate strong exponential growth and extrapolate accordingly.
-
-
-# Fit a log-linear (exponential) model to the observed window.
-# This is the stationarity assumption made explicit: the growth rate
-# in the observed window will continue indefinitely.
-lm_fit <- lm(log(N) ~ t, data = obs_df)
-
-cat("\nLog-linear fit on observed window:\n")
-cat("  Intercept (log scale): ", round(coef(lm_fit)[1], 4), "\n")
-cat("  Slope (growth rate):   ", round(coef(lm_fit)[2], 4), "\n")
-cat("  True r:                ", r, "\n")
-# The estimated growth rate will be close to r — but the model has no
-# mechanism to know that growth will stop.
-
-
-# Generate predictions from the naive model beyond the observation window
-pred_times <- seq(obs_window, max(times_logistic), by = 0.5)
-pred_df    <- tibble(
-  t      = pred_times,
-  # exp() converts from log scale back to original scale
-  N      = exp(predict(lm_fit, newdata = tibble(t = pred_times))),
-  source = "Naive extrapolation (stationarity assumption)"
 )
 
+#' 
+#' ## Resolution {#sec-resolution}
+#' 
+#' A model does not merely approximate the world. It defines a language, and that language has an expressive boundary. A phenomenon that requires distinctions the model cannot make is not a failure of fit in the ordinary sense — it is not an error that better data or more careful estimation would reduce. It lies outside the language entirely. When a modeling tradition calls something a paradox or an anomaly, it is often naming a phenomenon that is simply exterior to its formal vocabulary: real, reproducible, and grammatically inexpressible in the available terms.
+#' 
+#' The restriction operates on different dimensions in different models, but the consequence is always the same. The mean-field assumption makes network topology and agent heterogeneity inexpressible — not unlikely, not poorly approximated, but absent from the language's vocabulary entirely. The assumption that aggregate dynamics are determined by mean firm size makes the firm size distribution inexpressible: the distribution requires heterogeneity, and the sufficiency of the mean is the hypothesis that heterogeneity does not matter. The stationarity family makes regime change and bifurcation inexpressible — the language built from data generated before the bifurcation has no vocabulary for the turn. An equilibrium assumption makes path dependence inexpressible: which equilibrium the system reaches is indeterminate, and the assumption selects one by fiat.
+#' 
+#' None of these is a failure that better technique remedies. Each is a structural fact about the model's language. More observations do not add words that the language lacks. More sophisticated estimation does not give the ODE a spatial dimension. The right question is not "can I fit this better?" but "can this language say what I need to say?"
+#' 
+#' Every modeling choice is a choice of resolution — temporal, spectral, expressive. The ODE, the sufficiency of the mean, stationarity, equilibrium, regularization penalties, the sampling frequency of a time series — all are restrictions on the language in which the model is written. Each restriction makes some phenomena expressible and others not. The phenomena made inexpressible are not less real than the ones the model can reach. They are simply outside the scope of what was chosen to be said.
+#' 
+#' ## The Regularization Unification {#sec-regularization}
+#' 
+#' The connection between regularization and the ODE-ABM relationship is not analogical. It is constructive. Writing it out makes visible something that the course has been approaching from several directions simultaneously.
+#' 
+#' In an ABM, each agent $i$ carries a property vector $\theta_i$ — a birth rate, a productivity, a threshold for infection. Write $\theta_i = \bar\theta + \varepsilon_i$, where $\bar\theta$ is the population mean and $\varepsilon_i$ is the deviation, centered so that $\sum_i \varepsilon_i = 0$. The ODE is the model that sets $\varepsilon_i = 0$ for every agent — all heterogeneity collapsed to the mean. Nothing about this restriction is forced by the biology or the economics. It is a structural choice about the distribution of agent properties, and that distribution is a point mass at $\bar\theta$. An L2 penalty on $\{\varepsilon_i\}$ shrinks agents toward their mean; as the penalty strength increases, the ABM continuously approaches the ODE. They are not separate models. They are the same model at different positions along a regularization path.
+#' 
+#' The contact structure submits to the same treatment. Represent it as a weighted adjacency matrix $W$, where $W_{ij} \geq 0$ is the contact rate between agents $i$ and $j$. Every network topology is a special case: $W_{ij} = 0$ removes an edge; a heavy-tailed degree distribution produces the scale-free network from Chapter 2; the lattice concentrates all weight on immediate neighbors. Write the mean-field contact structure as $\bar{W}_{ij} = 1/n$ for all $i \neq j$ — uniform weight, every agent contacting every other at the same rate. This is not a neutral choice made for mathematical convenience. It is the maximum entropy distribution over contact matrices subject to the constraint that each agent's total contact rate is fixed. When you know the average contact rate and nothing else about who contacts whom, $\bar{W}$ is what the principle of maximum ignorance requires. Every departure from $\bar{W}$ is information about contact structure beyond the mean.
+#' 
+#' Write $W = \bar{W} + \Delta W$. The constraint $W_{ij} \geq 0$ restricts $\Delta W_{ij} \geq -1/n$, which defines a convex feasible region. The ODE corresponds to $\Delta W = 0$. The two reparametrizations together give the unified statement: the ODE is the ABM under simultaneous regularization of agent heterogeneity toward $\bar\theta$ and contact structure toward $\bar{W}$. Formally, consider the objective
+#' 
+#' $$\mathcal{L}(\{\varepsilon_i\},\, \Delta W) \;+\; \lambda_\theta \sum_i \|\varepsilon_i\|^2 \;+\; \lambda_W \|\Delta W\|_F^2$$
+#' 
+#' As $\lambda_\theta \to \infty$ and $\lambda_W \to \infty$, the solution forces $\varepsilon_i \to 0$ and $\Delta W \to 0$, recovering the ODE exactly. At finite $\lambda$, the solution interpolates. The regularization strengths are hyperparameters: estimable by cross-validation when individual trajectories are observed, tunable by information criteria when only aggregate data are available. Both L2 and L1 penalties on $\Delta W$ are convex on the feasible region, so the structural regularization problem is convex throughout. The non-convexity in ABM calibration comes from the stochastic simulation mapping parameters to outputs, not from the geometry of the parameter space itself.
+#' 
+#' The choice between L2 and L1 on $\Delta W$ is a choice about what kind of network departure from mean-field is expected. L2 shrinks all edge weights uniformly toward $1/n$ — the contact structure becomes progressively closer to random mixing as $\lambda_W$ increases. L1 produces sparse $\Delta W$: most edges sit near their mean-field weight, a few carry substantial deviations. Sparse positive entries in $\Delta W$ are hubs — agents with far more contacts than the mean-field allocates. This is precisely the Barabási-Albert structure that drove the qualitatively different epidemic dynamics in Chapter 2. The L1 penalty on contact structure selects the epidemiologically consequential nodes, in exactly the sense that LASSO selects the consequential predictors. This is not an analogy. The mathematical operation is the same.
+#' 
+#' The Bayesian identity sharpens the argument further. A Laplace prior on $\Delta W_{ij}$ produces the L1 penalty at the posterior mode — exactly, not approximately, by the same algebra as for regression coefficients. A Gaussian prior produces L2. The maximum entropy interpretation completes the identification: a flat prior over contact matrices subject to fixed mean contact rate is a Gaussian centered at $\bar{W}$. Ridge regularization toward $\bar{W}$ is therefore the correct Bayesian update under maximum ignorance about contact structure, starting from a Gaussian prior. When the analyst has no structural knowledge of the contact network beyond its mean, L2 toward the mean-field is the principled choice. L1 is appropriate when the contact network is expected to be sparse — when most agent pairs have no meaningful contact and the consequential structure is concentrated in a few edges. The penalty encodes the prior whether or not the analyst names it as one.
+#' 
+#' The unification runs further still. L2 regularization is the limiting case of training on Gaussian-perturbed inputs: as the perturbation variance shrinks to zero, the expected loss over perturbed data converges to the L2-penalized loss. The distributionally robust optimizer minimizing worst-case expected loss over a Wasserstein ball around the empirical measure recovers regularized estimators as special cases. Bayesian prior, regularization penalty, adversarial perturbation budget — three framings of the same restriction. The literature on mean-field games formalizes the reparametrization argument at infinite scale: as $n \to \infty$ with individual effects shrinking proportionally, the discrete agent system converges to a continuum PDE — the $\lambda \to \infty$ limit of the regularization path, studied with the tools of optimal control.
+#' 
+## ----ch4-regularization-geometry, fig.cap="Geometry of regularization. Coefficient contours (ellipses) intersect the constraint region at the regularized solution. L2 (ridge) penalty produces a circular constraint region; the solution is generally interior with all coefficients shrunk toward zero. L1 (LASSO) penalty produces a diamond constraint region; the solution tends to land on a corner, producing sparse solutions with some coefficients exactly zero."----
+# Visualize the geometry of L1 vs L2 regularization
+# The plot shows coefficient contours and constraint regions
 
-# Combine for plotting
-plot_df <- bind_rows(
-  logistic_df,
-  obs_df %>% mutate(source = "Observed window"),
-  pred_df
-) %>%
+# RSS contours centered at OLS estimate (beta1=1.5, beta2=2.0 for illustration)
+beta1_ols <- 1.5
+beta2_ols <- 2.0
+
+# Grid for contour computation
+b1 <- seq(-2.5, 3, length.out = 300)
+b2 <- seq(-1.5, 3.5, length.out = 300)
+grid_reg <- expand.grid(b1 = b1, b2 = b2) %>% as_tibble()
+
+# RSS surface (simplified: circular contours scaled from OLS)
+# Using anisotropic ellipses to reflect correlated predictors
+grid_reg <- grid_reg %>%
   mutate(
-    source = factor(source, levels = c(
-      "True trajectory",
-      "Observed window",
-      "Naive extrapolation (stationarity assumption)"
-    ))
+    rss = 0.7 * (b1 - beta1_ols)^2 +
+          0.4 * (b2 - beta2_ols)^2 +
+          0.3 * (b1 - beta1_ols) * (b2 - beta2_ols)
   )
 
-# Vertical line marking end of observation window
-p_logistic <- ggplot() +
-  # True trajectory
-  geom_line(
-    data    = filter(plot_df, source == "True trajectory"),
-    mapping = aes(x = t, y = N),
-    color   = "#2D5F8A",
-    linewidth = 1.1
-  ) +
-  # Observed data (thick, solid)
-  geom_line(
-    data      = filter(plot_df, source == "Observed window"),
-    mapping   = aes(x = t, y = N),
-    color     = "#2D5F8A",
-    linewidth = 2.2
-  ) +
-  # Naive extrapolation (dashed rust)
-  geom_line(
-    data      = filter(plot_df, source == "Naive extrapolation (stationarity assumption)"),
-    mapping   = aes(x = t, y = N),
-    color     = "#8A4A2D",
-    linewidth  = 1.0,
-    linetype   = "dashed"
-  ) +
-  # Horizontal line at carrying capacity K
-  geom_hline(yintercept = K, linetype = "dotted",
-             color = "#555555", linewidth = 0.7) +
-  annotate("text", x = 1, y = K + 30, label = paste0("K = ", K),
-           hjust = 0, family = "Source Serif 4", size = 3.2, color = "#555555") +
-  # Vertical line at observation cutoff
-  geom_vline(xintercept = obs_window, linetype = "solid",
-             color = "#DCDCD4", linewidth = 0.8) +
-  annotate("text", x = obs_window + 0.5, y = 80, label = "Observation\nwindow ends",
-           hjust = 0, family = "Source Serif 4", size = 2.8, color = "#555555") +
-  # Manual legend via annotate
-  annotate("text", x = 32, y = 750,
-           label = "True trajectory (blue)", hjust = 0,
-           family = "Source Serif 4", size = 3, color = "#2D5F8A") +
-  annotate("text", x = 32, y = 690,
-           label = "Naive extrapolation (rust dashed)", hjust = 0,
-           family = "Source Serif 4", size = 3, color = "#8A4A2D") +
-  scale_y_continuous(limits = c(0, max(pred_df$N) * 1.05),
-                     labels = scales::label_comma()) +
+# L2 constraint region: circle of radius r
+r_l2 <- 1.2
+constraint_l2 <- tibble(
+  angle = seq(0, 2*pi, length.out = 300),
+  b1    = r_l2 * cos(angle),
+  b2    = r_l2 * sin(angle)
+)
+
+# L1 constraint region: diamond |b1| + |b2| <= r
+r_l1 <- 1.2
+constraint_l1 <- tibble(
+  b1 = c(r_l1, 0, -r_l1, 0, r_l1),
+  b2 = c(0, r_l1, 0, -r_l1, 0)
+)
+
+# Ridge solution: project OLS onto L2 ball (simple approximation)
+scale_factor_l2 <- r_l2 / sqrt(beta1_ols^2 + beta2_ols^2)
+ridge_soln <- tibble(b1 = beta1_ols * scale_factor_l2,
+                     b2 = beta2_ols * scale_factor_l2,
+                     label = "Ridge solution")
+
+# LASSO solution: tends toward axis (corner of diamond)
+# Approximate: project onto nearest corner
+if (abs(beta1_ols) > abs(beta2_ols)) {
+  lasso_soln <- tibble(b1 = r_l1, b2 = 0, label = "LASSO solution")
+} else {
+  lasso_soln <- tibble(b1 = 0, b2 = r_l1, label = "LASSO solution")
+}
+
+p_l2 <- ggplot() +
+  geom_contour(data = grid_reg, aes(x = b1, y = b2, z = rss),
+               color = "#AAAAAA", breaks = c(0.5, 1.5, 3.0, 5.5, 9.0)) +
+  geom_path(data = constraint_l2, aes(x = b1, y = b2),
+            color = "#2D5F8A", linewidth = 1.2) +
+  geom_point(aes(x = beta1_ols, y = beta2_ols), color = "#1C1C1E", size = 2.5) +
+  geom_point(data = ridge_soln, aes(x = b1, y = b2),
+             color = "#2D5F8A", size = 3.5, shape = 18) +
+  geom_segment(aes(x = beta1_ols, y = beta2_ols,
+                   xend = ridge_soln$b1, yend = ridge_soln$b2),
+               arrow = arrow(length = unit(0.2, "cm")), color = "#555555") +
+  annotate("text", x = beta1_ols + 0.15, y = beta2_ols + 0.1,
+           label = "OLS", family = "Source Serif 4", size = 3.2) +
+  labs(title = "L2 (Ridge)",
+       subtitle = "Circular constraint; solution shrinks toward origin",
+       x = expression(beta[1]), y = expression(beta[2])) +
+  coord_equal(xlim = c(-2.2, 2.8), ylim = c(-1.2, 3.0))
+
+p_l1 <- ggplot() +
+  geom_contour(data = grid_reg, aes(x = b1, y = b2, z = rss),
+               color = "#AAAAAA", breaks = c(0.5, 1.5, 3.0, 5.5, 9.0)) +
+  geom_polygon(data = constraint_l1, aes(x = b1, y = b2),
+               fill = NA, color = "#8A4A2D", linewidth = 1.2) +
+  geom_point(aes(x = beta1_ols, y = beta2_ols), color = "#1C1C1E", size = 2.5) +
+  geom_point(data = lasso_soln, aes(x = b1, y = b2),
+             color = "#8A4A2D", size = 3.5, shape = 18) +
+  geom_segment(aes(x = beta1_ols, y = beta2_ols,
+                   xend = lasso_soln$b1, yend = lasso_soln$b2),
+               arrow = arrow(length = unit(0.2, "cm")), color = "#555555") +
+  annotate("text", x = beta1_ols + 0.15, y = beta2_ols + 0.1,
+           label = "OLS", family = "Source Serif 4", size = 3.2) +
+  labs(title = "L1 (LASSO)",
+       subtitle = "Diamond constraint; solution tends to corners (sparsity)",
+       x = expression(beta[1]), y = expression(beta[2])) +
+  coord_equal(xlim = c(-2.2, 2.8), ylim = c(-1.2, 3.0))
+
+p_l2 + p_l1
+
+#' 
+#' Every model involves two levels of restriction, and the reparametrization makes both legible. The first is the parametric family — the structural commitment that determines what phenomena are in scope. The mean-field ODE is a family: it fixes $\varepsilon_i = 0$ and $\Delta W = 0$ before any data are seen, admitting mass-action interactions in continuous time and excluding network structure, spatial heterogeneity, and discrete individual effects entirely. The mean-sufficient model of industry dynamics is a family: it admits dynamics driven by aggregate employment and excludes the distributional heterogeneity that generates the power law tail. The stationary time series is a family: it admits processes whose spectral structure is constant across time and excludes regime transitions. These are not parameter choices. They are structural commitments that determine what the model can say, and no quantity of data revises them — they are the grammar within which the data are interpreted.
+#' 
+#' The second level is the prior on that family — the regularization, calibrated to what the data at a particular observation frequency can support. The choice of penalty is a choice of prior, and the prior encodes beliefs about how far the true system sits from the family's anchor point: how heterogeneous the agents are, how far the contact network departs from maximum entropy, how sparse the consequential deviations are. The ABM critic who objects to parameter proliferation is demanding stronger regularization within a richer family — legitimate when the observation frequency cannot distinguish the parameters, illegitimate when the phenomenon requires the richer family to exist at all. Both levels interact with observation frequency: the family must be appropriate at the resolution of measurement, and the prior on the family must be calibrated to what that resolution can support. When the phenomenon is the mean-field limit of large-population randomly-mixed dynamics, the ODE is correct and additional expressiveness contributes nothing. When the phenomenon is the shape of the firm size distribution, or the topology-dependence of an epidemic, the restricted family does not fit poorly — it excludes the phenomenon by design, before estimation begins.
+#' 
+#' ## Temporal Resolution and Near-Decomposability {#sec-temporal}
+#' 
+#' All data is time-indexed. The firm size distribution has a year attached to it. The epidemic curve begins at a date. The regression coefficients are estimated from observations generated over a period. Sometimes the time label is displayed; sometimes it is known and suppressed; sometimes it is genuinely unknown. But the time structure is always present in the data-generating process, and every choice — of parametric family, of prior on that family — is a choice about how to handle it. The parametric family determines which temporal structures are expressible. The prior on the family determines what is estimable at the available observation frequency. Making these choices explicit, rather than allowing them to hide in the model's functional form, is the discipline the framework demands.
+#' 
+#' Herbert Simon observed that complex adaptive systems tend to be nearly decomposable: subsystems interact tightly at fast time scales and loosely at slow ones. A firm coordinates its internal operations at time scales too fast for prices to clear across firms. The economy coordinates across firms at time scales over which transaction costs can be overcome. Each level of organization has its characteristic frequency. The levels are not isolated from each other, but they are not fully coupled either — the fast dynamics within each level are relatively independent of the slow dynamics between levels.
+#' 
+#' A model fit at a particular temporal resolution is a low-pass filter. It recovers structure at frequencies below the resolution's Nyquist limit. Structure at faster frequencies is averaged out — not represented as noise, but absorbed into the model's coefficients where it leaves no fingerprint. A quarterly macroeconomic model recovers annual and multi-year dynamics. It is linguistically incapable of expressing sub-quarterly phenomena: the model has no time steps at which to represent them. This is not a data limitation in the sense that better data collection would fix it. It is a resolution choice, and the resolution choice has consequences for what the model can say.
+#' 
+#' Stationarity is the temporal counterpart of the mean-field assumption — not analogously but structurally, because both are parametric family choices. The mean-field family averages over spatial heterogeneity within each time step, asserting that contact structure is uniform across all pairs of agents. The stationary family averages over temporal heterogeneity across the observation window, asserting that the data-generating process at time $t$ is drawn from the same distribution as at time $t - k$ for all $k$. One suppresses spatial structure; the other suppresses temporal structure. Both determine what the model can express, and both interact with observation frequency in the same way: the family is appropriate when the dimension being averaged over is genuinely negligible at the relevant resolution, and misspecified when it is not.
+#' 
+#' Sampling frequency determines which family choices are testable from the available data. A model estimated at weekly frequency cannot detect dynamics faster than two weeks — the Nyquist limit is a hard constraint on what signal is recoverable at that resolution. The stationary family chosen at weekly resolution is a commitment only about weekly-and-slower structure. Whether the system is stationary at that resolution is a distinct question from whether it is stationary at finer resolutions, and the two questions have different answers whenever the system is nearly decomposable. When the system is capable of bifurcation, the stationary family is misspecified in exactly the way the mean-field family is misspecified when contact structure matters: the family does not have the vocabulary for what is about to happen.
+#' 
+## ----ch4-logistic-extrapolation, fig.cap="The extrapolation trap. A logistic growth process observed only in its early exponential phase (solid black points, t $\\leq$ 10) yields an exponential fit (dashed red) that projects unbounded growth. The true trajectory (solid blue) reaches a carrying capacity that is invisible from the early data. The turn is not outside the confidence interval of the fit — it is outside the language of the model fitted to the early data."----
+set.seed(2025)  # seed for reproducibility
+
+K  <- 1000   # carrying capacity
+r  <- 0.3    # intrinsic growth rate
+N0 <- 10     # initial population
+
+t_full <- seq(0, 50, by = 0.5)
+N_true <- K / (1 + ((K - N0) / N0) * exp(-r * t_full))
+
+logistic_df <- tibble(t = t_full, N = N_true)
+
+# Observed data: only the exponential phase (t <= 10)
+obs_df <- filter(logistic_df, t <= 10)
+
+# Fit a linear model to log(N) ~ t on the observed data
+# This corresponds to fitting an exponential model
+lm_fit  <- lm(log(N) ~ t, data = obs_df)
+r_hat   <- coef(lm_fit)["t"]
+N0_hat  <- exp(coef(lm_fit)["(Intercept)"])
+
+# Extrapolate using the fitted exponential
+pred_df <- tibble(t = seq(0, 50, by = 0.5)) %>%
+  mutate(N_pred = N0_hat * exp(r_hat * t))
+
+ggplot() +
+  # True logistic trajectory
+  geom_line(data = logistic_df, aes(x = t, y = N),
+            color = "#2D5F8A", linewidth = 1.0) +
+  # Exponential extrapolation
+  geom_line(data = pred_df, aes(x = t, y = N_pred),
+            color = "#C0392B", linewidth = 0.9, linetype = "dashed") +
+  # Observed data points
+  geom_point(data = obs_df, aes(x = t, y = N),
+             color = "#1C1C1E", size = 2.0) +
+  # Carrying capacity reference
+  geom_hline(yintercept = K, color = "#888888", linetype = "dotted") +
+  annotate("text", x = 42, y = K + 30, label = paste0("K = ", K),
+           family = "Source Serif 4", size = 3.5, color = "#888888") +
+  annotate("text", x = 12, y = 30,
+           label = "Observations (t \u2264 10)", size = 3.2,
+           family = "Source Serif 4", color = "#1C1C1E") +
+  annotate("segment", x = 10, xend = 10, y = 0, yend = K + 50,
+           linetype = "dotted", color = "#888888") +
+  scale_y_continuous(labels = scales::comma, limits = c(0, 1600)) +
   labs(
-    title    = "Stationarity as a Prior: What Extrapolation Cannot See",
-    subtitle = paste0(
-      "Naive log-linear fit on t ≤ ", obs_window,
-      " predicts unbounded growth. The carrying capacity is exterior to its language."
-    ),
-    x = "Time",
-    y = "Population N(t)"
+    title    = "Logistic growth: what extrapolation cannot see",
+    subtitle = "Blue: true trajectory. Red dashed: exponential fit to early data. The carrying capacity is invisible from observations in the exponential phase.",
+    x        = "Time",
+    y        = "Population"
   )
 
-print(p_logistic)
+#' 
+#' The logistic example is the stripped-down version of a general problem. Any system capable of bifurcation will defeat stationarity-based extrapolation at the bifurcation point. The early-phase data are generated by one dynamical regime; the post-bifurcation data are generated by another. A model fitted to the early-phase data has learned the parameters of a regime that no longer exists. This is not a statistical point about forecast intervals being too narrow. It is a structural point about the limits of inductive inference from time series in nonlinear systems. The carrying capacity is not a parameter that the exponential model can estimate with more data. It is a parameter that the exponential model does not have.
+#' 
+## ----ch4-bifurcation, fig.cap="Bifurcation diagram of the logistic map $x_{t+1} = r x_t(1 - x_t)$. For $r < 3$, the system converges to a single fixed point. At $r = 3$, a period-doubling bifurcation occurs. By $r \\approx 3.57$, the system enters chaos. A time series model fitted to data from $r = 2.8$ has no representation for the behavior at $r = 3.5$: the bifurcation is exterior to the language of the stationary model."----
+set.seed(2025)  # reproducibility
 
-
-# =============================================================================
-# SECTION 4.4: BIFURCATION DIAGRAM — THE POSSIBILITY SPACE
-# =============================================================================
-# The logistic map x_{t+1} = r * x_t * (1 - x_t) is perhaps the canonical
-# example of how a simple rule produces qualitatively different dynamics
-# depending on a single parameter. For r in [1, 3]: stable fixed point.
-# For r in (3, 3.45): period-2 oscillation. Then period-4, period-8...
-# then chaos. The system does not merely change quantitatively — it
-# changes regime. The bifurcation points are the boundaries of the
-# possibility space.
-#
-# This is the spatial analogue of the mean-field failure: just as network
-# topology is exterior to the ODE's language, regime change is exterior to
-# a stationarity prior. A time series model estimated in the stable region
-# cannot express what happens at the bifurcation.
-
-# Iterate the logistic map for each r value to find its attractor(s).
-# The standard approach: discard n_burn transient iterations (burn-in),
-# then collect n_collect steady-state values.
-
-logistic_map_attractor <- function(r_val,
-                                    n_burn    = 1000,  # iterations to discard (transient)
-                                    n_collect = 200) { # iterations to keep (attractor)
-
-  x <- 0.5   # starting value (arbitrary interior point)
-
-  # Burn-in: let transients die out
-  for (i in seq_len(n_burn)) {
-    x <- r_val * x * (1 - x)
-  }
-
-  # Collect attractor points
-  xs <- numeric(n_collect)
-  for (i in seq_len(n_collect)) {
+# Logistic map attractor: iterate the map and collect long-run values
+map_attractor <- function(r_val, n_burn = 500, n_keep = 200) {
+  # n_burn: transient steps discarded before collecting
+  # n_keep: steps collected for plotting
+  x <- 0.5  # initial condition (interior of [0,1])
+  for (i in seq_len(n_burn)) x <- r_val * x * (1 - x)
+  xs <- numeric(n_keep)
+  for (i in seq_len(n_keep)) {
     x    <- r_val * x * (1 - x)
     xs[i] <- x
   }
-
-  # Return a tibble: r value paired with all collected x values
   tibble(r = r_val, x = xs)
 }
 
-# Sweep r from 2.5 to 4.0
-# - [2.5, 3.0]: stable fixed point (single attractor)
-# - (3.0, 3.45): period-2 oscillation (two attractor points)
-# - (3.45, 3.54): period-4
-# - ... period-doubling cascade to chaos
-# - (3.57, 4.0): chaotic regime (with windows of order)
-
-set.seed(2025)   # seed before iteration (not stochastic here, but for reproducibility)
-
-r_vals        <- seq(2.5, 4.0, length.out = 1200)   # fine grid over r
-bifurcation_df <- map_dfr(r_vals, logistic_map_attractor)
-
-# Annotate the key bifurcation thresholds
-bifurcation_thresholds <- tibble(
-  r_val = c(3.0, 3.449, 3.544, 3.5688),
-  label = c("Period 2", "Period 4", "Period 8", "Onset of chaos"),
-  y_pos = c(0.88, 0.93, 0.95, 0.97)   # vertical position for labels
+# Sweep over r values
+bif_df <- map_dfr(
+  seq(2.5, 4.0, length.out = 1200),
+  map_attractor,
+  n_burn = 500,
+  n_keep = 150
 )
 
-p_bifurcation <- ggplot(bifurcation_df, aes(x = r, y = x)) +
-  geom_point(size = 0.05, alpha = 0.15, color = "#2D5F8A") +
-  # Vertical lines at bifurcation thresholds
-  geom_vline(
-    data    = bifurcation_thresholds,
-    mapping = aes(xintercept = r_val),
-    color   = "#8A4A2D",
-    linewidth = 0.5,
-    linetype = "dashed",
-    alpha    = 0.7
-  ) +
-  # Labels at bifurcation thresholds
-  geom_text(
-    data    = bifurcation_thresholds,
-    mapping = aes(x = r_val + 0.01, y = y_pos, label = label),
-    hjust   = 0,
-    size    = 2.8,
-    family  = "Source Serif 4",
-    color   = "#8A4A2D"
-  ) +
-  # Shade the chaotic region
-  annotate("rect",
-           xmin = 3.57, xmax = 4.0,
-           ymin = 0,    ymax = 1,
-           fill = "#C0392B", alpha = 0.04) +
-  annotate("text", x = 3.77, y = 0.08, label = "Chaotic\nregime",
-           hjust = 0.5, family = "Source Serif 4", size = 2.8,
-           color = "#C0392B") +
+ggplot(bif_df, aes(x = r, y = x)) +
+  geom_point(size = 0.05, alpha = 0.3, color = "#2D5F8A") +
+  geom_vline(xintercept = 3.0, linetype = "dashed", color = "#C0392B", linewidth = 0.6) +
+  geom_vline(xintercept = 3.449, linetype = "dashed", color = "#8A4A2D",
+             linewidth = 0.6, alpha = 0.7) +
+  annotate("text", x = 3.02, y = 0.95, label = "Period 2",
+           family = "Source Serif 4", size = 3.0, color = "#C0392B", hjust = 0) +
+  annotate("text", x = 3.47, y = 0.95, label = "Period 4",
+           family = "Source Serif 4", size = 3.0, color = "#8A4A2D", hjust = 0) +
   labs(
-    title    = "Bifurcation Diagram: The Logistic Map",
-    subtitle = paste0(
-      "x_{t+1} = r·x_t·(1 - x_t). Each vertical slice shows the attractor for that r value. ",
-      "The bifurcation points bound qualitatively distinct regimes."
-    ),
-    x = "Parameter r",
-    y = "Attractor x*",
-    caption = paste0(
-      "A model estimated in the stable region (r < 3) cannot express what happens ",
-      "at r > 3. The turn is exterior to the language built from the early data."
-    )
+    title    = "Bifurcation diagram: logistic map",
+    subtitle = "Long-run attractor values as the growth parameter r increases. The turn into chaos cannot be anticipated from pre-bifurcation data.",
+    x        = "Growth parameter (r)",
+    y        = "Long-run attractor value (x)"
   )
 
-print(p_bifurcation)
+#' 
+#' A time series model calibrated on data from the stable fixed-point regime ($r < 3$) has learned a stationary process. At $r = 3$, the system bifurcates to a period-two cycle. The stationary model has no representation for this — its language contains the word "stationary process" but not the word "bifurcation." The turn is not an outlier that the model underestimates. It is a structural change that moves the system outside the language the model was built in.
+#' 
+#' ## The Epistemology of Turning Points {#sec-turning-points}
+#' 
+#' Any trend extrapolated far enough produces an absurdity. A bond that compounds at five percent for long enough exceeds global GDP. A population growing at one percent doubles in seventy years and doubles again, until someone notices that the land does not. These projections are not errors of arithmetic. They are accurate outputs of models whose language contains no word for the ceiling. The problem is not extreme extrapolation. It is that any model built from data within a single phase of a cyclical system is, by construction, a model of that phase — and a phase, extrapolated, is infinite.
+#' 
+#' The observation that human affairs cycle rather than trend is old enough that its antiquity should give pause. Polybius, writing after Carthage, described anacyclosis: the sequence from monarchy through tyranny, from aristocracy through oligarchy, from democracy through mob rule and back to the need for monarchy. The form is not random deterioration but a structured progression, each stage generating the conditions that produce the next. The Platonic version is more pessimistic: the sequence runs in one direction, each form a degradation of the last. What both share, and what matters here, is the structure of the claim. Stability is not neutral. It is generative — of the conditions that will end it.
+#' 
+#' Ibn Khaldun, writing in the fourteenth century, gave this intuition its first formal treatment. Dynastic power rises on the strength of *asabiyyah* — group solidarity, the capacity for collective action that desert tribes possess in greater abundance than the sedentary populations they displace. Success dilutes it. Urban comfort, internal competition, the purchase of mercenary armies in place of kin-based ones: the mechanisms by which a dynasty's own dominance dissolves its original advantage are detailed, not vague. The cycle has a period: Ibn Khaldun estimated roughly four generations, approximately a century. The model is not falsified by the collapse of any particular dynasty. It is confirmed, because the collapse is what the model predicts.
+#' 
+#' Nikolai Kondratiev, writing in the 1920s, found a similar structure in industrialized economies. Long waves of approximately fifty years — expansion followed by contraction — seemed to characterize the historical series of prices, output, and interest rates since the beginning of industrial capitalism. Kondratiev did not explain the waves; he identified them. Schumpeter supplied the mechanism. Each wave is driven by a cluster of general-purpose technologies — the steam engine, the railways, electrification, the internal combustion engine — that open new productive frontiers, stimulate investment and employment through the expansion phase, and eventually saturate. The carrying capacity of any particular technological wave is finite. The expansion ends not because demand runs out but because the opportunities the technology created have been realized. The language of the expansion phase, fitted to expansion data, has no parameter for saturation.
+#' 
+#' Hyman Minsky's version is the sharpest. Stability, he argued, breeds instability — not as metaphor but as mechanism. A period of financial calm licenses leveraged risk-taking: lenders relax standards, borrowers extend, asset prices rise to reflect the expectation that they will continue to rise. The longer the calm persists, the more the system's structure shifts toward fragility, because the calm is evidence — compelling, well-fitted evidence — that leverage is safe. A lender operating from a model calibrated on the calm period is not being irrational. The model is a good fit to the data it was fitted on. It simply has no representation for the regime change that the calm's own dynamics are producing. The Minsky moment, when it comes, is not an outlier the model underweighted. It is a structural change into a regime the model could not express.
+#' 
+#' Reinhart and Rogoff catalogued eight centuries of financial crises and found the same pattern preceding every one: confident expert opinion that the old rules no longer applied, that this cycle was different, that the leverage was sustainable. This is not irrationality. It is the predictable output of models fitted to pre-crisis data by agents who understood their models perfectly and whose models were right about everything they were capable of saying. The crisis is exterior to the language of the models used to not predict it.
+#' 
+## ----ch4-two-windows, fig.cap="Two observation windows on the same cycle produce opposite extrapolations, both confident, both wrong at the turning point. A linear trend fitted to the expansion phase (blue, left window) predicts continued growth. The same model structure fitted to the contraction phase (red, right window) predicts continued decline. The turn between phases is precisely what neither model can anticipate: it is exterior to the language of any model fitted entirely within one phase. The structure is stylized after Kondratiev long waves, with a period of fifty time units."----
+set.seed(2025)  # reproducibility
 
+# Stylized long-wave cycle: sustained oscillation around a stable mean.
+# Period of 50 units, echoing Kondratiev's empirical estimate.
+t_full    <- seq(0, 130, by = 0.5)
+baseline  <- 100
+amplitude <- 35
+period    <- 50
+signal    <- baseline + amplitude * sin(2 * pi * t_full / period)
 
-# =============================================================================
-# SECTION 4.5: THE STATISTICIAN'S CHECKLIST
-# =============================================================================
-# The checklist question is not answered with a visualization. It is the
-# organizing principle for interpreting everything that came before.
-#
-# At what resolution is this model working, and is the phenomenon I care about
-# expressible at that resolution?
-#
-# The ABM is not the answer to every question it raises. It is evidence that:
-#   - the resolution choice is a choice,
-#   - the language restriction is a restriction, and
-#   - richer expressive resources exist when the phenomenon demands them.
-#
-# The tools are harder. The answers are less clean.
-# They are more likely to be true.
+# Add a small amount of noise to represent real data
+noise     <- rnorm(length(t_full), 0, 2)
+cycle_df  <- tibble(t = t_full, true = signal, observed = signal + noise)
 
-# A final visualization: show the same logistic growth trajectory at three
-# "observation resolutions" — fine (observing every timestep), coarse
-# (observing every 5 timesteps), and very coarse (every 15 timesteps).
-# Each resolution makes different features visible and different features
-# inexpressible.
+# Window A: expansion phase — the upswing (t ∈ [5, 20])
+win_a <- filter(cycle_df, t >= 5, t <= 20)
+fit_a <- lm(observed ~ t, data = win_a)
 
-times_full   <- seq(0, 50, by = 0.5)
-N_full       <- K / (1 + ((K - N0) / N0) * exp(-r * times_full))
-full_df      <- tibble(t = times_full, N = N_full, resolution = "Full (Δt = 0.5)")
+# Window B: contraction phase — the downswing (t ∈ [32, 47])
+win_b <- filter(cycle_df, t >= 32, t <= 47)
+fit_b <- lm(observed ~ t, data = win_b)
 
-# Coarse sampling: every 5th time unit
-coarse_df <- full_df %>%
-  filter(t %% 5 == 0) %>%
-  mutate(resolution = "Coarse (Δt = 5)")
+# Extrapolate each fit forward to t = 75
+extrap_t <- seq(5, 75, by = 0.5)
+extrap_df <- bind_rows(
+  tibble(t = extrap_t, fit = predict(fit_a, tibble(t = extrap_t)), window = "Expansion fit"),
+  tibble(t = extrap_t, fit = predict(fit_b, tibble(t = extrap_t)), window = "Contraction fit")
+)
 
-# Very coarse: every 15th time unit
-vcoarse_df <- full_df %>%
-  filter(t %% 15 == 0) %>%
-  mutate(resolution = "Very coarse (Δt = 15)")
+# Shade the observation windows
+shade_a <- tibble(xmin = 5,  xmax = 20, ymin = 40, ymax = 165)
+shade_b <- tibble(xmin = 32, xmax = 47, ymin = 40, ymax = 165)
 
-resolution_df <- bind_rows(full_df, coarse_df, vcoarse_df) %>%
-  mutate(
-    resolution = factor(resolution,
-                        levels = c("Full (Δt = 0.5)",
-                                   "Coarse (Δt = 5)",
-                                   "Very coarse (Δt = 15)"))
-  )
-
-p_resolution <- ggplot(resolution_df, aes(x = t, y = N, color = resolution)) +
-  # Full trajectory as background
-  geom_line(
-    data    = filter(resolution_df, resolution == "Full (Δt = 0.5)"),
-    mapping = aes(x = t, y = N),
-    color   = "#DCDCD4",
-    linewidth = 1.0
-  ) +
-  # Coarse and very coarse as points connected by lines
-  geom_point(
-    data    = filter(resolution_df, resolution != "Full (Δt = 0.5)"),
-    mapping = aes(x = t, y = N, color = resolution),
-    size    = 2.5
-  ) +
-  geom_line(
-    data    = filter(resolution_df, resolution != "Full (Δt = 0.5)"),
-    mapping = aes(x = t, y = N, color = resolution),
-    linewidth = 0.7
-  ) +
-  geom_hline(yintercept = K, linetype = "dotted",
-             color = "#555555", linewidth = 0.6) +
+ggplot() +
+  # Shaded observation windows
+  geom_rect(data = shade_a, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = "#2D5F8A", alpha = 0.08) +
+  geom_rect(data = shade_b, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = "#C0392B", alpha = 0.08) +
+  # True cycle (shown after observation period as dotted)
+  geom_line(data = filter(cycle_df, t <= 75),
+            aes(x = t, y = true),
+            color = "#555555", linewidth = 0.8, linetype = "dotted") +
+  # Observed data points in each window
+  geom_point(data = win_a, aes(x = t, y = observed),
+             color = "#2D5F8A", size = 1.5, alpha = 0.8) +
+  geom_point(data = win_b, aes(x = t, y = observed),
+             color = "#C0392B", size = 1.5, alpha = 0.8) +
+  # Extrapolations
+  geom_line(data = extrap_df,
+            aes(x = t, y = fit, color = window, linetype = window),
+            linewidth = 0.85) +
   scale_color_manual(
-    values = c(
-      "Full (Δt = 0.5)"       = "#DCDCD4",
-      "Coarse (Δt = 5)"       = "#2D5F8A",
-      "Very coarse (Δt = 15)" = "#8A4A2D"
-    ),
-    breaks = c("Coarse (Δt = 5)", "Very coarse (Δt = 15)")
+    values = c("Expansion fit" = "#2D5F8A", "Contraction fit" = "#C0392B")
   ) +
-  scale_y_continuous(labels = scales::label_comma()) +
+  scale_linetype_manual(
+    values = c("Expansion fit" = "solid", "Contraction fit" = "solid")
+  ) +
+  annotate("text", x = 12.5, y = 155, label = "Window A\n(expansion)",
+           family = "Source Serif 4", size = 3.0, color = "#2D5F8A") +
+  annotate("text", x = 39.5, y = 155, label = "Window B\n(contraction)",
+           family = "Source Serif 4", size = 3.0, color = "#C0392B") +
+  coord_cartesian(ylim = c(45, 165)) +
   labs(
-    title    = "Temporal Resolution and What It Makes Expressible",
-    subtitle = paste0(
-      "The same process observed at different sampling frequencies. ",
-      "A quarterly model fitted in the exponential phase cannot see the ceiling."
-    ),
-    x     = "Time",
-    y     = "N(t)",
-    color = NULL,
-    caption = paste0(
-      "Coarse resolution is not wrong about the dynamics it was built to describe. ",
-      "The error is resolution mismatch: applying a low-frequency language to a high-frequency phenomenon."
-    )
+    title    = "Two windows, two extrapolations",
+    subtitle = "Dotted: true cycle. Shaded: observation windows. Solid lines: linear trend extrapolations from each window.",
+    x        = "Time",
+    y        = "Index",
+    color    = NULL,
+    linetype = NULL
+  ) +
+  theme(legend.position = "bottom")
+
+#' 
+#' The two extrapolations in that figure are not bad statistical practice. Each is the correct output of a model well-fitted to its observation window. The residuals are small, the fit is good, the extrapolation is what the model implies. The models are wrong about the future not because they are poorly estimated but because they are built in a language that has no representation for the phase transition. More data from the same window would give tighter confidence bands and a more confident wrong answer.
+#' 
+#' This is the genealogy of the stationarity problem. Stationarity is not an assumption about noise — it is an assumption about regime. It asserts that the data-generating process visible in the observation window persists. When the system has a cyclical structure, this assertion is always temporarily true and permanently misleading: it is true within any phase long enough to fit a model, and it predicts the wrong turn every time. The model inherits nothing from its predecessors across the phase boundary because the phase boundary is precisely what the model cannot see.
+#' 
+#' The Kondratiev observation, the Minsky mechanism, the Ibn Khaldun genealogy of dynasties — these are all claims that the most important events in the system's history are phase transitions, and that models fitted within a phase are, by construction, blind to them. This is not a counsel of despair about time series modeling. It is a demand for precision about what time series models can and cannot say, and therefore about which questions they can and cannot answer. A model that fits the expansion phase fits the expansion phase. The question of whether the expansion will continue is a question about the regime structure — about where in the cycle the system currently sits, and what conditions govern the transition — and it is exterior to the language of any model that takes the expansion phase as its universe.
+#' 
+#' ## The Possibility Space {#sec-possibility}
+#' 
+#' The agent-based model does not produce better point forecasts. It is not a superior extrapolation engine. A model that represents the full heterogeneity of a firm population does not thereby know where the economy will be in ten years with more precision than a model tracking mean firm size does. Forecasting is not the point.
+#' 
+#' What the ABM offers is a map of the possibility space — the range of qualitatively distinct behaviors the system is capable of producing, the conditions under which each is realized, and the locations of the boundaries between them. These boundaries are not forecast errors. They are structural features of the system's dynamics. A map that shows them is a different kind of knowledge than a point forecast, and in many circumstances it is more useful.
+#' 
+#' Consider the contrast. A policy advisor working from a single trajectory — "the economy will grow at 2.3% next year, inflation will be 3.1%" — is navigating with a point. The point may be calibrated well or poorly; either way, it is a point. A policy advisor working from a possibility space map knows which dynamical regimes are accessible from the current state, what conditions would trigger a transition between them, and which interventions have leverage at the critical points. The map does not eliminate uncertainty. It characterizes it structurally, rather than reporting a number that suppresses the structure by design.
+#' 
+## ----ch4-possibility-space, fig.cap="Multiple trajectories from the same initial condition. A stochastic system starting from the same initial state can realize qualitatively different outcomes. The cloud of trajectories is the possibility space — not a confidence interval around a single forecast, but a map of qualitatively distinct futures the system can reach. The distinctions that matter are often between qualitative regimes, not between nearby trajectories within the same regime."----
+set.seed(2025)  # reproducibility
+
+# Stochastic logistic growth: same starting point, different trajectories
+# Stochasticity comes from demographic noise (discreteness of individuals)
+r_growth <- 0.3
+K_cap    <- 500
+N_start  <- 20
+T_traj   <- 60
+n_traj   <- 30
+
+run_stochastic_logistic <- function(seed, N0, r, K, T) {
+  set.seed(seed)
+  N <- N0
+  traj <- numeric(T + 1)
+  traj[1] <- N
+
+  for (tt in 2:(T + 1)) {
+    # Expected growth rate from logistic equation
+    expected_growth <- r * N * (1 - N / K)
+    # Add demographic stochasticity: births and deaths are Poisson draws
+    births <- rpois(1, max(0, expected_growth))
+    deaths <- rpois(1, max(0, -expected_growth + r * N^2 / K))
+    N      <- max(0, N + births - deaths)
+    traj[tt] <- N
+  }
+
+  tibble(t = 0:T, N = traj, seed = seed)
+}
+
+trajectories_df <- map_dfr(1:n_traj, run_stochastic_logistic,
+                            N0 = N_start, r = r_growth, K = K_cap, T = T_traj)
+
+# Deterministic solution for reference
+t_det <- seq(0, T_traj, by = 0.5)
+N_det <- K_cap / (1 + ((K_cap - N_start) / N_start) * exp(-r_growth * t_det))
+det_df <- tibble(t = t_det, N = N_det)
+
+ggplot() +
+  geom_line(
+    data = trajectories_df,
+    aes(x = t, y = N, group = seed),
+    alpha = 0.2, linewidth = 0.4, color = "#2D5F8A"
+  ) +
+  geom_line(
+    data = det_df,
+    aes(x = t, y = N),
+    color = "#1C1C1E", linewidth = 1.1
+  ) +
+  geom_hline(yintercept = K_cap, linetype = "dotted", color = "#888888") +
+  annotate("text", x = T_traj - 3, y = K_cap + 18,
+           label = paste0("K = ", K_cap), family = "Source Serif 4",
+           size = 3.2, color = "#888888") +
+  labs(
+    title    = "Possibility space: stochastic logistic growth",
+    subtitle = paste0(n_traj, " trajectories from the same initial condition (N\u2080 = ", N_start, "). ",
+                      "Solid: deterministic trajectory."),
+    x        = "Time",
+    y        = "Population"
   )
 
-print(p_resolution)
-
-
-# =============================================================================
-# SUMMARY FIGURE
-# =============================================================================
-
-p_ch4_summary <- (p_regularization) / (p_logistic | p_bifurcation) +
-  plot_annotation(
-    title   = "Chapter 4: The Possibility Space of Dynamics",
-    caption = paste0(
-      "Top: Regularization = Bayesian prior (same constraint, two descriptions). ",
-      "Bottom left: Stationarity miscalibrated by logistic ceiling. ",
-      "Bottom right: Bifurcation diagram — qualitative regimes in parameter space."
-    )
-  )
-
-print(p_ch4_summary)
-
-# =============================================================================
-# END OF CHAPTER 4
-# =============================================================================
+#' 
+#' This is what honest cartography looks like. Not "the population will be $K$ at time $T$" but "these are the trajectories accessible from this starting point, these are the conditions that push toward the upper envelope, and extinction is accessible when the population falls below a certain threshold from which recovery becomes unlikely." The map and the point forecast are not competing forecasts of the same thing. They are answers to different questions — and the question the map answers is often the more useful one.
+#' 
+#' ## The Statistician's Checklist {#sec-checklist}
+#' 
+#' The statistician's instinct toward honest uncertainty quantification is correct. Confidence intervals, posterior distributions, prediction intervals, cross-validation — these are all ways of refusing to report false precision. They are formal structures for saying "I do not know exactly, and here is what I do know about how much I do not know." This course has argued that the same instinct should extend from parameter uncertainty to structural uncertainty: not only "what are the plausible values of this parameter?" but "what class of data-generating procedures is consistent with what I observe, and what does each imply for the question I am asking?"
+#' 
+#' This reframe matters. A model is not merely a fitting device. It is a commitment to a class of mechanisms — a claim, made before data are consulted, about the space of DGPs that could have produced the observations. The ODE, equivalently the system dynamics model in the computational social science tradition, is a stock-and-flow structure whose flow equations embed the mean-field assumption: the same differential equations, whether written in mathematical notation or drawn as a Forrester diagram, impose $\varepsilon_i = 0$ and $\Delta W = 0$ before estimation begins. The ABM relaxes those constraints and thereby admits a broader class of DGPs. The apparent competition between system dynamics and agent-based modeling in that literature is the regularization tradeoff made methodological: it is the question of how strongly to constrain the mechanism space given what the data can support, not a disagreement about the underlying reality.
+#' 
+#' The checklist has two questions, which are two aspects of the same demand for honesty about constraints.
+#' 
+#' *At what resolution is this model working, and is the phenomenon I care about expressible at that resolution?* Stationarity constrains temporal variation to zero across the observation window — the Nyquist limit determines what frequencies are identifiable at all, and the stationarity prior zeros out variation within the identifiable band. A quarterly model cannot express sub-quarterly dynamics. A model fitted in the expansion phase of a long cycle cannot express the turn. When the phenomenon lives at a finer temporal scale, or requires a regime transition the model's prior forbids, additional data within the same resolution does not help: the constraint is structural, not statistical.
+#' 
+#' *What agent heterogeneity and contact structure has this model regularized to zero, and does the phenomenon require what was regularized away?* The mean-field ODE sets $\varepsilon_i = 0$ for all agents and $\Delta W = 0$ — it constrains every agent to the population mean and every contact pair to the maximum entropy rate. Hub-driven super-spreading lives in the sparse non-zero entries of $\Delta W$: it requires exactly the deviations from maximum entropy contact that the mean-field prior eliminates. The power law firm size distribution lives in the $\varepsilon_i$: it is a property of the full distribution of agent deviations, invisible to a model that has zeroed them out before estimation. The question is not whether the model fits poorly. It is whether the phenomenon exists within the model's feasible set at all.
+#' 
+#' These two questions share a structure: each asks whether the regularization the model applies — temporal, spatial, structural — is warranted for the phenomenon and the data. The answer depends on both simultaneously, and this is where the bias-variance tradeoff enters in two distinct senses that should not be conflated.
+#' 
+#' The first is the estimation sense. A richly parameterized ABM fitted to sparse data has high variance: small changes in the data produce large changes in the inferred heterogeneity and contact structure. Regularizing toward mean-field reduces that variance at the cost of bias — the estimates are stably wrong rather than noisily right. Under data sparsity, this is not a failure of the mean-field model. It is the correct conservative response: the model refuses to hallucinate structure the data cannot support, accepting systematic bias in exchange for stability. The ODE's implicit strong regularization is principled when the data is sparse in time or when the observation design cannot distinguish individual-level variation from population-level averages.
+#' 
+#' The second is the DGP-class sense. A narrow model family — mean-field, stationary, representative agent — has low uncertainty about which class of mechanism is operating, because it has committed strongly. But that commitment carries the risk of excluding the true DGP entirely. A wider family maintains higher uncertainty about the mechanism but lower risk of structural exclusion. These two senses interact but are not identical. A narrow family can have high estimation variance when data is sparse; a wide family can have low estimation variance when data is rich. The ODE advocate who objects to ABM parameter proliferation is speaking in the estimation sense — more parameters, higher variance. The response is in the DGP-class sense — those parameters describe mechanisms the narrow family cannot express, and whether the richer description is warranted depends on what the phenomenon requires and what the data can support. Both objection and response are correct within their own frame. The checklist resolves the apparent conflict by asking the prior question: does the phenomenon live inside the narrow family's feasible set? If it does, the narrow family's low-variance estimates are the right answer. If it does not, the narrow family's estimates are not low-variance approximations to the truth — they are precise answers to a different question.
+#' 
+#' Many phenomena are well-served by the ODE, the linear model, the stationary time series, the aggregate mean. Their implicit regularizations are warranted when the phenomena of interest sit well within their feasible sets — and many do. The checklist is not a case for ABM. It is a case for knowing which constraints you are applying and whether they are warranted for the phenomenon and the data jointly. When the answer is that the constraint zeros out exactly what the phenomenon requires, the path is not better estimation within the current model. It is a relaxation — a reduction in regularization strength, a richer family, a model that treats the zeroed-out structure as something to be inferred rather than assumed away. Name the constraint, identify what it zeros out, ask whether the phenomenon lives there. The rest follows from the answer.
+#' 
+#' The tools are harder. The proofs are less clean. The answers are less crisp. They are more likely to be true.
+#' 
+#' ---
+#' 
+#' ## References {-}
+#' 
