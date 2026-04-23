@@ -53,8 +53,9 @@ body {
   font-family:      var(--font-body);
   font-weight:      400;
   line-height:      var(--line-height-body);
-  margin:           0;
-  padding:          0;
+  max-width:        var(--content-max-width);
+  margin:           0 auto;
+  padding:          2rem 2.5rem 4rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -63,29 +64,7 @@ body {
    3. PAGE LAYOUT
    ============================================================ */
 
-/* Rmarkdown wraps content in .main-container */
-.main-container {
-  max-width:  var(--content-max-width);
-  margin:     0 auto;
-  padding:    2rem 2.5rem 4rem;
-}
-
-/* When TOC is floating, shift main content to make room */
-.tocify-wrapper {
-  top:        80px;
-  width:      var(--toc-width);
-  font-family: var(--font-heading);
-  font-size:  0.78rem;
-  font-weight: 400;
-}
-
-@media (min-width: 1100px) {
-  .main-container {
-    /* Leave room for floated TOC on wide viewports */
-    margin-left: calc(var(--toc-width) + 2rem);
-    max-width:   var(--content-max-width);
-  }
-}
+/* Bootstrap .main-container not used (theme: null); centering applied to body */
 
 /* ============================================================
    4. HEADINGS
@@ -271,21 +250,23 @@ pre code {
   white-space:  pre;
 }
 
-/* Code folding button */
-.code-folding-btn {
+/* Code fold toggle button (vanilla JS, no Bootstrap) */
+.code-fold-btn {
+  display:      block;
   font-family:  var(--font-heading);
-  font-size:    0.75rem;
+  font-size:    0.72rem;
   color:        var(--color-accent);
   border:       1px solid var(--color-rule);
   border-radius: 3px;
   background:   transparent;
-  padding:      0.15em 0.5em;
+  padding:      0.18em 0.6em;
   cursor:       pointer;
-  float:        right;
-  margin-top:   -0.25rem;
+  margin-bottom: 0.3rem;
+  text-align:   right;
+  margin-left:  auto;
 }
 
-.code-folding-btn:hover {
+.code-fold-btn:hover {
   background-color: var(--color-code-bg);
 }
 

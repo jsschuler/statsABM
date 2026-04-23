@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>The Possibility Space of Dynamics</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="John S. Schuler" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../_theme/xaringan-custom.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# The Possibility Space of Dynamics
+]
+.subtitle[
+## Agent-Based Modeling for Statisticians
+]
+.author[
+### John S. Schuler
+]
+.date[
+### JSM 2026
+]
+
+---
+
+
+
+
+---
+class: inverse, center, middle
+
+# The Possibility Space of Dynamics
+
+### Block 4 — Agent-Based Modeling for Statisticians
+### JSM 2026
+
+---
+
+## Roadmap
+
+The final block draws the argument together.
+
+--
+
+1. A framework for thinking about what models can and cannot say
+
+--
+
+2. Regularization, Bayesian priors, and modeling assumptions — a unification
+
+--
+
+3. Stationarity as a temporal regularity assumption — and what happens when it fails
+
+--
+
+4. Temporal resolution and near-decomposability
+
+--
+
+5. The possibility space — what modeling is for
+
+--
+
+6. The checklist question
+
+???
+Block 4 is 90 minutes. The tone is the most assured of the day — the argument has been built across three examples and can now be stated plainly. There is no new code beyond two illustrative computations. The session closes with a practical reorientation of what modeling is for.
+
+---
+
+## A Model Defines a Language
+
+A model does not merely approximate the world.
+
+--
+
+It defines a language — a set of distinctions the model can make, concepts it can express, phenomena it can represent.
+
+--
+
+That language has a boundary.
+
+--
+
+**A phenomenon that requires distinctions the model cannot make is not a failure of fit.**
+
+**It is outside the language entirely.**
+
+--
+
+When a modeling tradition calls something a paradox or an anomaly, it is often naming a phenomenon that is simply exterior to its formal vocabulary — real, reproducible, and grammatically forbidden within the model.
+
+???
+The key move here is the distinction between failure of fit and failure of expressibility. A failure of fit is fixable — better data, better estimation, more parameters. A failure of expressibility is structural — the model's language cannot form the sentence. The audience has seen three examples of the latter today: extinction events in ODE ecology, topology-driven epidemic dynamics in mean-field SIR, and the power law firm size distribution under models that treat mean firm size as a sufficient statistic.
+
+---
+
+## What Each Restriction Makes Inexpressible
+
+--
+
+**Mean-field assumption** (random mixing)
+→ Network topology is inexpressible. Contact structure does not exist in this language.
+
+--
+
+**Sufficiency of the mean** (mean-field applied to firm distributions)
+→ The firm size distribution is inexpressible. Heterogeneity has been assumed away.
+
+--
+
+**Stationarity assumption**
+→ Regime change and bifurcation are inexpressible. The future distribution must resemble the past.
+
+--
+
+**Equilibrium assumption**
+→ Path dependence and lock-in are inexpressible. History cannot matter.
+
+???
+Each bullet is one of the examples from the course, now stated as a restriction on expressive capacity rather than a modeling choice. The pattern is: the restriction is not stated as a restriction — it is embedded in the functional form, the distributional assumption, the conceptual framework. It does real work that enables tractability and it forecloses real phenomena.
+
+---
+
+## These Are Not Independent Failures
+
+Each restriction on this list does the same thing: it collapses a distribution to a point mass.
+
+--
+
+- Mean-field collapses the distribution of interaction structures to a single structure: random mixing.
+
+--
+
+- Sufficiency of the mean collapses the distribution of firm types to a single firm.
+
+--
+
+- Stationarity collapses the distribution over future regimes to the distribution observed in the past.
+
+--
+
+- Equilibrium collapses the distribution over histories to a single path-independent outcome.
+
+--
+
+The pattern has a name. In statistics, it is called **regularization**.
+
+???
+The unification is the central conceptual payoff of the afternoon. Each of these restrictions is a prior that assigns all probability mass to a particular structure. The statistician recognizes this immediately once it is stated — they deal with priors and regularization constantly. The move is to show that this is not analogy but identity.
+
+---
+
+## The Regularization Unification
+
+Bayesian inference and frequentist regularization are the same operation.
+
+--
+
+**Gaussian prior on regression coefficients**
+→ Posterior mode = ridge regression estimator. Exactly.
+
+--
+
+**Laplace prior on regression coefficients**
+→ Posterior mode = LASSO estimator. Exactly.
+
+--
+
+This is not an analogy. It is a mathematical identity.
+
+--
+
+The frequentist who uses LASSO is placing a Laplace prior on their coefficients whether they think of it that way or not.
+
+???
+The identity: arg min { ||y - Xβ||² + λ||β||₁ } = arg max { p(β|y) } under a Laplace prior. This is a standard result in Bayesian regression. The point is not to explain Bayesian LASSO to this audience — they know it. The point is to take that identity and extend it: every modeling assumption is a prior of this kind.
+
+---
+
+## The Identity, Stated
+
+The posterior mode under a Laplace prior solves:
+
+`$$\hat{\beta} = \arg\min_\beta \left\{ \|y - X\beta\|^2 + \lambda \|\beta\|_1 \right\}$$`
+
+which is exactly the LASSO estimator.
+
+--
+
+A Gaussian prior with variance `\(\sigma^2/\lambda\)` produces:
+
+`$$\hat{\beta} = \arg\min_\beta \left\{ \|y - X\beta\|^2 + \lambda \|\beta\|_2^2 \right\}$$`
+
+which is exactly ridge regression.
+
+--
+
+The Bayesian and the frequentist regularizer are solving the same problem.
+
+???
+State this cleanly and let it sit. The audience knows LASSO. They may not have connected it to the priors in their models. The connection matters because it means every modeling assumption — not just regression priors — is a restriction on the prior distribution, a decision about where to assign probability mass in model space.
+
+---
+
+## The Extension: Every Assumption Is a Prior
+
+The unification extends beyond regression.
+
+--
+
+L2 regularization = training on Gaussian-perturbed data (in the limit).
+
+The distributionally robust optimizer who minimizes worst-case loss over a Wasserstein ball around the empirical distribution recovers regularized estimators as special cases.
+
+--
+
+The Bayesian prior, the regularization penalty, and the distributional perturbation are **three descriptions of the same restriction** on effective model complexity.
+
+--
+
+Every modeling assumption examined today is a prior of this kind — it restricts the language in which the model works.
+
+???
+The distributionally robust optimization connection is a bridge to the audience's statistical training. DRO is increasingly standard in machine learning and statistics. The point: the mean-field assumption, the sufficiency of the mean applied to firm distributions, and stationarity are all priors in the sense of restricting the model's effective complexity. The critic who objects to ABM parameter proliferation is demanding a stronger prior — they should say so explicitly and justify it.
+
+---
+
+## Nominal vs. Effective Dimensionality
+
+The ABM critic: "Your model has too many parameters."
+
+--
+
+The statistician's response: "Are you counting nominal or effective dimensions?"
+
+--
+
+A model with 50 parameters where 45 produce qualitatively identical dynamics has **effective dimensionality of ~5**.
+
+--
+
+This is the LASSO intuition: sparse solutions in high-dimensional spaces. The nominal space is high-dimensional; the relevant structure is low-dimensional.
+
+--
+
+Most of the ABM parameter space produces qualitatively the same dynamics. The consequential behavior lives on a low-dimensional manifold.
+
+???
+The sparsity point from Block 2, stated now in full generality. The ABM does not suffer from a curse of dimensionality in the effectual sense — the calibrated structure is sparse. The critic who counts parameters is working in the wrong space.
+
+---
+
+## Stationarity Is a Prior
+
+Time series modeling rests on stationarity: the data-generating process in the future resembles the data-generating process in the past.
+
+--
+
+This is not a neutral observation. It is a restriction on the model's language.
+
+--
+
+**Stationarity asserts that the data-generating process lies within a neighborhood of the estimated distribution.**
+
+--
+
+When the system is capable of bifurcation, that neighborhood does not contain the true future distribution.
+
+--
+
+The stationarity prior is miscalibrated — in exactly the way a Gaussian prior is miscalibrated when the true signal is sparse.
+
+???
+The analogy is tight: a Gaussian prior assigns all its mass near zero, and when the true coefficients are large and sparse, the prior is badly wrong in a way that more data cannot fix. Stationarity assigns all its mass near the historical distribution, and when the system can bifurcate, the prior is badly wrong in a way that more historical data cannot fix — because more historical data just confirms the pre-bifurcation regime.
+
+---
+
+## What Extrapolation Cannot See
+
+
+``` r
+set.seed(2025)
+
+K  &lt;- 1000   # carrying capacity
+r  &lt;- 0.3    # intrinsic growth rate
+N0 &lt;- 10     # initial population
+
+times  &lt;- seq(0, 50, by = 0.5)
+N_true &lt;- K / (1 + ((K - N0) / N0) * exp(-r * times))
+
+# "Observed" window: only the early exponential phase
+obs &lt;- tibble(t = times, N = N_true) |&gt; filter(t &lt;= 10)
+
+# Naive linear model in log space — the stationarity assumption
+lm_fit &lt;- lm(log(N) ~ t, data = obs)
+cat("Estimated growth rate:", round(coef(lm_fit)["t"], 3), "\n")
+```
+
+```
+## Estimated growth rate: 0.284
+```
+
+???
+The setup is simple: logistic growth, observed only in the exponential phase. A researcher who sees only the first 10 time units has no information in those data about the carrying capacity — the data are perfectly consistent with unbounded exponential growth. The linear model in log space is the maximum likelihood estimator under the stationarity assumption. It is correct about what it has seen. It cannot see what it has not seen.
+
+---
+
+## The Extrapolation Failure
+
+&lt;img src="04_philosophical_conclusion_files/figure-html/extrap-plot-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The red line is not a bad forecast — it is the correct forecast under the stationarity assumption applied to the observed data. The problem is not the estimator. The problem is that the carrying capacity K is a parameter of the true model that does not appear in the observed data at all. No amount of additional data in the t = 0–10 window would reveal it. The stationarity prior forecloses K from the language.
+
+---
+
+## Bifurcation: The Language Cannot See the Turn
+
+Any system capable of **bifurcation** — a qualitative change in the regime of its dynamics — will defeat stationarity-based extrapolation at the bifurcation point.
+
+--
+
+This is not a statistical claim about forecast intervals.
+
+--
+
+It is a structural claim: the distributional shift at a bifurcation is not a large movement within the support of the pre-bifurcation distribution. It is a movement to a **different distribution entirely**.
+
+--
+
+Wider confidence intervals do not help. They are still centered on the wrong regime.
+
+???
+The language analogy is exact here. A confidence interval is a range of sentences in the model's language. Bifurcation produces a sentence in a different language — one the model cannot form. The COVID pandemic is an example the audience will recognize: ARIMA models fit to 2015–2019 hospitalization data had nothing to say about 2020. Not because the confidence intervals were too narrow. Because the DGP changed regime.
+
+---
+
+## The Logistic Map: Where the Language Breaks
+
+
+``` r
+# x_{t+1} = r * x_t * (1 - x_t)  — logistic map
+logistic_map_attractor &lt;- function(r_val, n_burn = 1000, n_collect = 200) {
+  x &lt;- 0.5
+  for (i in seq_len(n_burn)) x &lt;- r_val * x * (1 - x)
+  tibble(r = r_val,
+         x = sapply(seq_len(n_collect), function(i) {
+           x &lt;&lt;- r_val * x * (1 - x); x
+         }))
+}
+set.seed(2025)
+r_vals &lt;- seq(2.5, 4.0, length.out = 800)
+bif_df &lt;- map_dfr(r_vals, logistic_map_attractor)
+```
+
+???
+The logistic map is the canonical example of period-doubling bifurcation. At r &lt; 3, the system has a stable fixed point. At r slightly above 3, it bifurcates to a 2-cycle. Further increases produce 4-cycles, 8-cycles, and then chaos. A stationarity-based model estimated at r = 2.8 would have no language for what happens at r = 3.2.
+
+---
+
+## The Bifurcation Diagram
+
+&lt;img src="04_philosophical_conclusion_files/figure-html/bifurcation-plot-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The diagram shows the attractor of the logistic map as a function of r. A model calibrated in the fixed-point regime (r &lt; 3) would extrapolate a single equilibrium indefinitely. The period-doubling cascades and eventual chaos are exterior to that model's language — not unlikely predictions, but grammatically impossible ones.
+
+---
+
+## Near-Decomposability and Temporal Resolution
+
+Herbert Simon (1962): complex systems are **nearly decomposable**.
+
+--
+
+- Subsystems interact intensely at **fast time scales**.
+- They interact loosely at **slow time scales**.
+- Each level has its characteristic frequency.
+
+--
+
+A model fitted at a particular temporal resolution is a **low-pass filter**.
+
+--
+
+It recovers structure below its Nyquist limit. It makes faster structure inexpressible — not unlikely, but grammatically absent.
+
+???
+Simon's near-decomposability result is a theorem about the spectral structure of hierarchically organized systems. The cell coordinates faster than the organ; the organ coordinates faster than the organism; the organism coordinates faster than the market. A model fitted at the market level low-pass filters out everything at the cell level. This is not a limitation to be overcome — it is a feature that makes the model tractable. The error is applying it at the wrong temporal resolution.
+
+---
+
+## Resolution Mismatch
+
+A quarterly macroeconomic model is not wrong about the annual dynamics it was designed to capture.
+
+--
+
+It is linguistically incapable of expressing sub-quarterly phenomena.
+
+--
+
+This is not a data limitation. Finer data would not help — the model's structure cannot represent the faster dynamics even if the data resolve them.
+
+--
+
+**The error is resolution mismatch** — applying a coarse-resolution language to a fine-resolution phenomenon, or expecting a fine-resolution language to speak about structural features only visible at coarse resolution.
+
+--
+
+Ask: at what temporal scale is the phenomenon you care about operating?
+
+???
+The practical implication: before choosing a model, identify the temporal resolution of the policy question. A model of quarterly business cycles is the wrong instrument for studying the response to a supply shock that resolves in days. A model of daily financial returns is the wrong instrument for studying secular stagnation.
+
+---
+
+## The Checklist Question
+
+.center[
+.large[
+**At what resolution is this model working,**
+
+**and is the phenomenon I care about**
+
+**expressible at that resolution?**
+]
+]
+
+???
+This is the takeaway the audience should leave with. It applies to every model they will use or build. ODE, ARIMA, GLM, aggregate industry model, ABM — ask the question. The answer does not always disqualify the model. But the question must be asked before the model's conclusions are taken seriously.
+
+---
+
+## The Checklist Applied
+
+| Model | Working resolution | Inexpressible phenomena |
+|-------|-------------------|------------------------|
+| ODE ecology | Population aggregate, continuous time | Extinction events, spatial pattern, finite-size effects |
+| Mean-field SIR | Population aggregate, homogeneous mixing | Network topology, superspreaders, spatial heterogeneity |
+| Mean-sufficient model | Aggregate economy, equilibrium | Firm size distribution, distributional dynamics |
+| Stationary ARIMA | Pre-bifurcation regime | Regime change, structural breaks, path dependence |
+| Calibrated ABM | Agent-level, discrete time | Well — depends on the ABM. Ask the same question. |
+
+???
+The last row is important: the checklist applies to ABMs too. An ABM without spatial structure cannot express spatially driven phenomena. An ABM with homogeneous agents cannot express heterogeneity-driven emergence. The ABM is a richer language, but it still has a boundary. The point is not that ABMs are better than all other models. It is that every model has a resolution and a boundary, and the honest modeler knows what they are.
+
+---
+
+## Possibility Space vs. Point Forecast
+
+The ABM does not produce better point forecasts. This is not its value proposition.
+
+--
+
+What it offers is a **map of the possibility space** — the range of qualitatively distinct behaviors the system is capable of, the conditions under which each is realized, and the locations of the bifurcation points that separate them.
+
+--
+
+A policy advisor working from a **point forecast** is navigating with a single trajectory.
+
+--
+
+A policy advisor working from a **possibility space map** sees not only where the current trajectory leads, but which turns exist, which conditions trigger them, and which interventions have leverage at the critical points.
+
+???
+The possibility space framing reorients what modeling is for. The goal is not to produce the number — "GDP growth will be 2.3% next year" — but to produce the chart: these are the regimes, these are the boundaries between them, these are the control parameters. The map does not eliminate uncertainty. It characterizes it structurally rather than suppressing it under false precision.
+
+---
+
+## What the Map Shows
+
+&lt;img src="04_philosophical_conclusion_files/figure-html/possibility-space-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The illustration is simple but the point is sharp: all three trajectories start at the same point. A point forecast selects one. The possibility space map shows all three, labels the conditions under which each occurs, and identifies the control parameters (here, carrying capacity K — which might represent resource availability, regulatory environment, or market size). Policy operates on the control parameters, not on the trajectory directly.
+
+---
+
+## The Statistician's Instinct, Extended
+
+The statistician's instinct toward honest uncertainty quantification is exactly the right instinct.
+
+--
+
+Confidence intervals, posterior distributions, prediction intervals — these are refusals of false precision.
+
+--
+
+The framework developed today extends that instinct from **parameter uncertainty** to **structural uncertainty**:
+
+uncertainty not only about the values of model parameters, but about **which qualitative regime the system occupies** and which it will move toward.
+
+--
+
+The ABM is not the answer to every question these observations raise. It is evidence that the resolution choice is a choice, the language restriction is a restriction, and richer expressive resources exist when the phenomenon demands them.
+
+???
+The closing argument: the statistician already has the right instinct. They report intervals, not point estimates, because they know the data underdetermine the parameters. The extension is to apply that instinct one level up: the data underdetermine the regime, too. The model class choice is not neutral. The expressive boundary is not given by nature. These are choices, and responsible science requires acknowledging them.
+
+---
+
+## Three Examples, One Pattern
+
+.pull-left[
+**Block 1: ODE Ecology &amp; Epidemics**
+- Mean-field prior embedded in functional form
+- Makes extinction and topology inexpressible
+
+**Block 2: Agent-Based Contrast**
+- ABM relaxes the mean-field prior
+- ODE is the ABM's limiting case: not a rival, a special case
+]
+
+.pull-right[
+**Block 3: Firm Size**
+- Sufficiency of the mean = mean-field for distributions
+- Power law inexpressible; Axtell's mechanism generates it
+
+**Block 4: The Pattern Named**
+- Every modeling choice is a prior
+- Every prior restricts the language
+- Ask the checklist question
+]
+
+???
+The four-block summary. The pattern is the same in every case: a restriction on the model's language, not stated as a restriction, making some phenomena grammatically impossible. The agent-based framework relaxes those restrictions. The checklist question is how to decide whether the relaxation is necessary for the phenomenon at hand.
+
+---
+
+## The Tools Are Harder
+
+The statistician who takes this framework seriously will ask harder questions — of their models, of policy implications, of colleagues who report false precision.
+
+--
+
+The answers will be less clean.
+
+--
+
+The possibility space is harder to communicate than a point forecast.
+
+--
+
+A regime map requires more assumptions to be explicit, more limitations to be stated.
+
+--
+
+The tools are harder. The answers are less clean.
+
+--
+
+They are more likely to be true.
+
+???
+The closing line is intentionally spare. There is no consolation prize for the difficulty. The statistician's job is honest representation of what the data and the model can and cannot say — and that requires knowing the model's expressive boundary. The course has been an argument for taking that boundary seriously. The final sentence is the conclusion the morning's examples made, in retrospect, inevitable.
+
+---
+
+## Course Summary
+
+Today's argument, in one paragraph:
+
+Every model defines a language. The ODE, the aggregate industry model that treats mean firm size as sufficient, the stationary time series model — each collapses a distribution to a point mass in a different place, making some phenomena expressible and others not. The agent-based framework does not add assumptions to these models. It relaxes the restrictions they impose silently. The phenomena that lie beyond those restrictions — extinction, network topology, the firm size power law, regime change — are not anomalies. They are the world, seen from outside the language.
+
+--
+
+The statistician's checklist: *at what resolution is this model working, and is the phenomenon I care about expressible at that resolution?*
+
+???
+The summary paragraph is the one-paragraph version of the course. If a student remembers nothing else, they should remember this. The checklist question is the tool that turns the abstract argument into a practical habit.
+
+---
+
+## Materials and Contact
+
+**Course repository:** `github.com/[username]/abm-statisticians`
+
+The repository contains:
+- `book/abm_course_book.Rmd` — the complete course textbook (renderable R Markdown)
+- `slides/` — all four Xaringan slide decks
+- `code/` — heavily commented R scripts for each chapter (the primary take-away)
+- `_theme/` — CSS and theming scaffold (intentionally left for customization)
+
+--
+
+**R packages required:**
+`tidyverse`, `deSolve`, `igraph`, `tidygraph`, `ggraph`, `gganimate`,
+`poweRlaw`, `broom`, `patchwork`, `xaringan`, `xaringanthemer`
+
+--
+
+**Contact:** [instructor email]
+
+*Thank you.*
+
+???
+Final slide. Make sure students know the repository is public and the code/ directory scripts are the primary student artifact — fully commented R scripts they can use as a reference after the course.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9",
+  "navigation": {
+    "scroll": false
+  }
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

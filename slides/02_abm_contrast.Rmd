@@ -1,8 +1,8 @@
 ---
 title: "Agents, Networks, and the Geometry of Interaction"
 subtitle: "Agent-Based Modeling for Statisticians"
-author: "John Lynham"
-date: "JSM 2025"
+author: "John S. Schuler"
+date: "JSM 2026"
 output:
   xaringan::moon_reader:
     css: ["../_theme/xaringan-custom.css", "default-fonts"]
@@ -139,67 +139,47 @@ Speaker notes: The rules are deliberately verbal before they are computational. 
 ## ABM Lotka-Volterra: Core Code
 
 ```{r abm-lv-def, echo=TRUE}
-set.seed(42)  # for reproducibility; change to explore stochastic variation
-
-# One timestep of the ABM
-step_lv <- function(pop, p_birth, p_eat, p_death) {
-  prey     <- filter(pop, type == "prey")
-  predators <- filter(pop, type == "predator")
-
-  # Rule 1: prey reproduction
-  n_births <- rbinom(1, nrow(prey), p_birth)
-  new_prey <- tibble(id   = max(pop$id) + seq_len(n_births),
-                     type = "prey")
-
-  # Rule 2: predation via random pairing
-  n_pairs  <- min(nrow(predators), nrow(prey))
-  if (n_pairs > 0) {
-    prey_idx <- sample(nrow(prey), n_pairs, replace = FALSE)
-    eaten    <- rbinom(n_pairs, 1, p_eat)
-    prey     <- prey[-prey_idx[eaten == 1], ]
-    n_new_pred <- sum(eaten)
-    new_pred <- tibble(id   = max(pop$id) + nrow(new_prey) + seq_len(n_new_pred),
-                       type = "predator")
-  } else {
-    new_pred <- tibble(id = integer(), type = character())
-  }
-
-  # Rule 3: predator death
-  pred_survive <- predators[rbinom(nrow(predators), 1, 1 - p_death) == 1, ]
-
-  bind_rows(prey, pred_survive, new_prey, new_pred)
+set.seed(42)
+step_lv <- function(pop, p_birth = 0.15, p_kill = 0.00375,
+                    p_convert = 0.267, p_death = 0.10) {
+  prey <- filter(pop, type == "prey")
+  pred <- filter(pop, type == "predator")
+  N <- nrow(prey); P <- nrow(pred)
+  nb <- rbinom(1, N, p_birth)           # Rule 1: prey reproduce
+  new_prey <- tibble(id = max(pop$id) + seq_len(nb), type = "prey")
+  kills <- rbinom(P, N, p_kill)         # Rule 2: each predator kills Binom(N,p_kill) prey
+  dead  <- unique(unlist(lapply(kills[kills > 0],
+             function(k) slice_sample(prey, n = min(k, N))$id)))
+  prey  <- filter(prey, !id %in% dead)
+  np    <- rbinom(1, length(dead), p_convert)
+  new_pred <- tibble(id = max(pop$id) + nb + seq_len(np), type = "predator")
+  pred  <- pred[rbinom(P, 1, 1 - p_death) == 1, ]  # Rule 3: predators die
+  bind_rows(prey, pred, new_prey, new_pred)
 }
 ```
 
 ???
-Speaker notes: The code structure mirrors the verbal rules exactly. `rbinom` calls make the stochasticity explicit — each event is a Bernoulli trial. The random pairing in Rule 2 is the mean-field assumption in code: `sample(nrow(prey), n_pairs, replace = FALSE)` draws uniformly from the full prey population, giving every predator equal access to every prey. This line is the functional form $\beta NP$ written procedurally.
+Speaker notes: The code structure mirrors the verbal rules exactly. `rbinom` calls make the stochasticity explicit. Rule 2 is the mean-field assumption in code: each predator independently samples every prey individual with probability `p_kill`. The expected number of kills is `p_kill × N × P = β N P` — the functional form $\beta NP$ written procedurally. `p_kill` maps directly to β; `p_kill × p_convert` maps to δ.
 
 ---
 
 ```{r abm-lv-run, echo=TRUE}
-# Run ABM for T timesteps, multiple replications
 run_lv_abm <- function(T = 300, n_prey0 = 60, n_pred0 = 15,
-                       p_birth = 0.06, p_eat = 0.04, p_death = 0.08,
-                       seed_val = 42) {
+                       p_birth = 0.15, p_kill = 0.00375,
+                       p_convert = 0.267, p_death = 0.10, seed_val = 42) {
   set.seed(seed_val)
-  pop <- tibble(
-    id   = seq_len(n_prey0 + n_pred0),
-    type = c(rep("prey", n_prey0), rep("predator", n_pred0))
-  )
-  counts <- tibble(time = 0L,
-                   prey = n_prey0, predator = n_pred0)
+  pop <- tibble(id   = seq_len(n_prey0 + n_pred0),
+                type = c(rep("prey", n_prey0), rep("predator", n_pred0)))
+  counts <- tibble(time = 0L, prey = n_prey0, predator = n_pred0)
   for (t in seq_len(T)) {
     if (nrow(filter(pop, type == "prey")) == 0 ||
         nrow(filter(pop, type == "predator")) == 0) break
-    pop <- step_lv(pop, p_birth, p_eat, p_death)
-    counts <- add_row(counts, time = t,
-                      prey     = sum(pop$type == "prey"),
+    pop    <- step_lv(pop, p_birth, p_kill, p_convert, p_death)
+    counts <- add_row(counts, time = t, prey = sum(pop$type == "prey"),
                       predator = sum(pop$type == "predator"))
   }
   counts
 }
-
-# Run 10 replications
 abm_runs <- map_dfr(1:10, ~ run_lv_abm(seed_val = .x) |> mutate(run = .x))
 ```
 
@@ -287,7 +267,7 @@ set.seed(99)
 # Small-population ABM — extinction events become common
 small_runs <- map_dfr(1:20, ~ run_lv_abm(
   T = 300, n_prey0 = 20, n_pred0 = 8,
-  p_birth = 0.06, p_eat = 0.05, p_death = 0.08,
+  p_birth = 0.15, p_kill = 0.00375, p_convert = 0.267, p_death = 0.10,
   seed_val = .x
 ) |> mutate(run = .x))
 
@@ -322,53 +302,25 @@ Speaker notes: Some of the translucent lines hit zero and stay there — extinct
 ## ABM SIR: Random Mixing
 
 ```{r abm-sir-def, echo=TRUE}
-set.seed(123)  # for reproducibility
-
-# Agent-based SIR: random mixing version
-# Each agent: id, status (S/I/R), days_infected
-run_abm_sir <- function(N = 500, I0 = 1, beta = 0.3, gamma = 0.1,
+set.seed(123)
+run_abm_sir <- function(N = 500, beta = 0.3, gamma = 0.1,
                         T = 150, seed_val = 123) {
   set.seed(seed_val)
-  agents <- tibble(
-    id             = seq_len(N),
-    status         = c(rep("I", I0), rep("S", N - I0)),
-    days_infected  = c(rep(1L, I0), rep(0L, N - I0))
-  )
-  results <- tibble(time = 0L,
-                    S = N - I0, I = I0, R = 0L)
-
+  status  <- c("I", rep("S", N - 1))
+  results <- tibble(time = 0L, S = N - 1L, I = 1L, R = 0L)
   for (t in seq_len(T)) {
-    infectious <- filter(agents, status == "I")
-    susceptible <- filter(agents, status == "S")
-
-    # Each infectious agent contacts a random susceptible
-    if (nrow(infectious) > 0 && nrow(susceptible) > 0) {
-      contacts  <- sample(susceptible$id,
-                          min(nrow(infectious), nrow(susceptible)),
-                          replace = FALSE)
-      transmit  <- rbinom(length(contacts), 1, beta)
-      new_I_ids <- contacts[transmit == 1]
-      agents <- agents |>
-        mutate(status = case_when(
-          id %in% new_I_ids ~ "I",
-          TRUE              ~ status
-        ),
-        days_infected = if_else(status == "I", days_infected + 1L, days_infected))
+    inf  <- which(status == "I"); susc <- which(status == "S")
+    if (length(inf) > 0 && length(susc) > 0) {
+      # Random mixing — mean-field assumption in agent code
+      ctc <- sample(susc, min(length(inf), length(susc)))
+      status[ctc[rbinom(length(ctc), 1, beta) == 1]] <- "I"
     }
-    # Recovery
-    agents <- agents |>
-      mutate(status = case_when(
-        status == "I" & rbinom(n(), 1, gamma) == 1 ~ "R",
-        TRUE                                        ~ status
-      ))
-    results <- add_row(results, time = t,
-                       S = sum(agents$status == "S"),
-                       I = sum(agents$status == "I"),
-                       R = sum(agents$status == "R"))
+    status[inf[rbinom(length(inf), 1, gamma) == 1]] <- "R"
+    results <- add_row(results, time = t, S = sum(status == "S"),
+                       I = sum(status == "I"), R = sum(status == "R"))
   }
   results
 }
-
 abm_sir_runs <- map_dfr(1:8, ~ run_abm_sir(seed_val = .x) |> mutate(run = .x))
 ```
 
@@ -529,48 +481,35 @@ Speaker notes: The policy implication of the Barabási-Albert topology is signif
 ## Network SIR: Edge-Traversal Infection
 
 ```{r network-sir-def, echo=TRUE}
-set.seed(101)  # for reproducibility
-
+set.seed(101)
 run_network_sir <- function(graph, N, beta = 0.15, gamma = 0.1,
-                             T = 80, seed_val = 101) {
+                            T = 80, seed_val = 101) {
   set.seed(seed_val)
-  status <- rep("S", N)
-  # Infect one random node at t=0
-  status[sample(N, 1)] <- "I"
-
-  adj <- as_adjacency_list(graph)
-  results <- tibble(time = 0L,
-                    S = sum(status == "S"),
-                    I = sum(status == "I"),
-                    R = sum(status == "R"))
-
+  status <- rep("S", N); status[sample(N, 1)] <- "I"
+  adj    <- lapply(as_adj_list(graph), as.integer)
+  results <- tibble(time = 0L, S = N - 1L, I = 1L, R = 0L)
   for (t in seq_len(T)) {
-    new_status <- status
+    new_st <- status
     for (i in which(status == "I")) {
-      # Transmission along edges only
-      neighbors_i <- adj[[i]]
-      suscept_nb  <- neighbors_i[status[neighbors_i] == "S"]
-      if (length(suscept_nb) > 0) {
-        transmit <- rbinom(length(suscept_nb), 1, beta)
-        new_status[suscept_nb[transmit == 1]] <- "I"
-      }
-      # Recovery
-      if (rbinom(1, 1, gamma) == 1) new_status[i] <- "R"
+      nb_s <- adj[[i]][status[adj[[i]]] == "S"]    # edges only — no mean-field
+      new_st[nb_s[rbinom(length(nb_s), 1, beta) == 1]] <- "I"
+      if (rbinom(1, 1, gamma) == 1) new_st[i] <- "R"
     }
-    status <- new_status
-    results <- add_row(results, time = t,
-                       S = sum(status == "S"),
-                       I = sum(status == "I"),
-                       R = sum(status == "R"))
+    status  <- new_st
+    results <- add_row(results, time = t, S = sum(status == "S"),
+                       I = sum(status == "I"), R = sum(status == "R"))
   }
   results
 }
+```
 
-# Run on both network types, multiple replications
+```{r network-sir-run, echo=FALSE}
 er_sir_runs <- map_dfr(1:10,
-  ~ run_network_sir(er_graph, N_net, seed_val = .x) |> mutate(network = "Erdős-Rényi", run = .x))
+  ~ run_network_sir(er_graph, N_net, seed_val = .x) |>
+    mutate(network = "Erdos-Renyi", run = .x))
 ba_sir_runs <- map_dfr(1:10,
-  ~ run_network_sir(ba_graph, N_net, seed_val = .x) |> mutate(network = "Barabási-Albert", run = .x))
+  ~ run_network_sir(ba_graph, N_net, seed_val = .x) |>
+    mutate(network = "Barabasi-Albert", run = .x))
 network_sir_runs <- bind_rows(er_sir_runs, ba_sir_runs)
 ```
 
@@ -590,8 +529,8 @@ network_sir_runs |>
                fun = mean, geom = "line",
                linewidth = 1.6) +
   scale_color_manual(
-    values = c("Erdős-Rényi" = "#2D5F8A",
-               "Barabási-Albert" = "#8A4A2D"),
+    values = c("Erdos-Renyi" = "#2D5F8A",
+               "Barabasi-Albert" = "#8A4A2D"),
     name = NULL
   ) +
   labs(title    = "Epidemic curves by contact network topology",
@@ -663,37 +602,23 @@ Speaker notes: The animation is the argument. Description cannot substitute for 
 ---
 
 ```{r spatial-lv-code, echo=TRUE, eval=FALSE}
-# Spatial Lotka-Volterra: grid-based ABM with local interaction
-# Full code in code/ch02_abm_contrast.R
-# This chunk generates the gganimate animation shown in the live session
+# Spatial LV: each cell holds prey/predator counts
+# Full code: code/ch02_abm_contrast.R and slides/render_spatial_anim.R
+set.seed(2025)
+GRID <- 40; T_MAX <- 100
 
-set.seed(314)
-GRID  <- 40          # grid size (GRID x GRID cells)
-T_MAX <- 200         # number of timesteps
-P_BIRTH  <- 0.12
-P_EAT    <- 0.10
-P_DEATH  <- 0.06
+grid <- expand_grid(x = 1:GRID, y = 1:GRID) |>
+  mutate(prey = 0L, predator = 0L)
 
-# Initialize grid: each cell holds count of prey and predators
-grid_state <- expand_grid(x = 1:GRID, y = 1:GRID) |>
-  mutate(prey     = rbinom(n(), 2, 0.6),
-         predator = rbinom(n(), 1, 0.15))
-
-# Moore neighborhood function
+# Moore neighborhood: 8 adjacent cells — local interaction, not mean-field
 moore_nbrs <- function(x, y, g = GRID) {
-  expand_grid(dx = -1:1, dy = -1:1) |>
-    filter(!(dx == 0 & dy == 0)) |>
-    mutate(nx = ((x + dx - 1) %% g) + 1,
-           ny = ((y + dy - 1) %% g) + 1) |>
-    select(nx, ny)
+  dx <- c(-1L,0L,1L,-1L,1L,-1L,0L,1L)
+  dy <- c(-1L,-1L,-1L,0L,0L,1L,1L,1L)
+  list(x = ((x + dx - 1L) %% g) + 1L,
+       y = ((y + dy - 1L) %% g) + 1L)
 }
-
-# ... (full step function and animation loop in distributed materials)
-
-# Animation call (requires gifski)
-# anim <- ggplot(frames_df, aes(x = x, y = y, fill = prey_log)) + ...
-#   transition_time(time) + ...
-# anim_save("spatial_lv.gif", anim)
+# step_spatial_lv(), simulation loop, and anim_save()
+# in distributed materials — see render_spatial_anim.R
 ```
 
 ???
@@ -704,14 +629,10 @@ Speaker notes: Show this code briefly to demonstrate the structure — grid, Moo
 ## [Animation] Spatial Lotka-Volterra
 
 .center[
-*[Pre-rendered animation: spatial_lv.gif]*
-
-*Spiral wave formation in a 40×40 agent grid*
-
-*Local interaction only — Moore neighborhood*
+```{r spatial-lv-anim, echo=FALSE, out.width="55%"}
+knitr::include_graphics("spatial_lv.png")
+```
 ]
-
-The animation is the argument.
 
 Spiral waves are a dynamical regime that is simply inexpressible in the mean-field language — they require the spatial language to exist at all.
 
@@ -771,7 +692,7 @@ class: center, middle
 
 *Block 3 begins at 12:30*
 
-*All code at: [github.com/johnlynham/abm-statisticians]*
+*All code at: [github.com/jsschuler/abm-statisticians]*
 
 ???
 Speaker notes: Remind the audience that the network SIR and spatial Lotka-Volterra code are fully implemented and commented in the distributed materials. If they want to run the spatial animation themselves, all dependencies are listed in the README.

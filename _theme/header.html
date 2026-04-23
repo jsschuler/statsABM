@@ -1,5 +1,27 @@
 <!-- header.html — Injected into <head> for the course book -->
-<meta name="author" content="John Lynham">
-<meta name="description" content="Agent-Based Modeling for Statisticians — JSM 2025 Short Course">
+<meta name="author" content="John S. Schuler">
+<meta name="description" content="Agent-Based Modeling for Statisticians — JSM 2026 Short Course">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<script>
+/* Lightweight code folding — no Bootstrap required.
+   Adds a toggle button above every code block; default state is shown. */
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('pre').forEach(function (pre) {
+    var btn = document.createElement('button');
+    btn.className = 'code-fold-btn';
+    btn.textContent = 'Hide code';
+    btn.setAttribute('aria-expanded', 'true');
+
+    pre.parentNode.insertBefore(btn, pre);
+
+    btn.addEventListener('click', function () {
+      var hidden = pre.style.display === 'none';
+      pre.style.display = hidden ? '' : 'none';
+      btn.textContent   = hidden ? 'Hide code' : 'Show code';
+      btn.setAttribute('aria-expanded', String(hidden));
+    });
+  });
+});
+</script>

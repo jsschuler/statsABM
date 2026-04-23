@@ -1,8 +1,8 @@
 ---
 title: "The Possibility Space of Dynamics"
 subtitle: "Agent-Based Modeling for Statisticians"
-author: "John Lynham"
-date: "JSM 2025"
+author: "John S. Schuler"
+date: "JSM 2026"
 output:
   xaringan::moon_reader:
     css: ["../_theme/xaringan-custom.css", "default-fonts"]
@@ -58,7 +58,7 @@ class: inverse, center, middle
 # The Possibility Space of Dynamics
 
 ### Block 4 — Agent-Based Modeling for Statisticians
-### JSM 2025
+### JSM 2026
 
 ---
 
@@ -397,22 +397,15 @@ The language analogy is exact here. A confidence interval is a range of sentence
 ## The Logistic Map: Where the Language Breaks
 
 ```{r bifurcation-compute, echo=TRUE, cache=TRUE}
-# Logistic map bifurcation diagram
-# x_{t+1} = r * x_t * (1 - x_t)
+# x_{t+1} = r * x_t * (1 - x_t)  — logistic map
 logistic_map_attractor <- function(r_val, n_burn = 1000, n_collect = 200) {
   x <- 0.5
-  # Burn-in: discard transient dynamics
   for (i in seq_len(n_burn)) x <- r_val * x * (1 - x)
-  # Collect attractor points
-  tibble(
-    r = r_val,
-    x = sapply(seq_len(n_collect), function(i) {
-      x <<- r_val * x * (1 - x)
-      x
-    })
-  )
+  tibble(r = r_val,
+         x = sapply(seq_len(n_collect), function(i) {
+           x <<- r_val * x * (1 - x); x
+         }))
 }
-
 set.seed(2025)
 r_vals <- seq(2.5, 4.0, length.out = 800)
 bif_df <- map_dfr(r_vals, logistic_map_attractor)

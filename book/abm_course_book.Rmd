@@ -3,6 +3,18 @@ title: "Agent-Based Modeling for Statisticians"
 subtitle: "A Short Course"
 author: "John S. Schuler"
 date: "Joint Statistical Meetings, 2026"
+documentclass: book
+classoption: oneside
+fontsize: 11pt
+mainfont: "Source Serif 4"
+mainfontoptions:
+  - BoldFont=Source Serif 4 SemiBold
+  - ItalicFont=Source Serif 4 Italic
+sansfont: "Raleway"
+monofont: "Fira Code"
+monofontoptions:
+  - Scale=0.85
+linestretch: 1.25
 output:
   pdf_document:
     toc: true
@@ -13,23 +25,22 @@ output:
     fig_height: 4.5
     latex_engine: xelatex
     keep_tex: true
+    includes:
+      in_header: preamble.tex
   html_document:
     toc: true
-    toc_float:
-      collapsed: false
-      smooth_scroll: true
     toc_depth: 3
     number_sections: true
     theme: null
     css: ["../_theme/fonts.css", "../_theme/custom.css"]
-    highlight: null
+    highlight: pygments
     self_contained: true
     mathjax: "default"
     fig_caption: true
     fig_width: 8
     fig_height: 5
     df_print: paged
-    code_folding: show
+    code_folding: null
     includes:
       in_header: "../_theme/header.html"
 ---
@@ -41,7 +52,7 @@ knitr::opts_chunk$set(
   warning    = FALSE,
   fig.align  = "center",
   cache      = TRUE,
-  cache.path = "cache/"
+  cache.path = paste0("cache/", if (knitr::is_latex_output()) "pdf" else "html", "/")
 )
 
 # Enable Google Fonts in PDF/PNG output devices via showtext
@@ -362,11 +373,11 @@ palette_ch2 <- c(
   recovered   = "#27AE60"
 )
 
-# ODE parameters derived directly from the ABM mass-action rates:
-#   alpha = p_birth = 0.15  (per-capita prey birth rate per step)
-#   gamma = p_death = 0.10  (per-capita predator death rate per step)
-#   beta  = k_enc   = 0.00375 (per-pair encounter-kill rate; matches ABM)
-#   delta = k_enc * p_convert = 0.00375 * 0.267 = 0.001 (predator birth rate)
+# ODE parameters derived from the ABM individual-level rates:
+#   alpha = p_birth = 0.15   (per-capita prey birth rate per step)
+#   gamma = p_death = 0.10   (per-capita predator death rate per step)
+#   beta  = p_kill  = 0.00375 (kill probability per predator-prey pair per step)
+#   delta = p_kill * p_convert = 0.00375 * 0.267 ≈ 0.001 (predator birth rate)
 # Equilibrium: N* = gamma/delta = 100, P* = alpha/beta = 40.
 # Starting at (N=200, P=40): N is above N*, P is at P*, so P rises first
 # while N stays near 200, then both oscillate. Period ≈ 51 steps.
@@ -404,7 +415,7 @@ Give an agent a neighborhood smaller than the full population, and you give the 
 
 The biology is unchanged. Prey reproduce, predators hunt, predators die — the same rules as the differential equations. What changes is the substrate: a population of discrete individuals rather than a continuous quantity.
 
-Each individual is a row in a `tibble` carrying an identifier, a type (prey or predator), and an alive status. At each discrete time step: each surviving prey reproduces with probability $p_\text{birth}$; each predator is matched with a random prey individual and, with probability $p_\text{eat}$, kills it and may produce an offspring; each predator dies with probability $p_\text{death}$. The parameters $p_\text{birth}$, $p_\text{eat}$, $p_\text{death}$ are the individual-level counterparts of $\alpha$, $\beta\delta$, and $\gamma$ — the same rates, acting on the same events, at a different level of description.
+Each individual is a row in a `tibble` carrying an identifier, a type (prey or predator), and an alive status. At each discrete time step: each surviving prey reproduces with probability $p_\text{birth}$; each predator independently encounters each prey individual with probability $p_\text{kill}$, killing it on contact; each kill produces a new predator with probability $p_\text{convert}$; each predator dies independently with probability $p_\text{death}$. The parameters map directly onto the ODE: $p_\text{birth} = \alpha$, $p_\text{kill} = \beta$, $p_\text{kill} \times p_\text{convert} = \delta$, $p_\text{death} = \gamma$ — the same rates, now governing discrete individuals rather than continuous quantities.
 
 ```{r ch2-abm-lv-functions}
 # Agent-based Lotka-Volterra
@@ -418,13 +429,14 @@ init_lv_abm <- function(n_prey, n_pred) {
   )
 }
 
-step_lv_abm <- function(pop, p_birth = 0.15, k_enc = 0.00375, p_convert = 0.267,
+step_lv_abm <- function(pop, p_birth = 0.15, p_kill = 0.00375, p_convert = 0.267,
                         p_death = 0.10, max_pop = 5000L) {
   # One time step of the agent-based LV model.
-  # Encounter mechanism is Poisson mass-action: the expected number of
-  # predator-prey kills per step is k_enc * N * P, matching the beta*N*P term
-  # in the LV ODE exactly. Each kill converts to a new predator with
-  # probability p_convert, so delta = k_enc * p_convert in the ODE.
+  # Each predator independently encounters each prey with probability p_kill
+  # per pair per step — the direct individual-level interpretation of the
+  # beta*N*P term. Expected kills per step = p_kill * N * P = beta * N * P.
+  # Each kill produces a new predator with probability p_convert, so
+  # delta = p_kill * p_convert in the ODE.
   prey  <- filter(pop, type == "prey",     alive)
   preds <- filter(pop, type == "predator", alive)
   N     <- nrow(prey)
@@ -432,10 +444,7 @@ step_lv_abm <- function(pop, p_birth = 0.15, k_enc = 0.00375, p_convert = 0.267,
   max_id <- max(pop$id, 0L)
 
   # --- Prey reproduction ---
-  # Each alive prey reproduces with probability p_birth.
-  # max_pop is a safety cap: births are suppressed when prey exceed this
-  # threshold, preventing runaway population growth in parameter regimes
-  # where predation is temporarily low.
+  # max_pop is a safety cap against runaway growth in low-predation phases.
   n_born <- if (N >= max_pop) 0L else rbinom(1, N, p_birth)
   new_prey <- if (n_born > 0) {
     tibble(id = seq_len(n_born) + max_id, type = "prey", alive = TRUE)
@@ -444,33 +453,36 @@ step_lv_abm <- function(pop, p_birth = 0.15, k_enc = 0.00375, p_convert = 0.267,
   }
   max_id <- max_id + n_born
 
-  # --- Predator-prey encounters (Poisson mass-action) ---
-  # Number of kills ~ Poisson(k_enc * N * P), capped at N to avoid over-kill.
-  # This is the discrete-time analogue of the beta*N*P term in the LV ODE.
-  # Each kill also produces a new predator with probability p_convert.
-  n_kills <- min(rpois(1L, k_enc * N * P), N)
+  # --- Predator-prey encounters ---
+  # Each predator kills Binomial(N, p_kill) prey independently.
+  # Deduplication ensures each prey dies at most once per step.
   dead_prey_ids <- integer(0)
   new_pred_rows <- tibble(id = integer(), type = character(), alive = logical())
 
-  if (n_kills > 0) {
-    dead_prey_ids <- slice_sample(prey, n = n_kills)$id
-    n_new_pred    <- rbinom(1L, n_kills, p_convert)
+  if (N > 0 && P > 0) {
+    kills_per_pred <- rbinom(P, N, p_kill)
+    all_kills <- unlist(lapply(kills_per_pred[kills_per_pred > 0], function(k) {
+      slice_sample(prey, n = min(k, N))$id
+    }))
+    dead_prey_ids <- unique(all_kills)
+    n_kills_total <- length(dead_prey_ids)
 
-    if (n_new_pred > 0) {
-      new_pred_rows <- tibble(
-        id    = seq_len(n_new_pred) + max_id,
-        type  = "predator",
-        alive = TRUE
-      )
-      max_id <- max_id + n_new_pred
+    if (n_kills_total > 0) {
+      n_new_pred <- rbinom(1L, n_kills_total, p_convert)
+      if (n_new_pred > 0) {
+        new_pred_rows <- tibble(
+          id    = seq_len(n_new_pred) + max_id,
+          type  = "predator",
+          alive = TRUE
+        )
+        max_id <- max_id + n_new_pred
+      }
     }
   }
 
   # --- Predator natural death ---
-  # Each alive predator dies with probability p_death
   dead_pred_ids <- preds$id[rbinom(nrow(preds), 1, p_death) == 1]
 
-  # Update population: remove dead agents, add new ones
   pop_surviving <- pop %>%
     mutate(alive = alive & !(id %in% c(dead_prey_ids, dead_pred_ids))) %>%
     filter(alive)
@@ -507,7 +519,7 @@ n_pred0  <- 40
 
 abm_runs <- map_dfr(1:n_reps, function(rep) {
   run_lv_abm(T = T_run, n_prey = n_prey0, n_pred = n_pred0, seed = rep,
-             p_birth = 0.15, k_enc = 0.00375, p_convert = 0.267,
+             p_birth = 0.15, p_kill = 0.00375, p_convert = 0.267,
              p_death = 0.10) %>%
     mutate(rep = rep)
 })
@@ -558,7 +570,7 @@ With large populations and random mixing, the stochastic runs collapse onto the 
 
 Now reduce the population.
 
-```{r ch2-abm-extinction, fig.cap="The ODE cannot see extinction. With small populations, ABM runs frequently reach zero — a state the ODE cannot represent. The ODE orbits forever; the ABM can, and often does, fall to zero and stay there."}
+```{r ch2-abm-extinction, fig.cap="The ODE cannot see extinction. With small populations, ABM runs frequently reach zero, a state the ODE cannot represent. The ODE orbits forever; the ABM can, and often does, fall to zero and stay there."}
 # Small-population ABM: extinction is possible
 set.seed(2025)  # reproducibility
 
@@ -574,7 +586,7 @@ abm_small <- map_dfr(1:n_reps_small, function(rep) {
     n_pred    = n_pred_small,
     seed      = rep + 100,
     p_birth   = 0.15,
-    k_enc     = 0.00375,
+    p_kill    = 0.00375,
     p_convert = 0.267,
     p_death   = 0.10
   ) %>%
@@ -608,6 +620,13 @@ extinction_count <- abm_small %>%
   ) %>%
   pull(n_any_extinct)
 
+# Set ylim just above the peaks of the well-behaved (periodic/extinct) runs.
+# Diverging runs exceed this limit and are clipped; noted in the text below.
+run_peaks <- abm_small_long %>%
+  group_by(rep, species) %>%
+  summarise(peak = max(count), .groups = "drop")
+ylim_cap <- quantile(run_peaks$peak, 0.80) * 1.05
+
 ggplot() +
   geom_line(
     data = abm_small_long,
@@ -623,6 +642,7 @@ ggplot() +
     values = palette_ch2[c("prey", "predator")],
     labels = c("prey" = "Prey", "predator" = "Predator")
   ) +
+  coord_cartesian(ylim = c(0, ylim_cap)) +
   labs(
     title    = "Small-population ABM: extinction events",
     subtitle = paste0(
@@ -637,6 +657,8 @@ ggplot() +
 ```
 
 The ODE orbits forever. For a continuous quantity that obeys a smooth differential equation, there is no path to zero unless you engineer one by hand. The ABM can fall to zero because it represents discrete individuals: when the last prey individual dies, the population is extinguished, and that is a state from which there is no return. The phenomenon of extinction — one of the most consequential events in population biology — is inexpressible in the ODE's language. Not unlikely. Not improbable. Grammatically forbidden.
+
+A minority of runs go the other direction entirely: demographic stochasticity amplifies a favorable initial sequence and the population explodes before the predator response can stabilize it. Those runs exceed the figure's y-axis limit and are clipped. They are the other face of small-number noise — not extinction, but unbounded growth before the inevitable collapse — and they are equally invisible to the ODE.
 
 ## An Agent-Based SIR {#sec-abm-sir}
 
@@ -843,12 +865,12 @@ sir_ba <- run_network_sir(g_ba, I0 = 5, p_infect = 0.05, p_recover = 0.1,
                            T = 100, seed = 302)
 
 sir_network_df <- bind_rows(
-  mutate(sir_er, network = "Erdős-Rényi"),
-  mutate(sir_ba, network = "Barabási-Albert")
+  mutate(sir_er, network = "Erdos-Renyi"),
+  mutate(sir_ba, network = "Barabasi-Albert")
 )
 ```
 
-```{r ch2-network-sir-plot, fig.cap="SIR epidemic curves on two networks with the same mean degree. The Barabási-Albert scale-free network (right) produces faster initial spread through hubs, different peak timing, and a different final epidemic size than the structurally simpler Erdős-Rényi graph (left). The same transmission parameters; different interaction structures; different epidemics."}
+```{r ch2-network-sir-plot, fig.cap="SIR epidemic curves on two networks with the same mean degree. The Barabasi-Albert scale-free network (right) produces faster initial spread through hubs, different peak timing, and a different final epidemic size than the structurally simpler Erdos-Renyi graph (left). The same transmission parameters; different interaction structures; different epidemics."}
 sir_network_long <- sir_network_df %>%
   pivot_longer(c(S, I, R), names_to = "compartment", values_to = "count") %>%
   mutate(
@@ -870,7 +892,7 @@ ggplot(sir_network_long, aes(x = t, y = count, color = compartment)) +
   )
 ```
 
-```{r ch2-network-viz, fig.cap="Contact network structures at the peak of the epidemic. Node color indicates compartment status: blue = susceptible, red = infectious, green = recovered. Left: Erdős-Rényi graph, with roughly uniform degree distribution. Right: Barabási-Albert graph, with visible hub nodes carrying many connections. The hub structure changes the epidemic's geometry."}
+```{r ch2-network-viz, fig.cap="Contact network structures at the peak of the epidemic. Node color indicates compartment status: blue = susceptible, red = infectious, green = recovered. Left: Erdos-Renyi graph, with roughly uniform degree distribution. Right: Barabasi-Albert graph, with visible hub nodes carrying many connections. The hub structure changes the epidemic's geometry."}
 set.seed(2025)
 
 # Find peak time for each network
@@ -910,11 +932,11 @@ states_ba <- get_states_at_t(g_ba, t_peak_ba, seed = 302)
 # Tidygraph objects for ggraph
 tg_er <- as_tbl_graph(g_er) %>%
   mutate(compartment = states_er,
-         network     = "Erdős-Rényi")
+         network     = "Erdos-Renyi")
 
 tg_ba <- as_tbl_graph(g_ba) %>%
   mutate(compartment = states_ba,
-         network     = "Barabási-Albert")
+         network     = "Barabasi-Albert")
 
 plot_network <- function(tg, title_str, t_peak) {
   ggraph(tg, layout = "fr") +
@@ -933,8 +955,8 @@ plot_network <- function(tg, title_str, t_peak) {
           plot.background = element_rect(fill = "#FAFAF7", color = NA))
 }
 
-p_er_net <- plot_network(tg_er, "Erdős-Rényi", t_peak_er)
-p_ba_net <- plot_network(tg_ba, "Barabási-Albert", t_peak_ba)
+p_er_net <- plot_network(tg_er, "Erdos-Renyi", t_peak_er)
+p_ba_net <- plot_network(tg_ba, "Barabasi-Albert", t_peak_ba)
 
 p_er_net + p_ba_net
 ```
@@ -961,7 +983,7 @@ Parameterize the contact matrix as a mixture: with probability $p$, each infecte
 
 Each curve below is the mean of fifteen stochastic runs. The ODE is parameterized to match: $\gamma = -\log(1 - p_\text{recover})$ converts the ABM's geometric per-step recovery to its continuous-time equivalent, and $\beta$ is scaled to preserve $\mathcal{R}_0 = 3$ under that corrected $\gamma$. A residual gap between the $p = 1$ mean and the ODE dashed line is unavoidable — the ABM operates in discrete time with step size 1, while the ODE is continuous; at unit step size, higher-order discretization terms remain. The gap closes as the step size shrinks. It does not close with more data, more replicates, or better parameter tuning. It is not a calibration failure. It is the boundary between the two languages.
 
-```{r ch2-regularization-path, fig.cap="The regularization path from structured network contact ($p = 0$, full $\\Delta W$) to random mixing ($p = 1$, $\\Delta W = 0$). Each curve shows $I(t)$ for a different value of the mixing probability on the Barabási-Albert network. The ODE (dashed) is the $p = 1$ limit. Dialing $p$ from 0 to 1 shrinks $\\Delta W$ toward zero — the regularization path between the structured ABM and the differential equation."}
+```{r ch2-regularization-path, fig.cap="The regularization path from structured network contact ($p = 0$, full $\\Delta W$) to random mixing ($p = 1$, $\\Delta W = 0$). Each curve shows $I(t)$ for a different value of the mixing probability on the Barabasi-Albert network. The ODE (dashed) is the $p = 1$ limit. Dialing $p$ from 0 to 1 shrinks $\\Delta W$ toward zero: the regularization path between the structured ABM and the differential equation."}
 set.seed(2025)  # reproducibility
 
 # Mixed contact SIR: each infected agent makes contacts_per_step contacts per step.
@@ -1201,7 +1223,7 @@ spatial_anim <- ggplot(spatial_df, aes(x = x, y = y, fill = prey)) +
   ) +
   coord_equal() +
   labs(
-    title    = "Spatial Lotka-Volterra — prey density",
+    title    = "Spatial Lotka-Volterra: prey density",
     subtitle = "Time: {as.integer(frame_time)}"
   ) +
   theme_void(base_family = "Source Serif 4") +
@@ -1258,7 +1280,7 @@ The dynamic range is the first clue that something unusual is happening. The lar
 
 A power law distribution has the form $P(\text{size} \geq x) \propto x^{-(\alpha - 1)}$ for $x \geq x_\text{min}$. In logarithmic coordinates, the complementary cumulative distribution function is a straight line with slope $-(\alpha - 1)$. On a linear scale, the distribution looks like a spike near zero and an invisible tail. The linear plot defeats the intuition; the log-log plot reveals the structure.
 
-```{r ch3-data, fig.cap="Firm size distribution on a linear scale (left) and log-log scale (right, CCDF). The dynamic range — from single-employee firms to corporations employing hundreds of thousands — defeats any visualization on a linear scale. The log-log plot reveals the power law: a straight line across many orders of magnitude."}
+```{r ch3-data, fig.cap="Firm size distribution on a linear scale (left) and log-log scale (right, CCDF). The dynamic range, from single-employee firms to corporations employing hundreds of thousands, defeats any visualization on a linear scale. The log-log plot reveals the power law: a straight line across many orders of magnitude."}
 # NOTE: The data below are synthetic, generated from a power law distribution
 # as a placeholder. Substitute US Census Bureau SUSB microdata for real analysis.
 # SUSB data available at: https://www.census.gov/programs-surveys/susb.html
@@ -1581,7 +1603,7 @@ Stationarity is the temporal counterpart of the mean-field assumption — not an
 
 Sampling frequency determines which family choices are testable from the available data. A model estimated at weekly frequency cannot detect dynamics faster than two weeks — the Nyquist limit is a hard constraint on what signal is recoverable at that resolution. The stationary family chosen at weekly resolution is a commitment only about weekly-and-slower structure. Whether the system is stationary at that resolution is a distinct question from whether it is stationary at finer resolutions, and the two questions have different answers whenever the system is nearly decomposable. When the system is capable of bifurcation, the stationary family is misspecified in exactly the way the mean-field family is misspecified when contact structure matters: the family does not have the vocabulary for what is about to happen.
 
-```{r ch4-logistic-extrapolation, fig.cap="The extrapolation trap. A logistic growth process observed only in its early exponential phase (solid black points, t $\\leq$ 10) yields an exponential fit (dashed red) that projects unbounded growth. The true trajectory (solid blue) reaches a carrying capacity that is invisible from the early data. The turn is not outside the confidence interval of the fit — it is outside the language of the model fitted to the early data."}
+```{r ch4-logistic-extrapolation, fig.cap="The extrapolation trap. A logistic growth process observed only in its early exponential phase (solid black points, t $\\leq$ 10) yields an exponential fit (dashed red) that projects unbounded growth. The true trajectory (solid blue) reaches a carrying capacity that is invisible from the early data. The turn is not outside the confidence interval of the fit; it is outside the language of the model fitted to the early data."}
 set.seed(2025)  # seed for reproducibility
 
 K  <- 1000   # carrying capacity
@@ -1775,6 +1797,24 @@ This is the genealogy of the stationarity problem. Stationarity is not an assump
 
 The Kondratiev observation, the Minsky mechanism, the Ibn Khaldun genealogy of dynasties — these are all claims that the most important events in the system's history are phase transitions, and that models fitted within a phase are, by construction, blind to them. This is not a counsel of despair about time series modeling. It is a demand for precision about what time series models can and cannot say, and therefore about which questions they can and cannot answer. A model that fits the expansion phase fits the expansion phase. The question of whether the expansion will continue is a question about the regime structure — about where in the cycle the system currently sits, and what conditions govern the transition — and it is exterior to the language of any model that takes the expansion phase as its universe.
 
+## A Genealogy of the Catastrophist Error {#sec-genealogy}
+
+The cyclical thinkers described in the previous section — Ibn Khaldun, Kondratiev, Minsky — share one structural commitment: the system recovers. The trough precedes a new expansion; the collapsed dynasty is replaced by a vigorous successor; the Minsky moment clears the leverage and the cycle continues. There is a parallel tradition, equally old and quantitatively more elaborated, that draws the opposite conclusion from the same observation of decline: the trajectory does not reverse. It continues to zero.
+
+Thomas Malthus, in 1798, argued that population grows geometrically while food production grows arithmetically, and that the gap between them would be closed not by adaptation but by famine, disease, and war. The argument is internally consistent and empirically wrong. The mechanisms that falsified it — the demographic transition, in which populations in rising living standards reduce their own fertility without external compulsion; the productivity revolutions in agriculture that decoupled caloric output from land area — are not poorly estimated parameters in the Malthusian model. They are outside its language. The model's attractor is collapse. It has no basin for voluntary demographic transition, no representation for endogenous agricultural innovation. The catastrophe it predicts requires that nothing exterior to the model operates. What operated, always, was exactly that.
+
+William Stanley Jevons raised the structure one level in 1865. Britain's coal was finite, consumption was growing, therefore industrial civilization would eventually exhaust its substrate. Jevons added a subtlety Malthus lacked: he observed that more efficient steam engines had increased coal consumption rather than reduced it, because lower cost expanded demand faster than efficiency contracted it. His model still had no mechanism for the substitution of one energy substrate for another, or for the migration of industrial processes away from coal entirely. The resource it tracked was coal; the thing it failed to see was that the binding constraint was energy, whose definition was not fixed.
+
+The most technically elaborate version of the argument appeared in 1972. Jay Forrester's system dynamics framework, applied by Meadows and colleagues in *The Limits to Growth*, coupled population, industrial output, food production, resource depletion, and pollution in a calibrated differential equation system and projected global economic and population collapse within a century. World3 was carefully built and carefully fitted. It could not represent endogenous technological change, price-mediated substitution across resources, or the behavioral adaptations of heterogeneous agents responding to scarcity signals. These are not refinements a more careful version of the same model would include. They require a different expressive language — one in which agents are individual, heterogeneous, and adaptive rather than aggregated into mean-field stocks.
+
+The Simon-Ehrlich wager of 1980 makes the epistemological structure precise. Paul Ehrlich, wagering on the resource scarcity his models predicted, bet that the real prices of five commodity metals would rise over the following decade. Julian Simon took the other side. By 1990, all five prices had fallen. The mechanism was what Ehrlich's models structurally excluded: price signals induced exploration, efficiency improvements, and substitution across metals and production processes. The bet is not a record of who guessed right. It is a controlled demonstration that the models predicting scarcity systematically lacked the vocabulary for the mechanisms that prevented it. The exclusion was a feature of the expressive language, not a calibration error.
+
+The pattern has repeated. Hubbert's logistic depletion curve, correct for US lower-48 conventional oil production, was generalized to a global supply model and used to predict catastrophic oil shortage, repeatedly, from the 1970s through the 2000s. Each prediction failed through the same structural deficit: the models had no representation for unconventional reserves, for the technological frontier in extraction, for demand-side adaptation under rising prices. The resource proved more heterogeneous than the model allowed, and the agents more adaptive.
+
+What unifies this genealogy is a specific error: the over-generalization of locality. Each model in the sequence observes a local trajectory — a resource depleting at the current extraction rate, a population growing under current technology — and generalizes from the local slope to a global claim about the system's fate. The inference is valid only if the local behavior fully characterizes the attractor structure: if the system has no other basin, no adaptive mechanisms, no possibility outside the trajectory currently observed. The catastrophist model makes this assumption by construction. It is a model with one attractor, in a language that cannot represent the mechanisms that would produce another.
+
+This is not pessimism. It is a failure of cartography. The question the model cannot ask is: what qualitatively distinct futures are accessible from the current state, under what structural conditions does each obtain, and what observables or interventions govern which the system enters? The cyclical tradition and the catastrophist tradition cannot be distinguished by their trajectories. A declining resource is consistent with both a periodic trough and an approach to genuine collapse. Local extrapolation is silent on which regime the system occupies. That question is structural — it requires knowledge of the attractors, the mechanisms, and the boundaries between them — and it is exterior to the language of any model that takes the current phase as its universe.
+
 ## The Possibility Space {#sec-possibility}
 
 The agent-based model does not produce better point forecasts. It is not a superior extrapolation engine. A model that represents the full heterogeneity of a firm population does not thereby know where the economy will be in ten years with more precision than a model tracking mean firm size does. Forecasting is not the point.
@@ -1783,7 +1823,7 @@ What the ABM offers is a map of the possibility space — the range of qualitati
 
 Consider the contrast. A policy advisor working from a single trajectory — "the economy will grow at 2.3% next year, inflation will be 3.1%" — is navigating with a point. The point may be calibrated well or poorly; either way, it is a point. A policy advisor working from a possibility space map knows which dynamical regimes are accessible from the current state, what conditions would trigger a transition between them, and which interventions have leverage at the critical points. The map does not eliminate uncertainty. It characterizes it structurally, rather than reporting a number that suppresses the structure by design.
 
-```{r ch4-possibility-space, fig.cap="Multiple trajectories from the same initial condition. A stochastic system starting from the same initial state can realize qualitatively different outcomes. The cloud of trajectories is the possibility space — not a confidence interval around a single forecast, but a map of qualitatively distinct futures the system can reach. The distinctions that matter are often between qualitative regimes, not between nearby trajectories within the same regime."}
+```{r ch4-possibility-space, fig.cap="Multiple trajectories from the same initial condition. A stochastic system starting from the same initial state can realize qualitatively different outcomes. The cloud of trajectories is the possibility space: not a confidence interval around a single forecast, but a map of qualitatively distinct futures the system can reach. The distinctions that matter are often between qualitative regimes, not between nearby trajectories within the same regime."}
 set.seed(2025)  # reproducibility
 
 # Stochastic logistic growth: same starting point, different trajectories

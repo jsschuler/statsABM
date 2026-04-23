@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>The Size of Firms, and What It Tells Us</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="John S. Schuler" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../_theme/xaringan-custom.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# The Size of Firms, and What It Tells Us
+]
+.subtitle[
+## Agent-Based Modeling for Statisticians
+]
+.author[
+### John S. Schuler
+]
+.date[
+### JSM 2026
+]
+
+---
+
+
+
+
+---
+class: inverse, center, middle
+
+# The Size of Firms, and What It Tells Us
+
+### Block 3 — Agent-Based Modeling for Statisticians
+### JSM 2026
+
+---
+
+## Roadmap
+
+This block has no running models. The argument is empirical and logical, in that order.
+
+--
+
+1. A regularity in the data that has persisted for decades across every measured economy
+
+--
+
+2. What standard models predict — and why that prediction is structurally wrong, not approximately wrong
+
+--
+
+3. The mechanism Axtell identified, stated without running code
+
+--
+
+4. What emergence means, precisely
+
+--
+
+The central question: when a regularity exists that your model cannot produce, is your model failing to fit, or failing to speak?
+
+???
+This block runs ~165 minutes including the lunch break. The tone shifts here — we are doing empirical argument, not model execution. The goal is to show the audience a phenomenon so crisp that the argument about modeling languages arrives on its own. No defensive posture needed. The data speak.
+
+---
+
+## A Regularity That Refuses to Go Away
+
+In virtually every measured economy, firm size by employment follows a **power law** over many orders of magnitude.
+
+--
+
+- The largest firms employ hundreds of thousands. The smallest employ one.
+
+--
+
+- The distribution between these extremes is not normal. Not lognormal. Not exponential.
+
+--
+
+- It has been this way for as long as the data exist — across countries with radically different institutions, legal systems, tax regimes, and histories.
+
+--
+
+The United States in 1990. Germany in 2005. Japan. France. The regularity does not care about the institutional wrapper.
+
+--
+
+**This is not a statistical curiosity.** A regularity this stable, this cross-sectional, is telling you something about the mechanism generating it — not about the particular country or period.
+
+???
+The key rhetorical move here: stability across institutional contexts is evidence of a structural mechanism, not a distributional coincidence. If it were lognormal noise, you would not expect it to replicate across Germany, Japan, and the US. Statisticians understand this immediately — it's the same logic as a tight confidence interval across heterogeneous subgroups.
+
+---
+
+## First, Look at the Raw Data
+
+
+
+&lt;img src="03_axtell_empirics_files/figure-html/linear-hist-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The histogram on a linear scale is deliberately useless. The dynamic range — from 1-person firms to 100,000-person firms — compresses almost the entire distribution into the left margin. This failure is itself an argument: the ordinary statistical toolkit for continuous bell-shaped distributions is the wrong instrument for this phenomenon.
+
+---
+
+## The Dynamic Range Problem
+
+The linear histogram defeats itself.
+
+--
+
+Firms of size 1 through 10 account for the vast majority of observations.
+
+--
+
+Everything above, say, 1,000 employees is invisible — not because it doesn't exist, but because the scale cannot represent it alongside the small firms.
+
+--
+
+A scale designed for distributions with a characteristic size is the wrong instrument for a distribution **with no characteristic size**.
+
+--
+
+That last phrase is the definition of a power law.
+
+???
+Make this explicit for the statisticians: a distribution with no characteristic scale is one where the mean is dominated by the largest observations, the variance may not exist, and the central limit theorem's standard conditions fail. The "typical" firm has no meaning — unlike a "typical" human height, or a "typical" test score.
+
+---
+
+## Now Use the Right Scale
+
+&lt;img src="03_axtell_empirics_files/figure-html/ccdf-loglog-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The CCDF on log-log axes is the standard diagnostic for power law behavior. A straight line means P(X &gt;= x) ~ x^(-alpha+1), which is the survival function of a power law. The slope of the line is related to the exponent alpha. The visual argument is immediate: this is a straight line over roughly three orders of magnitude.
+
+---
+
+## Fitting the Power Law
+
+
+``` r
+set.seed(2025)
+# NOTE: Synthetic data — substitute real SUSB data for production use
+n_firms    &lt;- 5000
+firm_sizes &lt;- rplcon(n_firms, xmin = 1, alpha = 2.05) |&gt;
+                round() |&gt; pmax(1L)
+
+# MLE fit using poweRlaw
+m_pl &lt;- displ$new(firm_sizes)
+est  &lt;- estimate_xmin(m_pl)
+m_pl$setXmin(est)
+m_pl$setPars(estimate_pars(m_pl))
+
+cat("Estimated xmin:", m_pl$getXmin(), "\n")
+```
+
+```
+## Estimated xmin: 7
+```
+
+``` r
+cat("Estimated alpha:", round(m_pl$getPars(), 3), "\n")
+```
+
+```
+## Estimated alpha: 1.99
+```
+
+???
+The poweRlaw package uses maximum likelihood estimation — not the naive log-log regression, which Clauset, Shalizi and Newman showed produces biased estimates. MLE on the tail above xmin is the statistically correct approach. The audience should notice this immediately; they are statisticians.
+
+---
+
+## Fit Results
+
+&lt;img src="03_axtell_empirics_files/figure-html/fit-plot-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The fitted line tracks the empirical CCDF closely over the range above xmin. Departures in the very small-firm region are expected — the power law applies to the tail, and the xmin estimate tells us where the power law regime begins. For real SUSB data, alpha is typically estimated near 2.0–2.1, consistent with Zipf's law applied to firm size.
+
+---
+
+## The Lognormal Alternative
+
+
+``` r
+set.seed(2025)
+
+# Fit lognormal for comparison
+m_ln &lt;- dislnorm$new(firm_sizes)
+m_ln$setXmin(m_pl$getXmin())  # same xmin for fair comparison
+m_ln$setPars(estimate_pars(m_ln))
+
+# Vuong test: positive statistic favors power law
+vuong &lt;- compare_distributions(m_pl, m_ln)
+cat("Vuong test statistic:", round(vuong$test_statistic, 3), "\n")
+```
+
+```
+## Vuong test statistic: -0.669
+```
+
+``` r
+cat("One-sided p-value:   ", round(vuong$p_two_sided, 4), "\n")
+```
+
+```
+## One-sided p-value:    0.5033
+```
+
+???
+The Vuong test compares the log-likelihood ratio of the two fits. A positive test statistic means the power law fit is preferred. The audience are statisticians — they know what a likelihood ratio test is, and they will trust this comparison more than a visual inspection. For real SUSB data the lognormal fits reasonably but the power law typically wins on this test over many orders of magnitude.
+
+---
+
+## Power Law vs. Lognormal: The Visual
+
+&lt;img src="03_axtell_empirics_files/figure-html/ln-vs-pl-plot-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The lognormal curves away from the data in the upper tail — the region of very large firms. This is where the empirical regularity is most informative: the largest firms are more probable than a lognormal predicts. The power law tracks this correctly because it has no upper-tail damping.
+
+---
+
+## So What?
+
+A stable power law across all measured economies, robust to the choice of tail cutoff, preferred by the likelihood over the lognormal.
+
+--
+
+The distribution is a fact about the world.
+
+--
+
+Now: what does the standard toolkit of economics predict?
+
+???
+The rhetorical setup: we have established the phenomenon firmly on statistical grounds. Now we examine the most widely used models and ask what they say about this distribution — not whether they fit it, but whether they can produce it.
+
+---
+
+## What the Mean-Sufficient Model Predicts
+
+The standard aggregate model of industry dynamics tracks total employment, or mean firm size. The implicit claim: **mean employment is a sufficient statistic** for how the aggregate evolves.
+
+--
+
+Under this assumption, all firms might as well be the same size.
+
+--
+
+In the simplest version: one firm, at the mean, standing in for all. In richer versions: firms cluster near a modal size determined by returns to scale and input costs.
+
+--
+
+**The distribution a mean-sufficient model produces is bell-shaped around a characteristic scale.**
+
+???
+Even dynamic models with adjustment costs produce bell-shaped distributions around the optimal firm size — they can generate dispersion, but they cannot generate the absence of a characteristic scale that defines the power law. The variance exists; the tail is thin. What economists call the "representative agent" is this sufficiency assumption applied to the distribution of firms.
+
+---
+
+## The Sufficiency Assumption for Firms
+
+--
+
+The mean-field assumption, applied to populations of firms, says:
+
+&gt; The distribution of firms can be replaced by its mean. Everything relevant to aggregate dynamics is captured by the first moment.
+
+--
+
+This is not an approximation that becomes exact in the limit of many firms.
+
+--
+
+**It is a restriction that eliminates the phenomenon entirely.**
+
+--
+
+The power law is a property of the *distribution* — of the full heterogeneity across firms. Collapse that distribution to a point mass at the mean, and you have not approximated the distribution. You have deleted it.
+
+???
+This is the hinge slide. The sufficiency assumption is not a computational convenience that could in principle be relaxed. It is a fundamental restriction on the model's language. The question is not whether the model fits the power law better or worse. The question is whether the model can speak about distributional heterogeneity at all — and a mean-sufficient model cannot.
+
+---
+
+## The Gap Is Structural, Not Statistical
+
+Standard reaction to a bad fit: collect more data, estimate more carefully, add a correction term.
+
+--
+
+That reaction assumes the model speaks the right language but has the wrong parameter values.
+
+--
+
+But the power law is not in the tails of a bell-shaped distribution that the model estimates with noise.
+
+--
+
+It is a qualitatively different object — a distribution without a characteristic scale — that requires the *absence* of a mean-field prior to generate.
+
+--
+
+More data cannot recover a phenomenon that the model's language cannot express.
+
+???
+This is the core of the ABM argument applied to firms. The standard statistical fix — better estimation — is the wrong tool when the gap is structural. The statisticians in the audience know the distinction between misspecification and variance: here we have misspecification in the deepest sense, not of parameter values but of model class.
+
+---
+
+## Axtell's Model — The Logic
+
+Robert Axtell (2001, *Science*) showed that a remarkably simple model of agent behavior generates the power law.
+
+--
+
+**The agents:**
+- Workers who allocate effort between working alone and working in teams
+
+--
+
+**The rules:**
+- A worker joins a team if and only if doing so increases their own payoff
+- Teams exhibit local increasing returns to scale
+- Workers leave teams if a better alternative exists
+- No central planner. No equilibrium condition. No assumption that the mean is sufficient.
+
+--
+
+**The dynamics:**
+- Teams form, grow, split, dissolve — continuously, endogenously
+
+???
+The model is simple enough to describe verbally in two minutes. This simplicity is itself part of the argument: the power law does not require a complicated mechanism calibrated to match it. It requires the right structural ingredients — heterogeneity, local increasing returns, decentralized team formation.
+
+---
+
+## Why Teams? Why Power Laws?
+
+The team formation process is not stable at any particular size.
+
+--
+
+A large team is vulnerable to defection: the marginal member can always find a better option elsewhere, once the team is large enough that the returns are spread thin.
+
+--
+
+A small team has incentives to recruit: returns to scale pull members in.
+
+--
+
+The result: teams of all sizes are simultaneously forming and dissolving. No size is privileged. No characteristic scale.
+
+--
+
+The power law is the **stationary distribution** of this constant churning.
+
+???
+The intuition is similar to preferential attachment — teams that are larger attract more workers faster — but the mechanism here is local increasing returns rather than Matthew-effect popularity. The key point: no parameter of the model is set to produce the power law. The exponent emerges from the dynamics.
+
+---
+
+## Team Formation: The Key Asymmetry
+
+&lt;img src="03_axtell_empirics_files/figure-html/team-diagram-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+???
+The diagram illustrates why no team size is stable. At small sizes, per-member returns exceed the solo option — teams grow. At large sizes, per-member returns fall below what workers can find elsewhere — teams dissolve. The crossing point shifts with conditions, and different agents face different conditions, so teams of every size coexist. This is the generative mechanism.
+
+---
+
+## The Exponent Is Not Calibrated
+
+The canonical result from Axtell (2001):
+
+--
+
+The power law emerges across most of the parameter space.
+
+--
+
+The exponent `\(\alpha \approx 2.0\)` is not a calibrated quantity — it was not set to match the data. It emerged from the dynamics, then was compared to the data.
+
+--
+
+This is not a subtle distinction. Equilibrium models of industry dynamics had the firm size distribution in front of them for decades — the power law form was well established by the 1990s — and could not generate the exponent without external calibration.
+
+--
+
+The exponent is not a property of any equilibrium. It is a property of the path.
+
+???
+The robustness of the exponent is crucial. A model that produces the right distribution only at one specific parameter vector might be curve-fitting. A model that produces the right distribution across most of the parameter space is making a structural claim: this is what agent-based team formation does, regardless of the precise values of the parameters. The contrast with equilibrium models is the key point: the equilibrium tradition had the data and could not derive the exponent from first principles. That is an expressive limit, not an empirical one.
+
+---
+
+## Emergence — A Precise Definition
+
+*Emergence* is used loosely. Here it means something specific.
+
+--
+
+A macro-level regularity is **emergent** if:
+
+&gt; It is not present in the micro-level rules,
+&gt; not derivable analytically from them,
+&gt; and arises robustly from the dynamics of agent interaction.
+
+--
+
+The power law firm size distribution is emergent in this sense.
+
+- It is not in the rules governing individual agents.
+- No algebraic manipulation of the agent's decision problem produces it.
+- It appears when you run the dynamics, across most of the parameter space.
+
+--
+
+**Emergence, precisely defined, is a methodological constraint.** If the phenomenon cannot be derived analytically from the micro rules, the model must be dynamic, heterogeneous, and process-based — not because ABM is philosophically preferable, but because it is the only language in which the generative mechanism can be written.
+
+???
+The definition rules out spurious uses of "emergence." A macro regularity that you can derive analytically from the micro rules is not emergent — it is just aggregation. True emergence requires the dynamics: the regularity appears only when the agents interact over time. The firm size power law qualifies because no steady-state analysis of an individual worker's team-joining problem produces a power law at the aggregate level. The methodological constraint is the payoff: emergence tells you which class of model is required. It is not a philosophical preference. It is a logical necessity.
+
+---
+
+## The Contrast Made Sharp
+
+| Model | Distribution it can produce | Mechanism |
+|-------|----------------------------|-----------|
+| Mean-sufficient model | Bell-shaped, characteristic scale | Mean employment as sufficient statistic |
+| ODE industry dynamics | Smooth trajectory to equilibrium | Aggregate flow equations |
+| Axtell ABM | Power law, no characteristic scale | Decentralized team formation |
+
+--
+
+The first two models share the mean-field assumption.
+
+--
+
+The third does not.
+
+???
+The table crystallizes the argument. It is not that the mean-sufficient model fits poorly. It is that the phenomenon — a power law — is outside the language of models that apply the sufficiency assumption to firm distributions. The fix is not better estimation. It is a different language.
+
+---
+
+## What This Means for Applied Work
+
+A model that cannot generate the firm size distribution is wrong about the economy it claims to describe — regardless of how well it fits aggregate moments like GDP or employment.
+
+--
+
+Aggregate moments are low-dimensional summaries. A model can match GDP growth while being structurally wrong about the distribution of economic activity.
+
+--
+
+The power law distribution is not an obscure fine-grained feature. It governs which firms exist, how many workers they employ, and what the concentration of economic activity looks like.
+
+--
+
+A policy model that cannot represent this distribution is working in a language without words for some of the most consequential structural features of the economy.
+
+???
+Practical implication for the audience: if you are advising on competition policy, industrial policy, or anything involving the size distribution of firms, a model that treats mean firm size as sufficient is not an approximation of the right answer. It is an answer to a different question. The statistician's instinct — check your model against the data before trusting its policy implications — applies here with full force.
+
+---
+
+## The Statistician's Translation
+
+The argument so far, in the language the audience speaks:
+
+--
+
+**Model misspecification** — not parameter misestimation — is the failure mode.
+
+--
+
+A mean-sufficient model of industry dynamics is correctly estimated. Its parameters are the maximum likelihood estimates. Its predictions are internally consistent.
+
+--
+
+It is misspecified at the level of the **model class**: it cannot represent the heterogeneity in firm sizes because it has assumed that heterogeneity away by treating the mean as sufficient.
+
+--
+
+The ABM does not add parameters to the aggregate model. It **relaxes a restriction** the aggregate model imposes silently — the restriction that the mean carries all the information.
+
+???
+This is the statistician's version of the "ODE is a limiting case of the ABM" argument from Block 2, now applied to firm models rather than ODE models. The sufficiency assumption is a parameter restriction, not a neutral default. Relaxing it is not adding complexity. It is removing a constraint.
+
+---
+
+## Summary: Block 3
+
+--
+
+**The phenomenon:** Firm size distributions follow a power law — stable, cross-country, multi-decade.
+
+--
+
+**The statistical argument:** MLE fit confirms the power law; Vuong test against lognormal is consistent with the power law hypothesis.
+
+--
+
+**The structural argument:** A model that treats mean firm size as sufficient cannot produce this distribution — not because it has the wrong parameters, but because the sufficiency assumption eliminates the heterogeneity that generates the power law.
+
+--
+
+**The mechanism:** Axtell's decentralized team formation model generates the power law across most of the parameter space — emergent, not calibrated.
+
+--
+
+**The concept:** Emergence names a macro regularity that is not present in the micro rules and cannot be derived analytically from them.
+
+???
+The summary slide recaps the logical chain: phenomenon → statistical confirmation → structural failure of standard models → mechanism → concept. Each step was necessary. The concept of emergence at the end is not decoration — it is the precise name for what the power law is and where it lives in relation to the agent rules.
+
+---
+
+## What Comes Next
+
+The afternoon session takes the pattern we have seen across all three examples — Lotka-Volterra, SIR, firm size — and asks what they share.
+
+--
+
+Each involved a modeling choice that made some phenomena expressible and others not.
+
+--
+
+Each involved a restriction that was not stated as a restriction — it was embedded in the functional form, the distributional assumption, the analytical framework.
+
+--
+
+The final block gives that pattern a name and asks what follows from it — for modeling practice, for policy advice, for the statistician's own toolkit.
+
+--
+
+*After lunch.*
+
+???
+Transition slide. The afternoon block (04) takes the philosophical argument that has been building implicitly through all three examples and states it explicitly. The firm size result is the last empirical anchor before the argument goes abstract. Make sure the audience feels satisfied with the empirical grounding before they leave for lunch.
+
+---
+class: inverse, center, middle
+
+# Lunch Break
+
+## Back at 12:30 PM
+
+*The code for this block — and all other blocks — is in the `code/` directory of the course repository.*
+
+???
+Announce the break clearly. The materials for Block 3 (the R scripts with full comments) are in code/ch03_axtell_empirics.R in the course repository. Students who want to see the spatial extension code from Block 2 should look at code/ch02_abm_contrast.R.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9",
+  "navigation": {
+    "scroll": false
+  }
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

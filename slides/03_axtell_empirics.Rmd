@@ -1,8 +1,8 @@
 ---
 title: "The Size of Firms, and What It Tells Us"
 subtitle: "Agent-Based Modeling for Statisticians"
-author: "John Lynham"
-date: "JSM 2025"
+author: "John S. Schuler"
+date: "JSM 2026"
 output:
   xaringan::moon_reader:
     css: ["../_theme/xaringan-custom.css", "default-fonts"]
@@ -58,7 +58,7 @@ class: inverse, center, middle
 # The Size of Firms, and What It Tells Us
 
 ### Block 3 — Agent-Based Modeling for Statisticians
-### JSM 2025
+### JSM 2026
 
 ---
 
@@ -656,7 +656,7 @@ class: inverse, center, middle
 
 # Lunch Break
 
-## Back at 1:30 PM
+## Back at 12:30 PM
 
 *The code for this block — and all other blocks — is in the `code/` directory of the course repository.*
 

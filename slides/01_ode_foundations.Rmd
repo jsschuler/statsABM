@@ -1,8 +1,8 @@
 ---
 title: "The Differential Equations of Living Systems"
 subtitle: "Agent-Based Modeling for Statisticians"
-author: "John Lynham"
-date: "JSM 2025"
+author: "John S. Schuler"
+date: "JSM 2026"
 output:
   xaringan::moon_reader:
     css: ["../_theme/xaringan-custom.css", "default-fonts"]
@@ -173,9 +173,6 @@ Speaker notes: The parameter table is here for reference. Do not read it aloud. 
 ## Lotka-Volterra in R
 
 ```{r lv-ode-def, echo=TRUE}
-# Lotka-Volterra ODE system for deSolve
-# Parameters: alpha (prey growth), beta (predation),
-#             delta (predator efficiency), gamma (predator death)
 lotka_volterra <- function(t, state, parameters) {
   with(as.list(c(state, parameters)), {
     dN <- alpha * N - beta * N * P
@@ -183,12 +180,9 @@ lotka_volterra <- function(t, state, parameters) {
     list(c(dN, dP))
   })
 }
-
 params <- c(alpha = 0.8, beta = 0.02, delta = 0.01, gamma = 0.4)
 state0 <- c(N = 60, P = 15)
 times  <- seq(0, 80, by = 0.1)
-
-# set.seed not needed for ODE — deterministic
 lv_out <- ode(y = state0, times = times,
               func = lotka_volterra, parms = params)
 lv_df  <- as_tibble(as.data.frame(lv_out))
@@ -363,12 +357,10 @@ sir_model <- function(t, state, parameters) {
     list(c(dS, dI, dR))
   })
 }
-
-N      <- 1000
+N         <- 1000
 params_sir <- c(beta = 0.0003, gamma = 0.1)
 state_sir  <- c(S = N - 1, I = 1, R = 0)
 times_sir  <- seq(0, 160, by = 0.5)
-
 sir_out <- ode(y = state_sir, times = times_sir,
                func = sir_model, parms = params_sir)
 sir_df  <- as_tibble(as.data.frame(sir_out))
@@ -484,7 +476,7 @@ class: center, middle
 
 *Block 2 begins at 10:15*
 
-*Materials and code: [github.com/johnlynham/abm-statisticians]*
+*Materials and code: [github.com/jsschuler/abm-statisticians]*
 
 ???
 Speaker notes: Remind the audience that all code is in the distributed materials — they do not need to copy anything from the slides. The GitHub repository has fully commented scripts for every chunk shown today.

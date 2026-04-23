@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>The Differential Equations of Living Systems</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="John S. Schuler" />
+    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../_theme/xaringan-custom.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# The Differential Equations of Living Systems
+]
+.subtitle[
+## Agent-Based Modeling for Statisticians
+]
+.author[
+### John S. Schuler
+]
+.date[
+### JSM 2026
+]
+
+---
+
+
+
+
+---
+
+## Block 1: The Differential Equations of Living Systems
+
+.pull-left[
+**The terrain**
+
+- Feedback and why it defeats intuition
+- Lotka-Volterra: predators, prey, and the geometry of cycles
+- The mean-field assumption — named, precisely
+- SIR epidemics: the threshold phenomenon
+]
+
+.pull-right[
+**The destination**
+
+By the end of this block, the ODE is not just a tool you can use — it is a language you can describe. A language with a boundary. The boundary is the subject of the rest of the day.
+]
+
+???
+Speaker notes: Set expectations clearly. This block is not a review session — the audience knows differential equations. The goal is to look at two models they may already know, but to attend to the assumptions embedded in their structure with an eye they haven't needed before. The payoff comes in Block 2.
+
+---
+
+## Feedback Defeats Intuition
+
+A population of rabbits with unlimited food does not grow forever.
+
+An epidemic does not infect everyone it could.
+
+--
+
+These are not accidents. They are the signatures of feedback — the way a system's current state shapes its own future trajectory. Our unaided intuition, built for linear sequences of cause and effect, misfires.
+
+--
+
+The differential equation is the instrument built to read feedback's signature. Not because it is the only instrument, but because it makes the feedback structure explicit, manipulable, and — crucially — criticizable.
+
+--
+
+We are going to look at two classical models through fresh eyes today. Not to learn them, but to see what they assume.
+
+???
+Speaker notes: The key rhetorical move here is framing the ODE as an instrument that makes assumptions explicit — not as a neutral description of nature. This sets up the mean-field discussion later. The audience of statisticians will be comfortable with the idea that modeling choices embed assumptions; they may be less accustomed to finding those assumptions in functional forms rather than distributional families.
+
+---
+
+## Lotka-Volterra: The Assumptions
+
+What does a system of rabbits and foxes actually require us to assume?
+
+--
+
+**Assumption 1.** Absent predators, prey grow at a constant per-capita rate `\(\alpha\)`. A rabbit population left alone doubles on a fixed schedule.
+
+--
+
+**Assumption 2.** Absent prey, predators decline at a constant per-capita rate `\(\gamma\)`. Foxes starve at a fixed rate.
+
+--
+
+**Assumption 3.** Encounters between predators and prey occur at a rate proportional to the *product* of their population sizes. More on this in a moment.
+
+--
+
+**Assumption 4.** Each encounter kills one prey and, with efficiency `\(\delta/\beta\)`, produces one new predator.
+
+???
+Speaker notes: Build slowly here. The first two assumptions are unremarkable — they are the standard exponential growth/decay intuition. The third assumption carries enormous weight that will be named explicitly in two slides. Do not rush past it. The fourth is the energy transfer across trophic levels. Efficiency is the ratio of predator birth rate to predation rate — a standard ecological parameter.
+
+---
+
+## The Product Term
+
+.center[
+### `\(\beta NP\)`
+]
+
+This term says something specific about the world.
+
+--
+
+It says that every predator is equally likely to encounter every prey individual at every moment. That the rate of encounters scales with the product of the two population sizes. That space plays no role. That prior relationships between individuals play no role.
+
+--
+
+Every fox is, at every instant, in contact with every rabbit. Simultaneously. Uniformly.
+
+--
+
+This is not stated as an assumption anywhere in most presentations of Lotka-Volterra. It is embedded in the functional form. It is doing structural work before the model is even written down.
+
+???
+Speaker notes: This is the first appearance of what will be named as the mean-field assumption two slides from now. The goal here is to make the audience feel the assumption before it is named — so the naming arrives as a crystallization of something they have already seen. Do not name it yet. Let the strangeness of the claim sit with the room.
+
+---
+
+## The Lotka-Volterra System
+
+`$$\frac{dN}{dt} = \alpha N - \beta N P$$`
+
+`$$\frac{dP}{dt} = \delta N P - \gamma P$$`
+
+| Parameter | Meaning |
+|-----------|---------|
+| `\(\alpha\)` | Prey per-capita birth rate |
+| `\(\beta\)` | Predation rate coefficient |
+| `\(\delta\)` | Predator birth rate per prey consumed |
+| `\(\gamma\)` | Predator per-capita death rate |
+
+The nullclines are `\(N^* = \gamma/\delta\)` and `\(P^* = \alpha/\beta\)`. Trajectories orbit these fixed points.
+
+???
+Speaker notes: The parameter table is here for reference. Do not read it aloud. Point to the nullclines and remind the audience that the fixed point is an orbit center — not an attractor, not a repeller. This will matter for the phase portrait. The closed-orbit result is genuinely strange and deserves a moment of attention.
+
+---
+
+## Lotka-Volterra in R
+
+
+``` r
+lotka_volterra &lt;- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    dN &lt;- alpha * N - beta * N * P
+    dP &lt;- delta * N * P - gamma * P
+    list(c(dN, dP))
+  })
+}
+params &lt;- c(alpha = 0.8, beta = 0.02, delta = 0.01, gamma = 0.4)
+state0 &lt;- c(N = 60, P = 15)
+times  &lt;- seq(0, 80, by = 0.1)
+lv_out &lt;- ode(y = state0, times = times,
+              func = lotka_volterra, parms = params)
+lv_df  &lt;- as_tibble(as.data.frame(lv_out))
+```
+
+???
+Speaker notes: Keep the code brief on the slide. The full annotated version is in the course materials. Emphasize `deSolve`'s clean interface — state vector, parameter list, the function returns derivatives. The `with(as.list(...))` idiom lets parameter names appear directly in the equations, which is pedagogically useful.
+
+---
+
+## Lotka-Volterra: Time Series
+
+&lt;img src="01_ode_foundations_files/figure-html/lv-timeseries-1.png" width="720" style="display: block; margin: auto;" /&gt;
+
+???
+Speaker notes: Draw attention to the lag between the prey peak and the predator peak. This is the feedback loop made visible: prey grow, then predators follow (with a lag), then predators suppress prey, then predators collapse, then prey recover. The cycle is self-sustaining and perfectly regular. The perfect regularity will become suspicious in Block 2.
+
+---
+
+## The Phase Portrait
+
+The trajectories are closed orbits. The system cycles forever — without damping, without growth.
+
+&lt;img src="01_ode_foundations_files/figure-html/lv-phase-1.png" width="648" style="display: block; margin: auto;" /&gt;
+
+???
+Speaker notes: The closed orbit is geometrically beautiful and physically peculiar — like a pendulum that never loses energy to friction. Real ecological systems do not behave this way; populations show damped oscillations or stochastic fluctuations around equilibrium. The model is a clean mathematical object, not a literal description. The question is which of its structural choices produce this cleanliness — and what is the cost.
+
+---
+
+## The Mean-Field Assumption
+
+That product term `\(\beta NP\)` has a name.
+
+--
+
+**The mean-field assumption**: every individual in the population interacts with every other individual with equal probability at every moment. The population is perfectly mixed. Space does not exist. Individuals have no persistent relationships, no locations, no neighborhoods. Every interaction is drawn at random from the full population, at every instant.
+
+--
+
+It is not stated as an assumption in most presentations of Lotka-Volterra. It is embedded in the functional form. It is doing the work that makes the closed-orbit result possible.
+
+--
+
+It is a structural restriction — one that assigns all probability mass to a single interaction structure, the fully mixed population, and zero probability mass to every other structure that has ever existed in a real ecosystem.
+
+???
+Speaker notes: This is the hinge of the entire day. Name it precisely. Do not apologize for it — the mean-field assumption has been scientifically productive for over a century. The point is not that it is wrong, but that it is a choice — a strong one — embedded silently in the functional form. A statistician in the audience may immediately recognize this framing: a restriction that is never acknowledged is a restriction that can never be relaxed. Pause here. Let this land.
+
+---
+
+## SIR: A Model the Room Has Opinions About
+
+The years since 2020 have given most people in this room considerably more opinions about this model than they might have anticipated forming.
+
+--
+
+The SIR model partitions a closed population into three compartments:
+
+- **S** — Susceptible: not yet infected, capable of infection
+- **I** — Infectious: currently infected and capable of transmitting
+- **R** — Recovered: immune, no longer capable of transmission
+
+--
+
+The same mean-field assumption governs contact. Infectious individuals contact susceptibles at a rate proportional to `\(SI\)` — every infectious person is, at every moment, equally likely to encounter any susceptible person in the population.
+
+???
+Speaker notes: The 2020 reference lands differently now than it did in 2019. Use it to humanize the model — these are not abstract symbols, this is a formal description of something many people have lived through. The humor in the understatement ("considerably more opinions") should be dry, not milked. Then pivot immediately to the formal structure. The mean-field assumption appears again — make this explicit: it is the same structural choice, now governing human contact rather than predator-prey encounter.
+
+---
+
+## SIR: Assumptions Built Incrementally
+
+**The closed population**: `\(S + I + R = N\)` (constant). No births, no deaths from other causes.
+
+--
+
+**Mass action**: infectious individuals contact susceptibles at rate `\(\beta SI\)`. The product again. The same prior.
+
+--
+
+**Recovery**: infectious individuals recover (and become immune) at per-capita rate `\(\gamma\)`. The average infectious period is `\(1/\gamma\)`.
+
+--
+
+These three verbal assumptions are all you need. The equations follow.
+
+???
+Speaker notes: The verbal-to-formal derivation is pedagogically important. The audience should see that the model structure is not arbitrary — each term in the ODE corresponds to a specific verbal claim about biology. This makes the model criticizable: which verbal claim fails for COVID, for influenza, for measles?
+
+---
+
+## The SIR System
+
+`$$\frac{dS}{dt} = -\beta S I$$`
+
+`$$\frac{dI}{dt} = \beta S I - \gamma I$$`
+
+`$$\frac{dR}{dt} = \gamma I$$`
+
+The system conserves population: `\(\frac{d}{dt}(S + I + R) = 0\)`.
+
+???
+Speaker notes: Note the conservation property explicitly — it is a consistency check on the model. Each person leaving S enters I; each person leaving I enters R; no one appears or disappears. This is the closed-population assumption made algebraically manifest. Also note: unlike Lotka-Volterra, SIR is not conservative in its phase space — there is no closed orbit. Trajectories spiral inward toward the disease-free equilibrium.
+
+---
+
+## The Epidemic Threshold
+
+The epidemic grows if `\(\frac{dI}{dt} &gt; 0\)` at `\(t = 0\)`.
+
+`$$\frac{dI}{dt}\bigg|_{t=0} = (\beta S_0 - \gamma) I_0 &gt; 0 \iff \frac{\beta S_0}{\gamma} &gt; 1$$`
+
+With `\(S_0 \approx N\)` at the start:
+
+`$$\mathcal{R}_0 = \frac{\beta N}{\gamma}$$`
+
+--
+
+This is not a number to memorize. It is a consequence of the model's structure, visible in the algebra. If each infectious person generates more than one secondary case before recovering, the epidemic grows. The algebra says why.
+
+???
+Speaker notes: Derive this from the sign condition, not from a definition. The audience should see that R0 is not an external parameter but an emergent quantity of the model — a function of the transmission rate, the population size, and the recovery rate. This makes it a target for intervention: you can reduce R0 by reducing beta (transmission), increasing gamma (recovery, treatment), or reducing the effective N (quarantine, population immunity). Each intervention corresponds to a different epidemiological strategy.
+
+---
+
+## SIR in R
+
+
+``` r
+sir_model &lt;- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    dS &lt;- -beta * S * I
+    dI &lt;-  beta * S * I - gamma * I
+    dR &lt;-  gamma * I
+    list(c(dS, dI, dR))
+  })
+}
+N         &lt;- 1000
+params_sir &lt;- c(beta = 0.0003, gamma = 0.1)
+state_sir  &lt;- c(S = N - 1, I = 1, R = 0)
+times_sir  &lt;- seq(0, 160, by = 0.5)
+sir_out &lt;- ode(y = state_sir, times = times_sir,
+               func = sir_model, parms = params_sir)
+sir_df  &lt;- as_tibble(as.data.frame(sir_out))
+```
+
+???
+Speaker notes: R0 for these parameters = beta * N / gamma = 0.0003 * 1000 / 0.1 = 3. A value of 3 is within the range estimated for the original SARS-CoV-2 strain. The audience will recognize this number.
+
+---
+
+## SIR: Time Series
+
+&lt;img src="01_ode_foundations_files/figure-html/sir-timeseries-1.png" width="720" style="display: block; margin: auto;" /&gt;
+
+???
+Speaker notes: Point to three features: (1) the susceptible pool depletes before it reaches zero — herd immunity threshold is 1 - 1/R0, not zero; (2) the infectious curve is skewed right; (3) at the end, a substantial fraction remain susceptible but never infected. These are all consequences of the model structure, not external calibration.
+
+---
+
+## Parameter Sweep: Varying `\(\mathcal{R}_0\)`
+
+&lt;img src="01_ode_foundations_files/figure-html/sir-sweep-1.png" width="720" style="display: block; margin: auto;" /&gt;
+
+???
+Speaker notes: Two things to emphasize: (1) the epidemic threshold — at R0 = 1.5, there is a small epidemic; below 1 there would be none; (2) the relationship between R0 and final epidemic size is nonlinear. Doubling R0 does not double the attack rate. The nonlinearity comes from the depletion of the susceptible pool. This is the kind of thing the ODE captures exactly — within the mean-field language.
+
+---
+
+## A Language and Its Boundary
+
+Both models share a set of structural choices:
+
+--
+
+- **Continuous populations** — no individuals, no discreteness, no demographic stochasticity
+
+--
+
+- **Homogeneous individuals** — every prey is equivalent, every susceptible is equivalent
+
+--
+
+- **Perfect, instantaneous mixing** — mass action throughout; the mean-field assumption
+
+--
+
+- **No space** — location does not exist; there are no neighborhoods
+
+--
+
+- **No history** — the state at time `\(t\)` fully determines the state at `\(t + dt\)`
+
+--
+
+These are not flaws. Models making these assumptions have been productive for over a century. The point is that they constitute a language. Every language has an expressive boundary. The phenomena that lie beyond that boundary are not anomalies. They are the subject of Block 2.
+
+???
+Speaker notes: This summary slide is the pivot. The audience should leave Block 1 not with a criticism of ODEs but with a precise description of what the ODE says — which is the precondition for knowing what it cannot say. Frame this explicitly: the checklist is not a list of failures, it is a description of a language. A language is a tool; the question is always whether the tool's expressive capacity matches the phenomenon.
+
+---
+
+## What If Individuals Were Actually Individual?
+
+???
+Speaker notes: End here. No elaboration. The question is the transition — it should feel like a door left ajar. The audience will return from the break with this question still active. Do not answer it. Do not preview the answer. Let it sit.
+
+---
+class: center, middle
+
+# Block 1 Complete
+
+### Break — 15 minutes
+
+*Block 2 begins at 10:15*
+
+*Materials and code: [github.com/jsschuler/abm-statisticians]*
+
+???
+Speaker notes: Remind the audience that all code is in the distributed materials — they do not need to copy anything from the slides. The GitHub repository has fully commented scripts for every chunk shown today.
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+  "highlightStyle": "github",
+  "highlightLines": true,
+  "countIncrementalSlides": false,
+  "ratio": "16:9",
+  "navigation": {
+    "scroll": false
+  }
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
