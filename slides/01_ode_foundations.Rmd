@@ -29,6 +29,17 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(deSolve)
 library(patchwork)
+library(showtext)
+font_add("Source Serif 4",
+         regular = "../_theme/fonts/SourceSerif4-Regular.ttf",
+         bold    = "../_theme/fonts/SourceSerif4-SemiBold.ttf",
+         italic  = "../_theme/fonts/SourceSerif4-Italic.ttf")
+font_add("Raleway",
+         regular = "../_theme/fonts/Raleway-Light.ttf",
+         bold    = "../_theme/fonts/Raleway-Bold.ttf")
+font_add("Fira Code",
+         regular = "../_theme/fonts/FiraCode-Regular.ttf")
+showtext_auto()
 
 theme_set(
   theme_minimal(base_family = "Source Serif 4") +

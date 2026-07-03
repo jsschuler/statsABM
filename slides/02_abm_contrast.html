@@ -4,7 +4,7 @@
     <title>Agents, Networks, and the Geometry of Interaction</title>
     <meta charset="utf-8" />
     <meta name="author" content="John S. Schuler" />
-    <script src="libs/header-attrs-2.29/header-attrs.js"></script>
+    <script src="libs/header-attrs-2.30/header-attrs.js"></script>
     <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
     <link rel="stylesheet" href="../_theme/xaringan-custom.css" type="text/css" />
   </head>
@@ -186,7 +186,7 @@ Speaker notes: State this before showing the reduction plot, not after. If you s
 
 ## The Reduction Result
 
-&lt;img src="02_abm_contrast_files/figure-html/lv-reduction-plot-1.png" width="792" style="display: block; margin: auto;" /&gt;
+&lt;img src="02_abm_contrast_files/figure-html/lv-reduction-plot-1.png" alt="" width="792" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: The solid line is the ODE. The translucent traces are ten ABM runs with different random seeds. At this population size, the ABM orbits near the ODE solution — but notice the variance. Some runs track closely; a few diverge. The divergence will become the subject of the next slide. The key message: convergence is real, but it requires large N and random mixing. Both conditions are assumptions of the ODE.
@@ -195,7 +195,7 @@ Speaker notes: The solid line is the ODE. The translucent traces are ten ABM run
 
 ## The ODE Cannot See This
 
-&lt;img src="02_abm_contrast_files/figure-html/lv-extinction-1.png" width="792" style="display: block; margin: auto;" /&gt;
+&lt;img src="02_abm_contrast_files/figure-html/lv-extinction-1.png" alt="" width="792" style="display: block; margin: auto;" /&gt;
 
 **The ODE's language has no word for extinction.** The absorbing state at zero is outside its expressive range.
 
@@ -237,7 +237,7 @@ Speaker notes: The infection mechanism here is random mixing: each infectious ag
 
 ## ABM SIR: Convergence to ODE
 
-&lt;img src="02_abm_contrast_files/figure-html/sir-convergence-plot-1.png" width="792" style="display: block; margin: auto;" /&gt;
+&lt;img src="02_abm_contrast_files/figure-html/sir-convergence-plot-1.png" alt="" width="792" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: The convergence is clear at N = 500. The ABM runs cluster tightly around the ODE solution — peak timing, peak height, and tail behavior all align. The residual variance is demographic stochasticity: the irreducible randomness of a finite population. As N grows, this variance shrinks and the ABM approaches the ODE exactly. This is the reduction result for SIR.
@@ -295,7 +295,7 @@ Speaker notes: Mean degree is fixed to isolate the effect of topology on epidemi
 
 ## The Networks: Erdős-Rényi vs. Barabási-Albert
 
-&lt;img src="02_abm_contrast_files/figure-html/network-viz-1.png" width="792" style="display: block; margin: auto;" /&gt;
+&lt;img src="02_abm_contrast_files/figure-html/network-viz-1.png" alt="" width="792" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: The visual difference is immediate and striking. In the Erdős-Rényi graph, nodes are roughly uniform in size — similar degrees throughout. In the Barabási-Albert graph, a few large nodes (hubs) dominate. These hubs are connected to many other nodes. In an epidemic, they are both highly likely to be infected early (many contacts) and highly efficient at spreading infection further. The ODE sees only mean degree. It is blind to the variance.
@@ -365,7 +365,7 @@ Speaker notes: The critical structural change from the random-mixing ABM: infect
 
 ## Same `\(\mathcal{R}_0\)`. Different World.
 
-&lt;img src="02_abm_contrast_files/figure-html/network-epidemic-curves-1.png" width="792" style="display: block; margin: auto;" /&gt;
+&lt;img src="02_abm_contrast_files/figure-html/network-epidemic-curves-1.png" alt="" width="792" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: Both networks have the same mean degree and the same transmission parameters. The ODE predicts one epidemic curve. These networks produce qualitatively different dynamics: the Barabási-Albert epidemic peaks earlier, shows more variance across runs (because hub-seeding is a random event), and can sustain longer tails through hub persistence. The ODE's answer is neither of these — it is the mean-field average, which corresponds to neither topology. The question "what does contact network topology do to epidemic dynamics?" cannot be asked in the ODE's language. The answer it would give is not wrong. The question is simply exterior to its expressive range.
@@ -458,7 +458,7 @@ Speaker notes: Show this code briefly to demonstrate the structure — grid, Moo
 ## [Animation] Spatial Lotka-Volterra
 
 .center[
-&lt;img src="spatial_lv.png" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="spatial_lv.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
 ]
 
 Spiral waves are a dynamical regime that is simply inexpressible in the mean-field language — they require the spatial language to exist at all.

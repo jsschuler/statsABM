@@ -2,8 +2,13 @@ library(tidyverse)
 library(deSolve)
 library(showtext)
 
-font_add_google("Raleway", "Raleway")
-font_add_google("Source Serif 4", "Source Serif 4")
+font_add("Raleway",
+         regular = "_theme/fonts/Raleway-Light.ttf",
+         bold    = "_theme/fonts/Raleway-Bold.ttf")
+font_add("Source Serif 4",
+         regular = "_theme/fonts/SourceSerif4-Regular.ttf",
+         bold    = "_theme/fonts/SourceSerif4-SemiBold.ttf",
+         italic  = "_theme/fonts/SourceSerif4-Italic.ttf")
 showtext_auto()
 showtext_opts(dpi = 300)
 
