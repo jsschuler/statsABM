@@ -31,6 +31,24 @@ class: center, middle, inverse, title-slide
 
 
 ---
+class: center, middle
+
+.pull-left[
+&gt; *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
+&gt;
+&gt; — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
+]
+
+.pull-right[
+&gt; *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
+&gt;
+&gt; — Paul Ehrlich, *The Population Bomb* (1968)
+]
+
+???
+Speaker notes: Two predictions of catastrophic overshoot. One from 1700 BCE, one from 1968. Neither came true. Both were built on extrapolation from trend — exponential growth projected past the feedback that stops it. The models we study today are the instruments built to see the feedback that the naked eye misses.
+
+---
 
 ## Block 1: The Differential Equations of Living Systems
 
@@ -173,7 +191,7 @@ Speaker notes: Keep the code brief on the slide. The full annotated version is i
 
 ## Lotka-Volterra: Time Series
 
-&lt;img src="01_ode_foundations_files/figure-html/lv-timeseries-1.png" alt="" width="720" style="display: block; margin: auto;" /&gt;
+&lt;img src="01_ode_foundations_files/figure-html/lv-timeseries-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: Draw attention to the lag between the prey peak and the predator peak. This is the feedback loop made visible: prey grow, then predators follow (with a lag), then predators suppress prey, then predators collapse, then prey recover. The cycle is self-sustaining and perfectly regular. The perfect regularity will become suspicious in Block 2.
@@ -184,7 +202,7 @@ Speaker notes: Draw attention to the lag between the prey peak and the predator 
 
 The trajectories are closed orbits. The system cycles forever — without damping, without growth.
 
-&lt;img src="01_ode_foundations_files/figure-html/lv-phase-1.png" alt="" width="648" style="display: block; margin: auto;" /&gt;
+&lt;img src="01_ode_foundations_files/figure-html/lv-phase-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: The closed orbit is geometrically beautiful and physically peculiar — like a pendulum that never loses energy to friction. Real ecological systems do not behave this way; populations show damped oscillations or stochastic fluctuations around equilibrium. The model is a clean mathematical object, not a literal description. The question is which of its structural choices produce this cleanliness — and what is the cost.
@@ -316,7 +334,7 @@ Speaker notes: R0 for these parameters = beta * N / gamma = 0.0003 * 1000 / 0.1 
 
 ## SIR: Time Series
 
-&lt;img src="01_ode_foundations_files/figure-html/sir-timeseries-1.png" alt="" width="720" style="display: block; margin: auto;" /&gt;
+&lt;img src="01_ode_foundations_files/figure-html/sir-timeseries-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: Point to three features: (1) the susceptible pool depletes before it reaches zero — herd immunity threshold is 1 - 1/R0, not zero; (2) the infectious curve is skewed right; (3) at the end, a substantial fraction remain susceptible but never infected. These are all consequences of the model structure, not external calibration.
@@ -325,7 +343,7 @@ Speaker notes: Point to three features: (1) the susceptible pool depletes before
 
 ## Parameter Sweep: Varying `\(\mathcal{R}_0\)`
 
-&lt;img src="01_ode_foundations_files/figure-html/sir-sweep-1.png" alt="" width="720" style="display: block; margin: auto;" /&gt;
+&lt;img src="01_ode_foundations_files/figure-html/sir-sweep-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
 Speaker notes: Two things to emphasize: (1) the epidemic threshold — at R0 = 1.5, there is a small epidemic; below 1 there would be none; (2) the relationship between R0 and final epidemic size is nonlinear. Doubling R0 does not double the attack rate. The nonlinearity comes from the depletion of the susceptible pool. This is the kind of thing the ODE captures exactly — within the mean-field language.

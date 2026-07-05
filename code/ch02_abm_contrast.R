@@ -10,7 +10,7 @@
 #   1. Setup
 #   2. ABM Lotka-Volterra: functions, reduction result, extinction
 #   3. ABM SIR: random mixing vs ODE
-#   4. Network SIR: Erdos-Renyi vs Barabasi-Albert
+#   4. Network SIR: Erdos-Renyi vs Barabási-Albert
 #   5. Regularization path: interpolating between structured and mean-field
 #   6. Spatial Lotka-Volterra (gganimate, eval=FALSE — run separately)
 #
@@ -469,7 +469,7 @@ avg_deg <- 6   # target mean degree
 # Mean degree = p * (N - 1) ≈ avg_deg
 g_er <- igraph::erdos.renyi.game(N_net, p = avg_deg / (N_net - 1))
 
-# Barabasi-Albert: preferential attachment produces a heavy-tailed degree distribution
+# Barabási-Albert: preferential attachment produces a heavy-tailed degree distribution
 # m = edges added per new node; mean degree ≈ 2m
 g_ba <- igraph::sample_pa(N_net, m = avg_deg / 2, directed = FALSE)
 

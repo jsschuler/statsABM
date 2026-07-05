@@ -23,17 +23,8 @@ fi
 echo "→ Rendering book..."
 Rscript -e "rmarkdown::render('${BOOK_RMD}', output_format = 'pdf_document')"
 
-# 3. Combine cover + book via ghostscript
-echo "→ Combining cover and book..."
-gs \
-  -dBATCH \
-  -dNOPAUSE \
-  -dQUIET \
-  -sDEVICE=pdfwrite \
-  -dPDFSETTINGS=/prepress \
-  -dCompatibilityLevel=1.7 \
-  -sOutputFile="${OUT_PDF}" \
-  "${COVER_PDF}" \
-  "${BOOK_PDF}"
+# 3. Copy to output — cover is already embedded via \maketitle in preamble.tex
+echo "→ Copying to output..."
+cp "${BOOK_PDF}" "${OUT_PDF}"
 
 echo "✓ Done: ${OUT_PDF}"

@@ -31,12 +31,47 @@ class: center, middle, inverse, title-slide
 
 
 ---
-class: inverse, center, middle
+class: center, middle
 
-# The Possibility Space of Dynamics
+.pull-left[
+&gt; *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
+&gt;
+&gt; — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
+]
 
-### Block 4 — Agent-Based Modeling for Statisticians
-### JSM 2026
+.pull-right[
+&gt; *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
+&gt;
+&gt; — Paul Ehrlich, *The Population Bomb* (1968)
+]
+
+???
+Speaker notes: The epigraphs one final time. The course has been building toward a single observation: both of these predictions failed for the same structural reason. The language available to each predictor could not express the phenomenon that would make the prediction wrong. Block 4 names that structure and connects it to what statisticians already know how to think about.
+
+---
+
+## Where We Left Off
+
+Three examples, one pattern.
+
+--
+
+**Block 1:** The ODE embeds the mean-field assumption silently. Extinction events, network topology, spatial structure — all outside its state space.
+
+--
+
+**Block 2:** The ABM relaxes those restrictions. The reduction principle names the relationship: ODE as limiting case, not rival. The consequential phenomena live in the deviations from the limit.
+
+--
+
+**Block 3:** The firm size power law is outside the representable set of any aggregate-state model — present in every economy ever measured, inexpressible in the standard language of industry dynamics. Axtell's mechanism generates it without calibration.
+
+--
+
+**Block 4:** Name the pattern. Connect it to what statisticians already know. State the practical implication.
+
+???
+Speaker notes: After the afternoon break. This slide reconnects the day. The audience has seen the same argument made three times with three different examples. Block 4 is not a fourth example — it is the crystallization of the structure visible in the first three. The tone should be the most assured of the day.
 
 ---
 
@@ -96,7 +131,7 @@ That language has a boundary.
 When a modeling tradition calls something a paradox or an anomaly, it is often naming a phenomenon that is simply exterior to its formal vocabulary — real, reproducible, and grammatically forbidden within the model.
 
 ???
-The key move here is the distinction between failure of fit and failure of expressibility. A failure of fit is fixable — better data, better estimation, more parameters. A failure of expressibility is structural — the model's language cannot form the sentence. The audience has seen three examples of the latter today: extinction events in ODE ecology, topology-driven epidemic dynamics in mean-field SIR, and the power law firm size distribution under models that treat mean firm size as a sufficient statistic.
+The key move here is the distinction between failure of fit and failure of expressibility. A failure of fit is fixable — better data, better estimation, more parameters. A failure of expressibility is structural — the phenomenon is outside the model's representable set. The audience has seen three examples of the latter today: extinction events in ODE ecology, topology-driven epidemic dynamics in mean-field SIR, and the power law firm size distribution under aggregate-state models that restrict the dynamical state to mean employment.
 
 ---
 
@@ -109,8 +144,8 @@ The key move here is the distinction between failure of fit and failure of expre
 
 --
 
-**Sufficiency of the mean** (mean-field applied to firm distributions)
-→ The firm size distribution is inexpressible. Heterogeneity has been assumed away.
+**Aggregate-state closure** (mean-field applied to firm distributions)
+→ The firm size distribution is outside the model's representable set. Heterogeneity is restricted away.
 
 --
 
@@ -137,7 +172,7 @@ Each restriction on this list does the same thing: it collapses a distribution t
 
 --
 
-- Sufficiency of the mean collapses the distribution of firm types to a single firm.
+- Aggregate-state closure collapses the distribution of firm types to a single firm.
 
 --
 
@@ -156,7 +191,7 @@ The unification is the central conceptual payoff of the afternoon. Each of these
 
 ---
 
-## The Regularization Unification
+## The Regularization View
 
 Bayesian inference and frequentist regularization are the same operation.
 
@@ -172,14 +207,14 @@ Bayesian inference and frequentist regularization are the same operation.
 
 --
 
-This is not an analogy. It is a mathematical identity.
+The parallel is structural: the penalty acts on the same convex geometry in both cases. The domains differ; the geometry does not.
 
 --
 
 The frequentist who uses LASSO is placing a Laplace prior on their coefficients whether they think of it that way or not.
 
 ???
-The identity: arg min { ||y - Xβ||² + λ||β||₁ } = arg max { p(β|y) } under a Laplace prior. This is a standard result in Bayesian regression. The point is not to explain Bayesian LASSO to this audience — they know it. The point is to take that identity and extend it: every modeling assumption is a prior of this kind.
+The Bayesian-regularization equivalence (Tibshirani 1996, Hoerl &amp; Kennard 1970) is an established result. What this course adds is the extension: the same geometry applies to the ABM-ODE relationship. That extension is the interpretive framework of this course, not a standard result from the ABM literature. State the established identity cleanly, then name the extension as a synthesis.
 
 ---
 
@@ -227,7 +262,7 @@ The Bayesian prior, the regularization penalty, and the distributional perturbat
 Every modeling assumption examined today is a prior of this kind — it restricts the language in which the model works.
 
 ???
-The distributionally robust optimization connection is a bridge to the audience's statistical training. DRO is increasingly standard in machine learning and statistics. The point: the mean-field assumption, the sufficiency of the mean applied to firm distributions, and stationarity are all priors in the sense of restricting the model's effective complexity. The critic who objects to ABM parameter proliferation is demanding a stronger prior — they should say so explicitly and justify it.
+The distributionally robust optimization connection is a bridge to the audience's statistical training. DRO is increasingly standard in machine learning and statistics. The point: the mean-field assumption, the aggregate-state closure applied to firm distributions, and stationarity are all priors in the sense of restricting the model's effective complexity. The critic who objects to ABM parameter proliferation is demanding a stronger prior — they should say so explicitly and justify it.
 
 ---
 
@@ -313,7 +348,7 @@ The setup is simple: logistic growth, observed only in the exponential phase. A 
 
 ## The Extrapolation Failure
 
-&lt;img src="04_philosophical_conclusion_files/figure-html/extrap-plot-1.png" alt="" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="04_philosophical_conclusion_files/figure-html/extrap-plot-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
 The red line is not a bad forecast — it is the correct forecast under the stationarity assumption applied to the observed data. The problem is not the estimator. The problem is that the carrying capacity K is a parameter of the true model that does not appear in the observed data at all. No amount of additional data in the t = 0–10 window would reveal it. The stationarity prior forecloses K from the language.
@@ -366,10 +401,130 @@ The logistic map is the canonical example of period-doubling bifurcation. At r &
 
 ## The Bifurcation Diagram
 
-&lt;img src="04_philosophical_conclusion_files/figure-html/bifurcation-plot-1.png" alt="" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="04_philosophical_conclusion_files/figure-html/bifurcation-plot-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
 The diagram shows the attractor of the logistic map as a function of r. A model calibrated in the fixed-point regime (r &lt; 3) would extrapolate a single equilibrium indefinitely. The period-doubling cascades and eventual chaos are exterior to that model's language — not unlikely predictions, but grammatically impossible ones.
+
+---
+
+## A Genealogy of the Catastrophist Error
+
+The extrapolation error is not a modern statistical failure.
+
+--
+
+It is a structural feature of models with one attractor.
+
+--
+
+And it is very, very old.
+
+???
+The genealogy that follows is not digression. It is evidence that the error is not a product of bad technique or insufficient data. It is built into the expressive structure of models that cannot represent the mechanisms that falsify them. Every era has committed it with the best tools available.
+
+---
+
+## Genesis
+
+*"The earth was filled with violence."* (Genesis 6:11)
+
+--
+
+The flood narrative: unchecked multiplication meets catastrophic correction.
+
+--
+
+The structural claim is identical to Malthus: excess growth ends in reduction, and nothing within the model prevents it.
+
+--
+
+The correction is external, total, and not subject to revision.
+
+???
+Genesis and its Mesopotamian antecedent Atrahasis (c. 1700 BCE — see the course epigraph) are the catastrophist template in its theological form. Divine intervention replaces resource constraint as the corrective mechanism, but the structural feature is the same: one attractor, no internal recovery mechanism, correction from outside the model's language.
+
+---
+
+## Plato
+
+*Timaeus* (c. 360 BCE): periodic floods and conflagrations reset civilization to its pastoral minimum.
+
+--
+
+The upland shepherds survive. The coastal cities do not.
+
+--
+
+*Laws* (c. 350 BCE): optimal city size fixed at 5,040 — population is a variable to be controlled from outside, because internal dynamics have no corrective.
+
+--
+
+The model has one attractor. The question of what might generate a different one is not asked.
+
+???
+Plato's periodic catastrophism differs from simple pessimism: he believed civilization could be rebuilt after each reset. But the reset mechanism is external — flood, fire — not internal adaptation. The Laws specification is the more interesting case: Plato recognized that population growth is a problem, and his solution was external constraint rather than endogenous demographic transition. The structural deficit is the same.
+
+---
+
+## Aristotle
+
+*Politics* (c. 335 BCE): criticizing Plato for failing to specify what happens when population exceeds the ideal.
+
+--
+
+His answer: **poverty**.
+
+--
+
+Growth without limit produces scarcity. The Malthusian inference, 2,133 years early.
+
+--
+
+The question was correct. The structural deficit was not: no mechanism for voluntary fertility decline, no representation for productivity growth.
+
+???
+Aristotle's criticism of Plato is actually the right scientific move — he asked what happens when the boundary conditions of the ideal state are violated. But his answer committed the same error: local extrapolation without a mechanism for the feedback that would prevent the outcome. The poverty attractor is the only one his model contains.
+
+---
+
+## Tertullian
+
+*De Anima* (c. 210 CE):
+
+&gt; *"Our numbers are burdensome to the world, which can hardly supply our needs... pestilence, famine, and war have come to be regarded as remedies, since they prune the luxuriant growth of the human race."*
+
+--
+
+This language is indistinguishable from the 1798 *Essay on Population*.
+
+--
+
+Tertullian predates Malthus by **sixteen centuries** and makes the same argument with the same structural deficit.
+
+???
+The Tertullian passage is the sharpest illustration that the catastrophist error is not a product of Malthus's era, Jevons's era, or ours. It is structural. No vocabulary for the demographic transition, no vocabulary for the agricultural revolution, no attractor other than catastrophic correction. The same expressive deficit, 1,600 years before Malthus formalized it mathematically.
+
+---
+
+## The Pattern
+
+Genesis → Plato → Aristotle → Tertullian → Malthus → Jevons → *Limits to Growth* → Ehrlich
+
+--
+
+In every instance: a local trajectory extrapolated to a global claim about the system's fate.
+
+--
+
+In every instance: no representation for the mechanisms that falsified the prediction.
+
+--
+
+The error is not in the data or the technique. It is in the **expressive language** of the model.
+
+???
+The genealogy spans approximately 3,700 years. The error recurs not because each generation is careless, but because the structural deficit — a model with one attractor, no representation for adaptive mechanisms — is the natural form of extrapolation from observed local behavior. The ABM framework does not eliminate this error. It makes it visible, by giving the modeler a language in which multiple attractors can be represented and the mechanisms that select between them can be stated.
 
 ---
 
@@ -444,7 +599,7 @@ This is the takeaway the audience should leave with. It applies to every model t
 |-------|-------------------|------------------------|
 | ODE ecology | Population aggregate, continuous time | Extinction events, spatial pattern, finite-size effects |
 | Mean-field SIR | Population aggregate, homogeneous mixing | Network topology, superspreaders, spatial heterogeneity |
-| Mean-sufficient model | Aggregate economy, equilibrium | Firm size distribution, distributional dynamics |
+| Aggregate-state model | Aggregate economy, equilibrium | Firm size distribution, distributional dynamics |
 | Stationary ARIMA | Pre-bifurcation regime | Regime change, structural breaks, path dependence |
 | Calibrated ABM | Agent-level, discrete time | Well — depends on the ABM. Ask the same question. |
 
@@ -476,7 +631,7 @@ The possibility space framing reorients what modeling is for. The goal is not to
 
 ## What the Map Shows
 
-&lt;img src="04_philosophical_conclusion_files/figure-html/possibility-space-1.png" alt="" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="04_philosophical_conclusion_files/figure-html/possibility-space-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
 The illustration is simple but the point is sharp: all three trajectories start at the same point. A point forecast selects one. The possibility space map shows all three, labels the conditions under which each occurs, and identifies the control parameters (here, carrying capacity K — which might represent resource availability, regulatory environment, or market size). Policy operates on the control parameters, not on the trajectory directly.
@@ -520,7 +675,7 @@ The closing argument: the statistician already has the right instinct. They repo
 
 .pull-right[
 **Block 3: Firm Size**
-- Sufficiency of the mean = mean-field for distributions
+- Aggregate-state closure = mean-field for distributions
 - Power law inexpressible; Axtell's mechanism generates it
 
 **Block 4: The Pattern Named**
@@ -567,7 +722,7 @@ The closing line is intentionally spare. There is no consolation prize for the d
 
 Today's argument, in one paragraph:
 
-Every model defines a language. The ODE, the aggregate industry model that treats mean firm size as sufficient, the stationary time series model — each collapses a distribution to a point mass in a different place, making some phenomena expressible and others not. The agent-based framework does not add assumptions to these models. It relaxes the restrictions they impose silently. The phenomena that lie beyond those restrictions — extinction, network topology, the firm size power law, regime change — are not anomalies. They are the world, seen from outside the language.
+Every model restricts what it can represent. The ODE, the aggregate-state industry model, the stationary time series — each collapses a distribution to a point mass in a different place, placing some phenomena outside its representable set. The agent-based framework does not add assumptions to these models. It relaxes the restrictions they impose silently. The phenomena that lie beyond those restrictions — extinction, network topology, the firm size power law, regime change — are not anomalies. They are structural features that require a richer model family to exist at all.
 
 --
 

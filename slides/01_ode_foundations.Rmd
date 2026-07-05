@@ -19,11 +19,12 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo      = TRUE,
-  warning   = FALSE,
-  message   = FALSE,
+  echo       = TRUE,
+  warning    = FALSE,
+  message    = FALSE,
   fig.retina = 3,
-  fig.align  = "center"
+  fig.align  = "center",
+  out.width  = "100%"
 )
 
 library(tidyverse)
@@ -63,6 +64,24 @@ palette_ch1 <- c(
   recovered   = "#27AE60"
 )
 ```
+
+---
+class: center, middle
+
+.pull-left[
+> *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
+>
+> — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
+]
+
+.pull-right[
+> *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
+>
+> — Paul Ehrlich, *The Population Bomb* (1968)
+]
+
+???
+Speaker notes: Two predictions of catastrophic overshoot. One from 1700 BCE, one from 1968. Neither came true. Both were built on extrapolation from trend — exponential growth projected past the feedback that stops it. The models we study today are the instruments built to see the feedback that the naked eye misses.
 
 ---
 
@@ -232,7 +251,7 @@ Speaker notes: Draw attention to the lag between the prey peak and the predator 
 
 The trajectories are closed orbits. The system cycles forever — without damping, without growth.
 
-```{r lv-phase, echo=FALSE, fig.height=3.8, fig.width=9}
+```{r lv-phase, echo=FALSE, fig.height=4.2, fig.width=8}
 # Multiple initial conditions to show orbit family
 ic_list <- list(
   c(N = 40, P = 10), c(N = 60, P = 15),
@@ -250,9 +269,9 @@ ggplot(lv_phase, aes(x = N, y = P, color = orbit, group = orbit)) +
   scale_color_manual(values = c("#2D5F8A","#5A8FA8","#8A4A2D","#B87A5A"),
                      name = "Initial condition") +
   labs(title    = "Phase portrait: closed orbits around the fixed point",
-       subtitle = expression(N^"*" == gamma/delta ~ "," ~~ P^"*" == alpha/beta),
+       subtitle = "Fixed point: N* = gamma/delta,  P* = alpha/beta",
        x = "Prey (N)", y = "Predator (P)") +
-  theme(legend.position = "right")
+  theme(legend.position = "bottom")
 ```
 
 ???
@@ -401,7 +420,7 @@ sir_df |>
     name = NULL
   ) +
   labs(title    = "SIR epidemic dynamics",
-       subtitle = expression(mathcal(R)[0] == 3 ~~ "—" ~~ "epidemic peaks around day 50"),
+       subtitle = "R0 = 3  \u2014  epidemic peaks around day 50",
        x = "Time (days)", y = "Number of individuals") +
   theme(legend.position = "bottom")
 ```

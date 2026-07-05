@@ -23,7 +23,8 @@ knitr::opts_chunk$set(
   warning    = FALSE,
   message    = FALSE,
   fig.retina = 3,
-  fig.align  = "center"
+  fig.align  = "center",
+  out.width  = "100%"
 )
 
 library(tidyverse)
@@ -64,12 +65,43 @@ palette_ch3 <- c(
 ```
 
 ---
-class: inverse, center, middle
+class: center, middle
 
-# The Size of Firms, and What It Tells Us
+.pull-left[
+> *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
+>
+> — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
+]
 
-### Block 3 — Agent-Based Modeling for Statisticians
-### JSM 2026
+.pull-right[
+> *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
+>
+> — Paul Ehrlich, *The Population Bomb* (1968)
+]
+
+???
+Speaker notes: The epigraphs again, after lunch. Both predictions extrapolated from the visible trend and missed the distributional structure that governed the phenomenon. The firm size distribution is the same lesson in a different register: the aggregate statistics told one story, the full distribution told another.
+
+---
+
+## Where We Left Off
+
+Block 2 showed that the ODE is a limiting case of the ABM — recovered when agent homogeneity and mean-field contact structure are both imposed.
+
+--
+
+Relaxing those restrictions makes new phenomena visible: extinction events the ODE cannot reach, epidemic dynamics that depend on contact network topology.
+
+--
+
+The reduction principle names the relationship precisely. The ODE and the ABM are not rival frameworks. They can be viewed as members of a common modeling family indexed by regularization strength.
+
+--
+
+**Block 3 asks the same question in a different domain:** Is there an empirical regularity in economic data that aggregate-state models cannot produce — not approximately, but structurally?
+
+???
+Speaker notes: After lunch is a known attention trough. This slide does two things: reconnects returning audience members to the morning's argument, and frames Block 3 as the same conceptual move applied to a new domain. The statistical stakes are higher here because the empirical regularity is among the most robustly documented in economics.
 
 ---
 
@@ -202,7 +234,7 @@ ggplot(ccdf_df, aes(x = size, y = ccdf)) +
     title    = "Complementary CDF — Log-Log Scale",
     subtitle = "A straight line on log-log axes is the signature of a power law",
     x        = "Firm size (log scale)",
-    y        = "P(X ≥ x)  (log scale)"
+    y        = "P(X >= x)  (log scale)"
   )
 ```
 
@@ -252,10 +284,10 @@ ggplot() +
   scale_y_log10(labels = scales::percent) +
   labs(
     title    = "Power Law MLE Fit",
-    subtitle = paste0("Estimated α ≈ ", round(m_pl$getPars(), 2),
+    subtitle = paste0("Estimated alpha ~ ", round(m_pl$getPars(), 2),
                       "  |  xmin = ", m_pl$getXmin()),
     x        = "Firm size (log scale)",
-    y        = "P(X ≥ x)  (log scale)"
+    y        = "P(X >= x)  (log scale)"
   )
 ```
 
@@ -334,9 +366,9 @@ The rhetorical setup: we have established the phenomenon firmly on statistical g
 
 ---
 
-## What the Mean-Sufficient Model Predicts
+## What the Aggregate-State Model Predicts
 
-The standard aggregate model of industry dynamics tracks total employment, or mean firm size. The implicit claim: **mean employment is a sufficient statistic** for how the aggregate evolves.
+The standard aggregate model of industry dynamics tracks total employment, or mean firm size. The implicit claim: **the mean state is dynamically complete** — knowing mean employment determines the aggregate trajectory.
 
 --
 
@@ -348,14 +380,14 @@ In the simplest version: one firm, at the mean, standing in for all. In richer v
 
 --
 
-**The distribution a mean-sufficient model produces is bell-shaped around a characteristic scale.**
+**The distribution an aggregate-state model produces is bell-shaped around a characteristic scale.**
 
 ???
-Even dynamic models with adjustment costs produce bell-shaped distributions around the optimal firm size — they can generate dispersion, but they cannot generate the absence of a characteristic scale that defines the power law. The variance exists; the tail is thin. What economists call the "representative agent" is this sufficiency assumption applied to the distribution of firms.
+Even dynamic models with adjustment costs produce bell-shaped distributions around the optimal firm size — they can generate dispersion, but they cannot generate the absence of a characteristic scale that defines the power law. The variance exists; the tail is thin. What economists call the "representative agent" is this aggregate-state restriction applied to the distribution of firms.
 
 ---
 
-## The Sufficiency Assumption for Firms
+## The Aggregate-State Restriction for Firms
 
 --
 
@@ -376,7 +408,7 @@ This is not an approximation that becomes exact in the limit of many firms.
 The power law is a property of the *distribution* — of the full heterogeneity across firms. Collapse that distribution to a point mass at the mean, and you have not approximated the distribution. You have deleted it.
 
 ???
-This is the hinge slide. The sufficiency assumption is not a computational convenience that could in principle be relaxed. It is a fundamental restriction on the model's language. The question is not whether the model fits the power law better or worse. The question is whether the model can speak about distributional heterogeneity at all — and a mean-sufficient model cannot.
+This is the hinge slide. The aggregate-state restriction is not a computational convenience that could in principle be relaxed. It is a structural commitment that eliminates distributional heterogeneity from the model's state space. The question is not whether the model fits the power law better or worse. The question is whether the model can represent distributional heterogeneity at all — and an aggregate-state model cannot.
 
 ---
 
@@ -420,7 +452,7 @@ Robert Axtell (2001, *Science*) showed that a remarkably simple model of agent b
 - A worker joins a team if and only if doing so increases their own payoff
 - Teams exhibit local increasing returns to scale
 - Workers leave teams if a better alternative exists
-- No central planner. No equilibrium condition. No assumption that the mean is sufficient.
+- No central planner. No equilibrium condition. No aggregate-state restriction.
 
 --
 
@@ -477,7 +509,7 @@ tibble(size = team_size,
                      name = NULL) +
   labs(
     title    = "Incentive Structure in Team Formation",
-    subtitle = "Increasing returns at small size, thin returns at large size — no stable equilibrium",
+    subtitle = "Increasing returns at small scale; diminishing returns at large scale",
     x        = "Team size",
     y        = "Return per member (illustrative)"
   )
@@ -546,7 +578,7 @@ The definition rules out spurious uses of "emergence." A macro regularity that y
 
 | Model | Distribution it can produce | Mechanism |
 |-------|----------------------------|-----------|
-| Mean-sufficient model | Bell-shaped, characteristic scale | Mean employment as sufficient statistic |
+| Aggregate-state model | Bell-shaped, characteristic scale | Mean employment as sole dynamical state |
 | ODE industry dynamics | Smooth trajectory to equilibrium | Aggregate flow equations |
 | Axtell ABM | Power law, no characteristic scale | Decentralized team formation |
 
@@ -559,7 +591,7 @@ The first two models share the mean-field assumption.
 The third does not.
 
 ???
-The table crystallizes the argument. It is not that the mean-sufficient model fits poorly. It is that the phenomenon — a power law — is outside the language of models that apply the sufficiency assumption to firm distributions. The fix is not better estimation. It is a different language.
+The table crystallizes the argument. It is not that the aggregate-state model fits poorly. The phenomenon — a power law — is outside the representable set of models that apply the aggregate-state restriction to firm distributions. The fix is not better estimation. It is a richer model family.
 
 ---
 
@@ -580,7 +612,7 @@ The power law distribution is not an obscure fine-grained feature. It governs wh
 A policy model that cannot represent this distribution is working in a language without words for some of the most consequential structural features of the economy.
 
 ???
-Practical implication for the audience: if you are advising on competition policy, industrial policy, or anything involving the size distribution of firms, a model that treats mean firm size as sufficient is not an approximation of the right answer. It is an answer to a different question. The statistician's instinct — check your model against the data before trusting its policy implications — applies here with full force.
+Practical implication for the audience: if you are advising on competition policy, industrial policy, or anything involving the size distribution of firms, a model that treats mean firm size as the complete dynamical state is not an approximation of the right answer. It is an answer to a different question. The statistician's instinct — check your model against the data before trusting its policy implications — applies here with full force.
 
 ---
 
@@ -594,18 +626,18 @@ The argument so far, in the language the audience speaks:
 
 --
 
-A mean-sufficient model of industry dynamics is correctly estimated. Its parameters are the maximum likelihood estimates. Its predictions are internally consistent.
+An aggregate-state model of industry dynamics is correctly estimated. Its parameters are the maximum likelihood estimates. Its predictions are internally consistent.
 
 --
 
-It is misspecified at the level of the **model class**: it cannot represent the heterogeneity in firm sizes because it has assumed that heterogeneity away by treating the mean as sufficient.
+It is misspecified at the level of the **model class**: it cannot represent the heterogeneity in firm sizes because it has restricted the state space to mean employment before estimation begins.
 
 --
 
-The ABM does not add parameters to the aggregate model. It **relaxes a restriction** the aggregate model imposes silently — the restriction that the mean carries all the information.
+The ABM does not add parameters to the aggregate model. It **relaxes a restriction** the aggregate model imposes silently — the restriction that mean employment is the complete dynamical state.
 
 ???
-This is the statistician's version of the "ODE is a limiting case of the ABM" argument from Block 2, now applied to firm models rather than ODE models. The sufficiency assumption is a parameter restriction, not a neutral default. Relaxing it is not adding complexity. It is removing a constraint.
+This is the statistician's version of the "ODE is a limiting case of the ABM" argument from Block 2, now applied to firm models rather than ODE models. The aggregate-state restriction is a structural commitment, not a neutral default. Relaxing it is not adding complexity. It is removing a constraint.
 
 ---
 
@@ -621,7 +653,7 @@ This is the statistician's version of the "ODE is a limiting case of the ABM" ar
 
 --
 
-**The structural argument:** A model that treats mean firm size as sufficient cannot produce this distribution — not because it has the wrong parameters, but because the sufficiency assumption eliminates the heterogeneity that generates the power law.
+**The structural argument:** A model that treats mean firm size as the complete dynamical state cannot produce this distribution — not because it has the wrong parameters, but because the aggregate-state restriction eliminates the heterogeneity that generates the power law.
 
 --
 

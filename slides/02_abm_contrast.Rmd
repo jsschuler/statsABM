@@ -19,11 +19,12 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo      = TRUE,
-  warning   = FALSE,
-  message   = FALSE,
+  echo       = TRUE,
+  warning    = FALSE,
+  message    = FALSE,
   fig.retina = 3,
-  fig.align  = "center"
+  fig.align  = "center",
+  out.width  = "100%"
 )
 
 library(tidyverse)
@@ -69,6 +70,45 @@ palette_ch2 <- c(
 ```
 
 ---
+class: center, middle
+
+.pull-left[
+> *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
+>
+> — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
+]
+
+.pull-right[
+> *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
+>
+> — Paul Ehrlich, *The Population Bomb* (1968)
+]
+
+???
+Speaker notes: Return to the epigraphs. Block 1 showed what went wrong in both predictions: feedback, ignored. Block 2 shows what feedback looks like when individuals are actually individual — when the population is not a number but a collection of agents, each with a location and a neighborhood.
+
+---
+
+## Where We Left Off
+
+Block 1 derived two classical dynamical models from first principles and identified what is hiding in their structure.
+
+--
+
+The product term $\beta NP$ says that every predator is equally likely to encounter every prey individual at every instant. The mass-action term $\beta SI$ says the same about susceptibles and infectious individuals.
+
+--
+
+This is the mean-field assumption. It is not stated as an assumption — it is embedded in the functional form. It is doing the work that makes the analytical results possible.
+
+--
+
+**The question Block 1 ended with:** What if individuals were actually individual?
+
+???
+Speaker notes: This slide orients returning audience members. The key move is to remind them that what follows is not a different subject — it is the same question asked with a different instrument. The mean-field assumption was identified precisely in Block 1; Block 2 relaxes it and shows what becomes visible.
+
+---
 
 ## Block 2: Agents, Networks, and the Geometry of Interaction
 
@@ -78,14 +118,14 @@ palette_ch2 <- c(
 - What an agent is — and what the neighborhood means
 - ABM Lotka-Volterra: the reduction result, then the gap
 - ABM SIR: random mixing, then network structure
-- The reduction theorem stated cleanly
+- The reduction principle stated cleanly
 - Nominal parameters versus effective dimensionality
 ]
 
 .pull-right[
 **The conclusion**
 
-The ODE is not a competing paradigm. It is a limiting case — what the ABM becomes when the mean-field assumption is exact. Every ABM that includes random mixing contains the ODE as a theorem.
+The ODE is not a competing paradigm. It is a limiting case — what the ABM becomes when the mean-field assumption is exact. Many standard density-dependent ABMs recover the ODE in that limit.
 
 What lies outside that limit is the subject of this block.
 ]
@@ -437,7 +477,7 @@ p_er <- ggraph(er_sub, layout = "fr") +
   geom_edge_link(alpha = 0.2, color = "#AAAAAA") +
   geom_node_point(aes(size = degree), color = "#2D5F8A", alpha = 0.8) +
   scale_size_continuous(range = c(1, 6), guide = "none") +
-  labs(title = "Erdős–Rényi", subtitle = "Degree ≈ Poisson(6)") +
+  labs(title = "Erdős–Rényi", subtitle = "Degree ~ Poisson(6)") +
   theme_graph(base_family = "Source Serif 4") +
   theme(plot.background = element_rect(fill = "#FAFAF7", color = NA))
 
@@ -517,10 +557,10 @@ run_network_sir <- function(graph, N, beta = 0.15, gamma = 0.1,
 ```{r network-sir-run, echo=FALSE}
 er_sir_runs <- map_dfr(1:10,
   ~ run_network_sir(er_graph, N_net, seed_val = .x) |>
-    mutate(network = "Erdos-Renyi", run = .x))
+    mutate(network = "Erdős-Rényi", run = .x))
 ba_sir_runs <- map_dfr(1:10,
   ~ run_network_sir(ba_graph, N_net, seed_val = .x) |>
-    mutate(network = "Barabasi-Albert", run = .x))
+    mutate(network = "Barabási-Albert", run = .x))
 network_sir_runs <- bind_rows(er_sir_runs, ba_sir_runs)
 ```
 
@@ -540,12 +580,12 @@ network_sir_runs |>
                fun = mean, geom = "line",
                linewidth = 1.6) +
   scale_color_manual(
-    values = c("Erdos-Renyi" = "#2D5F8A",
-               "Barabasi-Albert" = "#8A4A2D"),
+    values = c("Erdős-Rényi" = "#2D5F8A",
+               "Barabási-Albert" = "#8A4A2D"),
     name = NULL
   ) +
   labs(title    = "Epidemic curves by contact network topology",
-       subtitle = "Same β, γ, N — thick lines are run averages",
+       subtitle = "Same beta, gamma, N \u2014 thick lines are run averages",
        x = "Time (days)", y = "Infectious individuals") +
   theme(legend.position = "bottom")
 ```
@@ -555,19 +595,21 @@ Speaker notes: Both networks have the same mean degree and the same transmission
 
 ---
 
-## The Reduction Theorem
+## The Reduction Principle
 
-Stated cleanly:
-
-As population size grows, as mixing becomes increasingly random, and as individual heterogeneity averages out across the population, the ABM converges in distribution to the ODE.
+The reduction principle: familiar ODE models can be recovered from agent-based models when two structural restrictions are imposed — agent homogeneity and mean-field contact structure.
 
 --
 
-The ODE is not wrong — it is a limiting case. It is what the ABM becomes when the mean-field assumption is exact. Every ABM that includes random mixing as a special case contains the ODE as a theorem.
+As population size grows, as mixing becomes increasingly random, and as individual heterogeneity averages out, the ABM converges in distribution to the ODE. The ODE is what the ABM becomes when both restrictions hold exactly.
 
 --
 
-This dissolves the apparent competition between the two paradigms. There is no competition. There is a richer language and one of its sublanguages. The question is always whether the phenomena of interest are expressible in the sublanguage — and for many of the most consequential social and biological phenomena, they are not.
+In that limiting case, the ODE is not an approximation to the ABM. It is the reduced form obtained after imposing the relevant restrictions. Many standard density-dependent ABMs recover the corresponding ODE in the large-population, random-mixing, homogeneous-agent limit.
+
+--
+
+This dissolves the apparent competition between the two paradigms. There is no competition. The ABM is the richer language; the ODE is the sublanguage recovered under homogeneity and mean-field contact. The question is always whether the phenomena of interest are expressible in the sublanguage — and for many of the most consequential social and biological phenomena, they are not.
 
 ???
 Speaker notes: This is the central theoretical claim of the session. State it with confidence. The Bayesian framing is available here if the audience wants it: the ODE is the posterior mode of the ABM under a Dirac prior on the interaction structure. The ABM relaxes that prior. The phenomena visible only in the ABM are those that have probability zero under the ODE's prior — not unlikely, but grammatically excluded. Regime change, extinction, network effects, spatial heterogeneity: all exterior to the language.
@@ -685,11 +727,11 @@ Block 3 asks a different kind of question.
 
 Not "what happens to a population over time?" but "what is the distribution of outcomes across entities at a point in time?"
 
-The firm size distribution is measured across millions of firms. It has been stable for decades, across countries with radically different institutions. Its form is a power law. No model that treats mean firm size as sufficient can reproduce it. No ODE model of industry dynamics can generate it.
+The firm size distribution has been stable for decades, across countries with radically different institutions. Its form is a power law. No model that treats mean employment as the complete dynamical state can reproduce it. No ODE model of industry dynamics can generate it.
 
-It is not that the standard models give the wrong answer. The phenomenon is exterior to their expressive range — for exactly the same reason the spiral waves and the extinction events are exterior to the mean-field ODE.
+The standard models are not giving the wrong answer. The phenomenon is outside their representable set — for exactly the same reason extinction events and topology-driven epidemics are outside the mean-field ODE.
 
-The language is the constraint. The distribution is the evidence.
+The restriction is the constraint. The distribution is the evidence.
 
 ???
 Speaker notes: The transition to Block 3 should feel like continuity, not a change of subject. The same conceptual move — identifying phenomena exterior to a language — now applies to a different domain: the distribution of firm sizes. The audience has seen the argument work twice (extinction, network topology). They are prepared to accept it a third time. The empirical stability of the power law is what makes the Axtell example devastating: this is not a modeling artifact. It is a regularity in the world, and the standard languages cannot express it.
