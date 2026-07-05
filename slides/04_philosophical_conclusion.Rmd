@@ -65,24 +65,6 @@ palette_ch4 <- c(
 ```
 
 ---
-class: center, middle
-
-.pull-left[
-> *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
->
-> — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
-]
-
-.pull-right[
-> *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
->
-> — Paul Ehrlich, *The Population Bomb* (1968)
-]
-
-???
-Speaker notes: The epigraphs one final time. The course has been building toward a single observation: both of these predictions failed for the same structural reason. The language available to each predictor could not express the phenomenon that would make the prediction wrong. Block 4 names that structure and connects it to what statisticians already know how to think about.
-
----
 
 ## Where We Left Off
 
@@ -227,7 +209,7 @@ The unification is the central conceptual payoff of the afternoon. Each of these
 
 ## The Regularization View
 
-Bayesian inference and frequentist regularization are the same operation.
+Bayesian priors and regularization penalties are the same operation.
 
 --
 
@@ -245,7 +227,7 @@ The parallel is structural: the penalty acts on the same convex geometry in both
 
 --
 
-The frequentist who uses LASSO is placing a Laplace prior on their coefficients whether they think of it that way or not.
+The practitioner who uses LASSO is placing a Laplace prior on their coefficients whether they think of it that way or not.
 
 ???
 The Bayesian-regularization equivalence (Tibshirani 1996, Hoerl & Kennard 1970) is an established result. What this course adds is the extension: the same geometry applies to the ABM-ODE relationship. That extension is the interpretive framework of this course, not a standard result from the ABM literature. State the established identity cleanly, then name the extension as a synthesis.
@@ -270,7 +252,7 @@ which is exactly ridge regression.
 
 --
 
-The Bayesian and the frequentist regularizer are solving the same problem.
+The prior and the penalty are solving the same problem.
 
 ???
 State this cleanly and let it sit. The audience knows LASSO. They may not have connected it to the priors in their models. The connection matters because it means every modeling assumption — not just regression priors — is a restriction on the prior distribution, a decision about where to assign probability mass in model space.
@@ -350,6 +332,33 @@ The analogy is tight: a Gaussian prior assigns all its mass near zero, and when 
 
 ---
 
+## The Logistic Equation
+
+**Continuous (ODE):** population growth with a carrying capacity $K$
+
+$$\frac{dN}{dt} = rN\!\left(1 - \frac{N}{K}\right)$$
+
+--
+
+Closed-form solution:
+
+$$N(t) = \frac{K}{1 + \dfrac{K - N_0}{N_0}\, e^{-rt}}$$
+
+Early in time ($N \ll K$), the $1 - N/K$ term is approximately 1 and growth is exponential. The ceiling only becomes visible once $N$ is large relative to $K$.
+
+--
+
+**Discrete (logistic map):** rescale $x_t = N_t / K \in [0,1]$
+
+$$x_{t+1} = r\, x_t (1 - x_t)$$
+
+Same structure. Radically different dynamics — fixed points, cycles, chaos — depending on $r$.
+
+???
+Speaker notes: The continuous and discrete forms share the same nonlinearity but have different long-run behaviours. The ODE always converges to K for r > 0. The discrete map can cycle or become chaotic for r > 3. The bifurcation diagram on the next few slides is the discrete map — the ODE alone cannot generate the period-doubling cascade. This difference is itself an instance of the resolution argument: discrete and continuous time are different languages, and some phenomena (chaos via period-doubling) are only expressible in the discrete language.
+
+---
+
 ## What Extrapolation Cannot See
 
 ```{r logistic-setup, echo=TRUE}
@@ -377,7 +386,7 @@ The setup is simple: logistic growth, observed only in the exponential phase. A 
 
 ## The Extrapolation Failure
 
-```{r extrap-plot, echo=FALSE, fig.height=4.5}
+```{r extrap-plot, echo=FALSE, fig.height=4.5, out.width="72%"}
 # True logistic trajectory
 true_df <- tibble(t = times, N = N_true, type = "True logistic")
 
@@ -441,6 +450,37 @@ The language analogy is exact here. A confidence interval is a range of sentence
 
 ---
 
+## The Logistic Map: Fixed Points and Stability
+
+$$x_{t+1} = f(x_t) = r\,x_t(1 - x_t)$$
+
+--
+
+**Fixed points** satisfy $x^* = f(x^*)$:
+
+$$x^* = 0 \qquad \text{and} \qquad x^* = 1 - \frac{1}{r}$$
+
+--
+
+**Stability:** a fixed point is stable when $|f'(x^*)| < 1$. Since $f'(x) = r(1 - 2x)$:
+
+$$\left|f'\!\left(1 - \tfrac{1}{r}\right)\right| = |2 - r| < 1 \implies 1 < r < 3$$
+
+--
+
+At $r = 3$ the fixed point loses stability. The system bifurcates to a **2-cycle**: $x^*_1 \to x^*_2 \to x^*_1 \to \cdots$
+
+--
+
+Further bifurcations occur at $r \approx 3.449,\ 3.544,\ 3.565,\ \ldots$ with each interval shrinking by the **Feigenbaum constant** $\delta \approx 4.669$.
+
+Chaos onset: $r \approx 3.570$.
+
+???
+Speaker notes: The key point for the course argument is what happens to a stationarity-based model calibrated in the fixed-point regime (r < 3). It estimates a single equilibrium x* = 1 - 1/r. The concept of a 2-cycle or chaos is not in its parameter space. When r crosses 3, the shift in the attractor is not a perturbation of x* — it is a qualitatively different object. The Feigenbaum constant is a universality result: the same ratio 4.669 governs period-doubling cascades in *any* one-dimensional unimodal map, not just the logistic. The structural result is more general than the specific equation.
+
+---
+
 ## The Logistic Map: Where the Language Breaks
 
 ```{r bifurcation-compute, echo=TRUE, cache=TRUE}
@@ -465,7 +505,7 @@ The logistic map is the canonical example of period-doubling bifurcation. At r <
 
 ## The Bifurcation Diagram
 
-```{r bifurcation-plot, echo=FALSE, fig.height=4.5}
+```{r bifurcation-plot, echo=FALSE, fig.height=4.5, out.width="72%"}
 ggplot(bif_df, aes(x = r, y = x)) +
   geom_point(size = 0.15, alpha = 0.3, color = palette_ch4["true_traj"]) +
   labs(
@@ -697,65 +737,90 @@ What it offers is a **map of the possibility space** — the range of qualitativ
 
 --
 
-A policy advisor working from a **point forecast** is navigating with a single trajectory.
+A point forecast selects one trajectory and reports it.
 
 --
 
-A policy advisor working from a **possibility space map** sees not only where the current trajectory leads, but which turns exist, which conditions trigger them, and which interventions have leverage at the critical points.
+A possibility space map shows the full range of qualitatively distinct behaviors the system is capable of — which regimes exist, what conditions separate them, and where the bifurcation points are.
+
+--
+
+The map does not eliminate uncertainty. It characterizes it structurally rather than suppressing it under false precision.
 
 ???
-The possibility space framing reorients what modeling is for. The goal is not to produce the number — "GDP growth will be 2.3% next year" — but to produce the chart: these are the regimes, these are the boundaries between them, these are the control parameters. The map does not eliminate uncertainty. It characterizes it structurally rather than suppressing it under false precision.
+The possibility space framing reorients what modeling is for. The goal is not to produce the number — "GDP growth will be 2.3% next year" — but to produce the chart: these are the regimes, these are the boundaries between them, these are the conditions that select among them. This is a different kind of knowledge than a point estimate. It is also more honest about what the model actually knows.
 
 ---
 
 ## What the Map Shows
 
-```{r possibility-space, echo=FALSE, fig.height=4}
-# Illustrative: multiple trajectories from same initial condition, different parameter regimes
-set.seed(2025)
-
-# Logistic growth under three regimes: below, near, above carrying capacity
-logistic_ode <- function(t, state, parms) {
-  with(as.list(c(state, parms)), {
-    dN <- r * N * (1 - N / K)
-    list(dN)
-  })
+```{r possibility-space, echo=FALSE, fig.height=4, out.width="72%"}
+# Three time series of the logistic map x_{t+1} = r*x*(1-x),
+# same initial condition x_0 = 0.2, qualitatively distinct regimes.
+run_map <- function(r_val, label, n = 60) {
+  x <- 0.2
+  xs <- numeric(n)
+  for (i in seq_len(n)) { x <- r_val * x * (1 - x); xs[i] <- x }
+  tibble(t = seq_len(n), x = xs, regime = label)
 }
 
-run_logistic <- function(r_val, K_val, label) {
-  out <- ode(
-    y     = c(N = 10),
-    times = seq(0, 40, by = 0.5),
-    func  = logistic_ode,
-    parms = c(r = r_val, K = K_val)
-  )
-  as_tibble(as.data.frame(out)) |> mutate(scenario = label)
-}
+map_df <- bind_rows(
+  run_map(2.8, "r = 2.8  fixed point"),
+  run_map(3.3, "r = 3.3  2-cycle"),
+  run_map(3.9, "r = 3.9  chaos")
+) |>
+  mutate(regime = factor(regime,
+                         levels = c("r = 2.8  fixed point",
+                                    "r = 3.3  2-cycle",
+                                    "r = 3.9  chaos")))
 
-scenarios <- bind_rows(
-  run_logistic(0.3, 500,  "Low carrying capacity"),
-  run_logistic(0.3, 1000, "Baseline"),
-  run_logistic(0.3, 2000, "High carrying capacity")
-)
-
-ggplot(scenarios, aes(x = time, y = N, color = scenario)) +
-  geom_line(linewidth = 1) +
+ggplot(map_df, aes(x = t, y = x, color = regime)) +
+  geom_line(linewidth = 0.8) +
   scale_color_manual(
-    values = c("Low carrying capacity" = "#C0392B",
-               "Baseline"              = "#2D5F8A",
-               "High carrying capacity"= "#27AE60"),
+    values = c("r = 2.8  fixed point" = "#2D5F8A",
+               "r = 3.3  2-cycle"     = "#27AE60",
+               "r = 3.9  chaos"       = "#C0392B"),
     name = NULL
   ) +
   labs(
-    title    = "The Possibility Space: Three Regimes, Same Initial Condition",
-    subtitle = "Policy levers determine which regime is realized",
-    x        = "Time",
-    y        = "N"
+    title    = "The Possibility Space: Same Initial Condition, Three Regimes",
+    subtitle = expression(x[t+1] == r * x[t] * (1 - x[t]) ~ "— qualitatively distinct behavior across r"),
+    x        = "Tick",
+    y        = expression(x[t])
   )
 ```
 
 ???
-The illustration is simple but the point is sharp: all three trajectories start at the same point. A point forecast selects one. The possibility space map shows all three, labels the conditions under which each occurs, and identifies the control parameters (here, carrying capacity K — which might represent resource availability, regulatory environment, or market size). Policy operates on the control parameters, not on the trajectory directly.
+The three trajectories start at x_0 = 0.2. The control parameter r is the only difference. At r = 2.8 the system settles to a fixed point — a stationarity-based model calibrated here would extrapolate a constant. At r = 3.3 it settles to a 2-cycle — the stationarity model is wrong but not catastrophically so. At r = 3.9 the trajectory is chaotic — no finite-horizon forecast is meaningful. A point forecast picks one trajectory. The possibility space map shows all three and identifies which value of r produces which qualitative behavior. Knowing where the bifurcation points are is a different kind of knowledge than knowing the next value of x.
+
+---
+
+## Epistemic Humility in Both Directions
+
+The catastrophist error does not imply its opposite.
+
+--
+
+Showing that extrapolation to catastrophe is a modeling failure does not establish that the system is stable. It establishes that the *model* had no language for the stabilizing mechanism.
+
+--
+
+The wolf-sheep ABM without grass crashes in 47 of 50 runs. Adding grass — a resource cycle that regenerates — converts extinction from the norm to the anomaly. The stability is **conditional**: it is a property of the full system, including the mechanism that makes it stable.
+
+--
+
+Remove the grass — drought, overgrazing at a faster rate, a parameter shift in regrowth time — and the dynamics change again. The stability does not belong to the predator-prey interaction. It belongs to the triple: predator, prey, and resource.
+
+--
+
+Herbert Simon observed that complex systems are nearly decomposable: fast dynamics within subsystems, slow dynamics between them. The wolf-sheep system with grass has two time scales. The predation cycle is fast; grass regrowth takes 30 ticks — slow relative to reproduction. The cycling depends on that ratio. Compress regrowth and the buffer disappears.
+
+--
+
+A model calibrated in the stable cycling regime has no language for what happens when the regrowth rate shifts. That perturbation operates at a different grain than the one the model describes. The grain is a choice, not a fact about the world.
+
+???
+Speaker notes: The point here is symmetric. The catastrophist error and the complacency error are both failures of expressive resolution — both involve a model that cannot represent the mechanism that would change the outcome. The wolf-sheep example makes this concrete: grass is the stabilizing mechanism, and its removal is not a parameter perturbation within the cycling model's language; it is a structural change to the system the model was describing. Simon's near-decomposability point adds the temporal dimension: the stability of the cycling regime is a phenomenon at the fast time scale of predation, but it depends on a parameter (regrowth time) that operates at a slower scale. A model fit only at the fast scale cannot see the slow parameter. A model fit only at the slow scale cannot see the fast dynamics. The right question is always: at what grain is this model working?
 
 ---
 
@@ -825,10 +890,6 @@ The possibility space is harder to communicate than a point forecast.
 --
 
 A regime map requires more assumptions to be explicit, more limitations to be stated.
-
---
-
-The tools are harder. The answers are less clean.
 
 --
 

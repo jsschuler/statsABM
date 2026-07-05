@@ -31,24 +31,6 @@ class: center, middle, inverse, title-slide
 
 
 ---
-class: center, middle
-
-.pull-left[
-&gt; *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
-&gt;
-&gt; — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
-]
-
-.pull-right[
-&gt; *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
-&gt;
-&gt; — Paul Ehrlich, *The Population Bomb* (1968)
-]
-
-???
-Speaker notes: Return to the epigraphs. Block 1 showed what went wrong in both predictions: feedback, ignored. Block 2 shows what feedback looks like when individuals are actually individual — when the population is not a number but a collection of agents, each with a location and a neighborhood.
-
----
 
 ## Where We Left Off
 
@@ -256,9 +238,10 @@ run_abm_sir &lt;- function(N = 500, beta = 0.3, gamma = 0.1,
   for (t in seq_len(T)) {
     inf  &lt;- which(status == "I"); susc &lt;- which(status == "S")
     if (length(inf) &gt; 0 &amp;&amp; length(susc) &gt; 0) {
-      # Random mixing — mean-field assumption in agent code
-      ctc &lt;- sample(susc, min(length(inf), length(susc)))
-      status[ctc[rbinom(length(ctc), 1, beta) == 1]] &lt;- "I"
+      # Frequency-dependent transmission: each susceptible infected with prob beta*I/N
+      # Expected new infections = S * beta * I / N — matches ODE's beta*S*I/N term exactly
+      p_inf &lt;- beta * length(inf) / N
+      status[susc[rbinom(length(susc), 1, p_inf) == 1]] &lt;- "I"
     }
     status[inf[rbinom(length(inf), 1, gamma) == 1]] &lt;- "R"
     results &lt;- add_row(results, time = t, S = sum(status == "S"),
@@ -270,7 +253,7 @@ abm_sir_runs &lt;- map_dfr(1:8, ~ run_abm_sir(seed_val = .x) |&gt; mutate(run = 
 ```
 
 ???
-Speaker notes: The infection mechanism here is random mixing: each infectious agent draws a random susceptible. This is the mean-field assumption in agent code. The recovery is a Bernoulli trial at each timestep with probability gamma — which gives a geometric distribution of infectious periods, the continuous analog of the exponential distribution in the ODE. The ODE assumes exponentially distributed infectious periods; this ABM implements that assumption discretely.
+Speaker notes: The infection mechanism implements frequency-dependent transmission: each susceptible is independently exposed with probability beta*I/N, so expected new infections = S * beta * I / N — the discrete-time counterpart of the ODE's beta*S*I/N term. This is the mean-field assumption in agent code: every susceptible is equally reachable by every infectious agent. Recovery is a Bernoulli trial with probability gamma, giving geometrically distributed infectious periods — the discrete analog of the ODE's exponential recovery.
 
 ---
 
@@ -453,59 +436,98 @@ Speaker notes: This is the answer to the most common technical objection to ABMs
 
 ---
 
-## Spatial Lotka-Volterra
+## Spatial Wolf-Sheep Predation
 
 *Extension module — distributed in course materials; not walked through in the live session.*
 
-Agents occupy cells on a grid. Interactions are local — each agent can only interact with its Moore neighborhood (8 adjacent cells). No global mixing.
+Agents (sheep and wolves) move on a grid. A wolf can eat a sheep only if they occupy the same cell. No global mixing — contact structure is the grid neighborhood.
 
 --
 
 The result:
 
-**Spiral waves.** A dynamical regime that does not exist in the mean-field model. Space generates structure — coherent, rotating patterns that sustain populations the mean-field equations would drive to extinction.
+**Extinction.** Wolf overshoot drives the system to zero — an absorbing state the ODE cannot reach. The ODE orbits forever; the ABM can crash, and stay crashed.
 
 ???
-Speaker notes: The animation is the argument. Description cannot substitute for the visual. The spatial model requires roughly 30 additional lines of code — fully commented in the distributed materials. The key point is not the complexity of the implementation but the novelty of the phenomenon: spiral waves are a qualitatively distinct regime, not a quantitative deviation from the ODE trajectory. They require the spatial language to exist at all. Show the animation and let it speak.
+Speaker notes: The image is the argument. The ODE with these parameters produces neutral cycles indefinitely. The ABM — same parameters, local interaction — produces boom-and-bust dynamics that terminate in extinction. The difference is not a quantitative deviation but a qualitative one: the absorbing state at zero is grammatically excluded from the ODE's language. Once populations hit zero in the ABM, there is no recovery. The ODE has no word for this.
 
 ---
 
 
 ``` r
-# Spatial LV: each cell holds prey/predator counts
-# Full code: code/ch02_abm_contrast.R and slides/render_spatial_anim.R
+# Wolf-Sheep Predation: R translation of Wilensky (2005) NetLogo model
+# Full code: slides/render_spatial_anim.R
 set.seed(2025)
-GRID &lt;- 40; T_MAX &lt;- 100
+G &lt;- 51L  # 51x51 toroidal grid (NetLogo default)
 
-grid &lt;- expand_grid(x = 1:GRID, y = 1:GRID) |&gt;
-  mutate(prey = 0L, predator = 0L)
+wrap &lt;- function(v, g) ((v - 1L) %% g) + 1L
 
-# Moore neighborhood: 8 adjacent cells — local interaction, not mean-field
-moore_nbrs &lt;- function(x, y, g = GRID) {
-  dx &lt;- c(-1L,0L,1L,-1L,1L,-1L,0L,1L)
-  dy &lt;- c(-1L,-1L,-1L,0L,0L,1L,1L,1L)
-  list(x = ((x + dx - 1L) %% g) + 1L,
-       y = ((y + dy - 1L) %% g) + 1L)
-}
-# step_spatial_lv(), simulation loop, and anim_save()
-# in distributed materials — see render_spatial_anim.R
+# Each tick: agents random-walk, wolves lose energy, wolves eat sheep
+# on same cell, agents die if energy &lt; 0, agents reproduce stochastically.
+# Local interaction: wolf must share a cell with a sheep to eat it.
+# — full implementation in distributed materials —
 ```
 
 ???
-Speaker notes: Show this code briefly to demonstrate the structure — grid, Moore neighborhood, local interaction. Then switch to the pre-rendered animation. The key conceptual point is that `moore_nbrs` has replaced `sample(full_population)` — the neighborhood is now local, and the mean-field assumption is gone. That single change generates qualitatively different dynamics: spiral waves, sustained population structure, persistence regimes that the mean-field model cannot support.
+Speaker notes: The key structural change from the random-mixing ABM is one line: wolves eat `sheep-here` — sheep on the same cell — not a random draw from the full population. That single restriction replaces the mean-field assumption with a local one. The rest of the model is standard energy bookkeeping. Show this code briefly, then switch to the pre-rendered image.
 
 ---
 
-## [Animation] Spatial Lotka-Volterra
+## [Spatial] Wolf-Sheep Predation
 
 .center[
-&lt;img src="spatial_lv.png" alt="" width="55%" style="display: block; margin: auto;" /&gt;
+&lt;img src="spatial_lv.gif" alt="" width="42%" style="display: block; margin: auto;" /&gt;
 ]
 
-Spiral waves are a dynamical regime that is simply inexpressible in the mean-field language — they require the spatial language to exist at all.
+???
+Speaker notes: Six snapshots from a single run. The ODE with equivalent parameters cycles forever. This ABM — same birth rates, same predation rates, local interaction only — crashes to zero at t = 146. Extinction is an absorbing state. The ODE cannot represent it because its language has no symbol for zero population; the differential equation simply continues through zero and into the negative. The absorbing boundary is exterior to the language. This is what "inexpressible" means.
+
+---
+
+## [Spatial] Wolf-Sheep — Population Over Time
+
+.center[
+&lt;img src="wolf_sheep_timeseries.png" alt="" width="90%" style="display: block; margin: auto;" /&gt;
+]
 
 ???
-Speaker notes: If the animation is available, show it here. If not, describe what the audience would see: coherent rotating patterns of prey and predator populations, moving across the grid, sustaining each other through local dynamics that the global mean-field equations destroy. The phenomenon is not a quantitative correction to the ODE. It is a qualitative regime that the ODE cannot represent at all. This is the clearest demonstration of expressive resolution in the course.
+Speaker notes: The same run, now shown as a time series. Sheep (blue) multiply unchecked at first; wolves (red) follow them up with a lag. At around t = 110 the wolves overshoot — 544 wolves, only 195 sheep remaining. The prey base collapses, and the wolves, now starving on an empty grid, die off by t = 146. The ODE with these parameters cycles forever. The ABM does not. The difference is the absorbing boundary at zero — a state the ODE cannot represent.
+
+---
+
+## What If Sheep Need to Eat?
+
+The no-grass model gives sheep unlimited energy. They reproduce freely; death comes only from wolves. The ODE assumes the same — prey grow at a fixed per-capita rate regardless of resource availability.
+
+--
+
+The grass variant (Wilensky 2005) adds one trophic level:
+
+- Each patch is either **green** (grazeable) or **brown** (exhausted)
+- A sheep on a green patch gains energy; the patch turns brown
+- Brown patches regrow after a fixed number of ticks
+
+--
+
+Sheep now face an energy constraint independent of wolves. When sheep are scarce, grass accumulates. Recovered grass supports sheep recovery; sheep recovery supports wolf recovery.
+
+--
+
+The question: does this third level change the qualitative dynamics?
+
+???
+Speaker notes: The grass extension is not about realism for its own sake. It is about identifying which assumptions are load-bearing. The no-grass model assumes the prey resource is inexhaustible — exactly the assumption embedded in the ODE's linear prey growth term. Adding grass makes that assumption explicit and relaxes it. The next slide shows what changes when it is relaxed.
+
+---
+
+## Cycling Is Sparse Without Grass
+
+.center[
+&lt;img src="parallel_runs.png" alt="" width="95%" style="display: block; margin: auto;" /&gt;
+]
+
+???
+Speaker notes: 50 independent runs of each model variant, 300 ticks. Without grass (left), 47 of 50 runs end in wolf overshoot followed by sheep extinction — the boom-bust dynamic terminates. The ODE's cyclic solution is the rare outcome, not the typical one. Adding a third trophic level — grass that regenerates at a fixed rate — converts the picture: 49 of 50 grass runs sustain both species to t = 300. The grass acts as a resource buffer: when sheep are scarce, grass accumulates; recovered grass supports sheep recovery; sheep recovery supports wolf recovery. The ODE cycles forever by assumption. The no-grass ABM shows that assumption is doing real work. It is not a neutral modeling choice — it is the condition under which cycling is actually possible.
 
 ---
 
@@ -519,6 +541,7 @@ Speaker notes: If the animation is available, show it here. If not, describe wha
 - Small populations → extinction; the ODE has no word for it
 - Contact network topology changes epidemic dynamics qualitatively — same `\(\mathcal{R}_0\)`, different world
 - Spatial structure generates phenomena exterior to the mean-field language
+- ODE cycling requires conditions (grass, energy buffering) that are assumptions, not defaults — 47/50 no-grass runs go extinct
 ]
 
 .pull-right[

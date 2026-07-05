@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="John S. Schuler" />
+
+
+<title>Speaker Notes — Block 2: Agents, Networks, and the Geometry of Interaction</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Speaker Notes — Block 2: Agents, Networks,
+and the Geometry of Interaction</h1>
+<h3 class="subtitle">Agent-Based Modeling for Statisticians — JSM
+2026</h3>
+<h4 class="author">John S. Schuler</h4>
+
+
+
+<style>
+body {
+font-family: Georgia, serif;
+font-size: 13pt;
+max-width: 720px;
+margin: 2em auto;
+padding: 0 1.5em;
+color: #1C1C1E;
+background: #fff;
+}
+h1 { font-size: 1.4em; border-bottom: 2px solid #1C1C1E; padding-bottom: 0.3em; margin-top: 2em; }
+h2 { font-size: 1.1em; color: #2D5F8A; margin-top: 1.8em; margin-bottom: 0.3em; }
+.slide-label {
+font-family: monospace;
+font-size: 0.85em;
+color: #888;
+margin-bottom: 0.2em;
+}
+p { line-height: 1.65; margin: 0.5em 0 1em 0; }
+hr { border: none; border-top: 1px solid #DCDCD4; margin: 2em 0; }
+@media print {
+body { font-size: 11pt; }
+h1 { page-break-before: always; }
+h2 { page-break-after: avoid; }
+}
+</style>
+<hr />
+<div class="slide-label">
+Slide 1 — Where We Left Off
+</div>
+<div id="reconnecting-after-the-break" class="section level2">
+<h2>Reconnecting After the Break</h2>
+<p>This slide orients returning audience members. The key move is to
+remind them that what follows is not a different subject — it is the
+same question asked with a different instrument. The mean-field
+assumption was identified precisely in Block 1; Block 2 relaxes it and
+shows what becomes visible.</p>
+<hr />
+<div class="slide-label">
+Slide 2 — Roadmap
+</div>
+</div>
+<div id="block-2-agents-networks-and-the-geometry-of-interaction" class="section level2">
+<h2>Block 2: Agents, Networks, and the Geometry of Interaction</h2>
+<p>Set the tone immediately: this is not an argument that ODE models are
+wrong. It is a demonstration that they are a special case of a richer
+language. The statistician analogy that will carry the session is
+regularization — the ODE is the ABM with a very strong prior. Do not
+state this yet. Let it arrive after the reduction result is shown.</p>
+<hr />
+<div class="slide-label">
+Slide 3
+</div>
+</div>
+<div id="what-is-an-agent" class="section level2">
+<h2>What Is an Agent?</h2>
+<p>The neighborhood concept is the load-bearing idea. Everything else
+follows from it. In the ODE, the neighborhood is implicit and uniform —
+the mass-action term embeds it without naming it. In the ABM, it is
+explicit and potentially heterogeneous. This makes it a first-class
+object: something you can vary, model, and test hypotheses about.
+Statisticians will recognize the analogy to specifying a covariance
+structure — the ODE is like assuming independence, the ABM lets you
+specify the structure.</p>
+<hr />
+<div class="slide-label">
+Slide 4
+</div>
+</div>
+<div id="abm-lotka-volterra-the-rules" class="section level2">
+<h2>ABM Lotka-Volterra: The Rules</h2>
+<p>The rules are deliberately verbal before they are computational. This
+is intentional — the verbal statement is the model; the code is just the
+execution. A model that can only be described in code is a model that
+cannot be criticized. These three rules map directly to the three terms
+in the Lotka-Volterra ODEs: alpha×N, beta×N×P, gamma×P. The
+correspondence will be made visible in the reduction result.</p>
+<hr />
+<div class="slide-label">
+Slide 5
+</div>
+</div>
+<div id="abm-lotka-volterra-core-code" class="section level2">
+<h2>ABM Lotka-Volterra: Core Code</h2>
+<p>The code structure mirrors the verbal rules exactly.
+<code>rbinom</code> calls make the stochasticity explicit. Rule 2 is the
+mean-field assumption in code: each predator independently samples every
+prey individual with probability <code>p_kill</code>. The expected
+number of kills is <code>p_kill × N × P = β N P</code> — the functional
+form βNP written procedurally. <code>p_kill</code> maps directly to β;
+<code>p_kill × p_convert</code> maps to δ.</p>
+<hr />
+<div class="slide-label">
+Slide 6 — Run loop slide
+</div>
+</div>
+<div id="abm-lotka-volterra-run-function" class="section level2">
+<h2>ABM Lotka-Volterra: Run Function</h2>
+<p>The early termination condition —
+<code>if (nrow(...) == 0) break</code> — is doing something the ODE
+cannot: it is detecting extinction. The ODE trajectory would continue
+through zero and into negative population sizes without complaint. The
+ABM respects the absorbing boundary.</p>
+<hr />
+<div class="slide-label">
+Slide 7
+</div>
+</div>
+<div id="the-ode-is-not-a-different-model" class="section level2">
+<h2>The ODE Is Not a Different Model</h2>
+<p>State this <strong>before</strong> showing the reduction plot, not
+after. If you show the convergence first and then explain it, it looks
+like post-hoc justification. If you explain it first, the plot arrives
+as confirmation of a prediction. This is the rhetorical structure of the
+reduction result: the ABM is the more general model, and the ODE falls
+out of it as a theorem. Not as an approximation — as a theorem.</p>
+<hr />
+<div class="slide-label">
+Slide 8
+</div>
+</div>
+<div id="the-reduction-result" class="section level2">
+<h2>The Reduction Result</h2>
+<p>The solid line is the ODE. The translucent traces are ten ABM runs
+with different random seeds. At this population size, the ABM orbits
+near the ODE solution — but notice the variance. Some runs track
+closely; a few diverge. The divergence will become the subject of the
+next slide. The key message: convergence is real, but it requires large
+N and random mixing. Both conditions are assumptions of the ODE.</p>
+<hr />
+<div class="slide-label">
+Slide 9
+</div>
+</div>
+<div id="the-ode-cannot-see-this" class="section level2">
+<h2>The ODE Cannot See This</h2>
+<p>Some of the translucent lines hit zero and stay there — extinction.
+The ODE line continues cycling, because a differential equation defined
+at the origin has no mechanism for absorbing state dynamics. The ODE is
+not wrong about the populations it was designed to describe — large,
+well-mixed, continuous. It is incapable of expressing a phenomenon that
+requires discreteness and small-number stochasticity. The ODE cannot say
+“the population went extinct.” The phrase is grammatically forbidden in
+its language.</p>
+<hr />
+<div class="slide-label">
+Slide 10
+</div>
+</div>
+<div id="abm-sir-random-mixing" class="section level2">
+<h2>ABM SIR: Random Mixing</h2>
+<p>The infection mechanism implements frequency-dependent transmission:
+each susceptible is independently exposed with probability beta×I/N, so
+expected new infections = S × beta × I / N — the discrete-time
+counterpart of the ODE’s beta×S×I/N term. This is the mean-field
+assumption in agent code: every susceptible is equally reachable by
+every infectious agent. Recovery is a Bernoulli trial with probability
+gamma, giving geometrically distributed infectious periods — the
+discrete analog of the ODE’s exponential recovery.</p>
+<hr />
+<div class="slide-label">
+Slide 11
+</div>
+</div>
+<div id="abm-sir-convergence-to-ode" class="section level2">
+<h2>ABM SIR: Convergence to ODE</h2>
+<p>The convergence is clear at N = 500. The ABM runs cluster tightly
+around the ODE solution — peak timing, peak height, and tail behavior
+all align. The residual variance is demographic stochasticity: the
+irreducible randomness of a finite population. As N grows, this variance
+shrinks and the ABM approaches the ODE exactly. This is the reduction
+result for SIR.</p>
+<hr />
+<div class="slide-label">
+Slide 12
+</div>
+</div>
+<div id="now-give-them-an-address" class="section level2">
+<h2>Now Give Them an Address</h2>
+<p>The transition here is from the ODE’s abstraction (the fully mixed
+population) to a structure that looks more like how transmission
+actually works. The key point is not that contact networks are “more
+realistic” — it is that they introduce a new structural object, the
+network topology, which is not representable in the ODE’s language.
+Network topology is a first-class variable in this language. You can ask
+questions about it. You can vary it and observe the consequences.</p>
+<hr />
+<div class="slide-label">
+Slide 13
+</div>
+</div>
+<div id="two-networks-same-mean-degree" class="section level2">
+<h2>Two Networks, Same Mean Degree</h2>
+<p>Mean degree is fixed to isolate the effect of topology on epidemic
+dynamics. Everything else — transmission rate, recovery rate, initial
+infected fraction — will be identical. If the ODE were the correct
+model, we would see identical epidemic curves. What we will see is
+something quite different.</p>
+<hr />
+<div class="slide-label">
+Slide 14
+</div>
+</div>
+<div id="the-networks-erdős-rényi-vs.-barabási-albert" class="section level2">
+<h2>The Networks: Erdős-Rényi vs. Barabási-Albert</h2>
+<p>The visual difference is immediate and striking. In the Erdős-Rényi
+graph, nodes are roughly uniform in size — similar degrees throughout.
+In the Barabási-Albert graph, a few large nodes (hubs) dominate. These
+hubs are connected to many other nodes. In an epidemic, they are both
+highly likely to be infected early (many contacts) and highly efficient
+at spreading infection further. The ODE sees only mean degree. It is
+blind to the variance.</p>
+<hr />
+<div class="slide-label">
+Slide 15
+</div>
+</div>
+<div id="erdős-rényi-vs.-barabási-albert-degree-distribution" class="section level2">
+<h2>Erdős-Rényi vs. Barabási-Albert: Degree Distribution</h2>
+<p>The policy implication of the Barabási-Albert topology is
+significant: targeted vaccination of hubs is dramatically more efficient
+than random vaccination, because hubs carry a disproportionate share of
+the transmission. The ODE cannot represent this strategy. The network
+SIR can. This is not a matter of fit — it is a matter of the question
+being askable.</p>
+<hr />
+<div class="slide-label">
+Slide 16
+</div>
+</div>
+<div id="network-sir-edge-traversal-infection" class="section level2">
+<h2>Network SIR: Edge-Traversal Infection</h2>
+<p>The critical structural change from the random-mixing ABM: infection
+now traverses edges only. <code>adj[[i]]</code> gives the neighbors of
+node i; susceptibles among them are the only candidates for
+transmission. The ODE’s βSI term is replaced by edge-by-edge Bernoulli
+trials. The contact structure is now load-bearing, not abstracted
+away.</p>
+<hr />
+<div class="slide-label">
+Slide 17
+</div>
+</div>
+<div id="same-mathcalr_0.-different-world." class="section level2">
+<h2>Same <span class="math inline">\(\mathcal{R}_0\)</span>. Different
+World.</h2>
+<p>Both networks have the same mean degree and the same transmission
+parameters. The ODE predicts one epidemic curve. These networks produce
+qualitatively different dynamics: the Barabási-Albert epidemic peaks
+earlier, shows more variance across runs (because hub-seeding is a
+random event), and can sustain longer tails through hub persistence. The
+ODE’s answer is neither of these — it is the mean-field average, which
+corresponds to neither topology. The question “what does contact network
+topology do to epidemic dynamics?” cannot be asked in the ODE’s
+language. The answer it would give is not wrong. The question is simply
+exterior to its expressive range.</p>
+<hr />
+<div class="slide-label">
+Slide 18
+</div>
+</div>
+<div id="the-reduction-principle" class="section level2">
+<h2>The Reduction Principle</h2>
+<p>This is the central theoretical claim of the session. State it with
+confidence. The Bayesian framing is available here if the audience wants
+it: the ODE is the posterior mode of the ABM under a Dirac prior on the
+interaction structure. The ABM relaxes that prior. The phenomena visible
+only in the ABM are those that have probability zero under the ODE’s
+prior — not unlikely, but grammatically excluded. Regime change,
+extinction, network effects, spatial heterogeneity: all exterior to the
+language.</p>
+<hr />
+<div class="slide-label">
+Slide 19
+</div>
+</div>
+<div id="nominal-parameters-vs.-effective-dimensions" class="section level2">
+<h2>Nominal Parameters vs. Effective Dimensions</h2>
+<p>This is the answer to the most common technical objection to ABMs —
+placed here, after the full demonstration, so it answers a question the
+audience has already formed rather than anticipating one they haven’t.
+The Bayesian framing: maximal regularization corresponds to a prior
+concentrated entirely on the mean-field interaction structure — one that
+assigns essentially all mass to random mixing. That is not parameter
+parsimony; it is a structural restriction that has been silently
+imposed.</p>
+<hr />
+<div class="slide-label">
+Slide 20
+</div>
+</div>
+<div id="spatial-wolf-sheep-predation-extension-module" class="section level2">
+<h2>Spatial Wolf-Sheep Predation (Extension Module)</h2>
+<p>The image is the argument. The ODE with these parameters produces
+neutral cycles indefinitely. The ABM — same parameters, local
+interaction — produces boom-and-bust dynamics that terminate in
+extinction. The difference is not a quantitative deviation but a
+qualitative one: the absorbing state at zero is grammatically excluded
+from the ODE’s language. Once populations hit zero in the ABM, there is
+no recovery. The ODE has no word for this.</p>
+<hr />
+<div class="slide-label">
+Slide 21 — Spatial code slide
+</div>
+</div>
+<div id="wolf-sheep-code-overview" class="section level2">
+<h2>Wolf-Sheep: Code Overview</h2>
+<p>The key structural change from the random-mixing ABM is one line:
+wolves eat <code>sheep-here</code> — sheep on the same cell — not a
+random draw from the full population. That single restriction replaces
+the mean-field assumption with a local one. The rest of the model is
+standard energy bookkeeping. Show this code briefly, then switch to the
+pre-rendered image.</p>
+<hr />
+<div class="slide-label">
+Slide 22 — Animation slide
+</div>
+</div>
+<div id="spatial-wolf-sheep-predation" class="section level2">
+<h2>[Spatial] Wolf-Sheep Predation</h2>
+<p>Six snapshots from a single run. The ODE with equivalent parameters
+cycles forever. This ABM — same birth rates, same predation rates, local
+interaction only — crashes to zero at t = 146. Extinction is an
+absorbing state. The ODE cannot represent it because its language has no
+symbol for zero population; the differential equation simply continues
+through zero and into the negative. The absorbing boundary is exterior
+to the language. This is what “inexpressible” means.</p>
+<hr />
+<div class="slide-label">
+Slide 23 — Time series slide
+</div>
+</div>
+<div id="spatial-wolf-sheep-population-over-time" class="section level2">
+<h2>[Spatial] Wolf-Sheep — Population Over Time</h2>
+<p>The same run, now shown as a time series. Sheep (blue) multiply
+unchecked at first; wolves (red) follow them up with a lag. At around t
+= 110 the wolves overshoot — 544 wolves, only 195 sheep remaining. The
+prey base collapses, and the wolves, now starving on an empty grid, die
+off by t = 146. The ODE with these parameters cycles forever. The ABM
+does not. The difference is the absorbing boundary at zero — a state the
+ODE cannot represent.</p>
+<hr />
+<div class="slide-label">
+Slide 24
+</div>
+</div>
+<div id="what-if-sheep-need-to-eat" class="section level2">
+<h2>What If Sheep Need to Eat?</h2>
+<p>The grass extension is not about realism for its own sake. It is
+about identifying which assumptions are load-bearing. The no-grass model
+assumes the prey resource is inexhaustible — exactly the assumption
+embedded in the ODE’s linear prey growth term. Adding grass makes that
+assumption explicit and relaxes it.</p>
+<hr />
+<div class="slide-label">
+Slide 25 — Parallel runs slide
+</div>
+</div>
+<div id="cycling-is-sparse-without-grass" class="section level2">
+<h2>Cycling Is Sparse Without Grass</h2>
+<p>50 independent runs of each model variant, 300 ticks. Without grass
+(left), 47 of 50 runs end in wolf overshoot followed by sheep extinction
+— the boom-bust dynamic terminates. The ODE’s cyclic solution is the
+rare outcome, not the typical one. Adding a third trophic level — grass
+that regenerates at a fixed rate — converts the picture: 49 of 50 grass
+runs sustain both species to t = 300. The grass acts as a resource
+buffer: when sheep are scarce, grass accumulates; recovered grass
+supports sheep recovery; sheep recovery supports wolf recovery. The ODE
+cycles forever by assumption. The no-grass ABM shows that assumption is
+doing real work. It is not a neutral modeling choice — it is the
+condition under which cycling is actually possible.</p>
+<hr />
+<div class="slide-label">
+Slide 26
+</div>
+</div>
+<div id="block-2-summary" class="section level2">
+<h2>Block 2: Summary</h2>
+<p>The summary should feel like a crystallization, not a list. The key
+points to land: (1) the competition between ODE and ABM is false — one
+contains the other; (2) the expressive boundary is the operative
+concept; (3) the statistician’s instinct toward model parsimony is
+correct, but parsimony should be measured in effective dimensions, not
+parameter counts; (4) the phenomena visible only in the ABM are exactly
+those that require the features the ODE’s language excludes.</p>
+<hr />
+<div class="slide-label">
+Slide 27 — Transition to Block 3
+</div>
+</div>
+<div id="toward-axtell" class="section level2">
+<h2>Toward Axtell</h2>
+<p>The transition to Block 3 should feel like continuity, not a change
+of subject. The same conceptual move — identifying phenomena exterior to
+a language — now applies to a different domain: the distribution of firm
+sizes. The audience has seen the argument work twice (extinction,
+network topology). They are prepared to accept it a third time. The
+empirical stability of the power law is what makes the Axtell example
+devastating: this is not a modeling artifact. It is a regularity in the
+world, and the standard languages cannot express it.</p>
+<hr />
+<div class="slide-label">
+Slide 28 — Break slide
+</div>
+</div>
+<div id="block-2-complete-lunch" class="section level2">
+<h2>Block 2 Complete / Lunch</h2>
+<p>Remind the audience that the network SIR and spatial Lotka-Volterra
+code are fully implemented and commented in the distributed materials.
+If they want to run the spatial animation themselves, all dependencies
+are listed in the README.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

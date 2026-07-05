@@ -1,0 +1,230 @@
+---
+title: "Speaker Notes — Block 3: The Size of Firms, and What It Tells Us"
+subtitle: "Agent-Based Modeling for Statisticians — JSM 2026"
+author: "John S. Schuler"
+output:
+  html_document:
+    theme: null
+    highlight: null
+    self_contained: true
+    css: null
+---
+
+<style>
+  body {
+    font-family: Georgia, serif;
+    font-size: 13pt;
+    max-width: 720px;
+    margin: 2em auto;
+    padding: 0 1.5em;
+    color: #1C1C1E;
+    background: #fff;
+  }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #1C1C1E; padding-bottom: 0.3em; margin-top: 2em; }
+  h2 { font-size: 1.1em; color: #2D5F8A; margin-top: 1.8em; margin-bottom: 0.3em; }
+  .slide-label {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 0.2em;
+  }
+  p { line-height: 1.65; margin: 0.5em 0 1em 0; }
+  hr { border: none; border-top: 1px solid #DCDCD4; margin: 2em 0; }
+  @media print {
+    body { font-size: 11pt; }
+    h1 { page-break-before: always; }
+    h2 { page-break-after: avoid; }
+  }
+</style>
+
+---
+
+<div class="slide-label">Slide 1 — Where We Left Off</div>
+
+## Reconnecting After Lunch
+
+After lunch is a known attention trough. This slide does two things: reconnects returning audience members to the morning's argument, and frames Block 3 as the same conceptual move applied to a new domain. The statistical stakes are higher here because the empirical regularity is among the most robustly documented in economics.
+
+---
+
+<div class="slide-label">Slide 2 — Roadmap</div>
+
+## Block 3: No Running Models
+
+This block runs approximately 165 minutes including the lunch break. The tone shifts here — we are doing empirical argument, not model execution. The goal is to show the audience a phenomenon so crisp that the argument about modeling languages arrives on its own. No defensive posture needed. The data speak.
+
+---
+
+<div class="slide-label">Slide 3</div>
+
+## A Regularity That Refuses to Go Away
+
+The key rhetorical move: stability across institutional contexts is evidence of a structural mechanism, not a distributional coincidence. If it were lognormal noise, you would not expect it to replicate across Germany, Japan, and the US. Statisticians understand this immediately — it's the same logic as a tight confidence interval across heterogeneous subgroups.
+
+---
+
+<div class="slide-label">Slide 4 — Linear histogram slide</div>
+
+## First, Look at the Raw Data
+
+The histogram on a linear scale is deliberately useless. The dynamic range — from 1-person firms to 100,000-person firms — compresses almost the entire distribution into the left margin. This failure is itself an argument: the ordinary statistical toolkit for continuous bell-shaped distributions is the wrong instrument for this phenomenon.
+
+---
+
+<div class="slide-label">Slide 5</div>
+
+## The Dynamic Range Problem
+
+Make this explicit for the statisticians: a distribution with no characteristic scale is one where the mean is dominated by the largest observations, the variance may not exist, and the central limit theorem's standard conditions fail. The "typical" firm has no meaning — unlike a "typical" human height, or a "typical" test score.
+
+---
+
+<div class="slide-label">Slide 6 — Log-log CCDF slide</div>
+
+## Now Use the Right Scale
+
+The CCDF on log-log axes is the standard diagnostic for power law behavior. A straight line means P(X ≥ x) ~ x^(−α+1), which is the survival function of a power law. The slope of the line is related to the exponent α. The visual argument is immediate: this is a straight line over roughly three orders of magnitude.
+
+---
+
+<div class="slide-label">Slide 7</div>
+
+## Fitting the Power Law
+
+The `poweRlaw` package uses maximum likelihood estimation — not the naive log-log regression, which Clauset, Shalizi and Newman showed produces biased estimates. MLE on the tail above x_min is the statistically correct approach. The audience should notice this immediately; they are statisticians.
+
+---
+
+<div class="slide-label">Slide 8 — Fit results plot slide</div>
+
+## Fit Results
+
+The fitted line tracks the empirical CCDF closely over the range above x_min. Departures in the very small-firm region are expected — the power law applies to the tail, and the x_min estimate tells us where the power law regime begins. The Axtell simulation produces an α consistent with the empirically observed exponent near 2.0–2.1.
+
+---
+
+<div class="slide-label">Slide 9</div>
+
+## The Lognormal Alternative
+
+The Vuong test compares the log-likelihood ratio of the two fits. A positive test statistic means the power law fit is preferred. The audience are statisticians — they know what a likelihood ratio test is, and they will trust this comparison more than a visual inspection. With the Axtell simulation data, the Vuong test is close — the two distributions are difficult to distinguish statistically, which is itself informative. The simulation generates the characteristic power law shape without perfectly distinguishing it from a lognormal over the full range. For real SUSB data, the power law typically wins the Vuong test more decisively.
+
+---
+
+<div class="slide-label">Slide 10 — Power law vs. lognormal plot</div>
+
+## Power Law vs. Lognormal: The Visual
+
+The lognormal curves away from the data in the upper tail — the region of very large firms. This is where the empirical regularity is most informative: the largest firms are more probable than a lognormal predicts. The power law tracks this correctly because it has no upper-tail damping.
+
+---
+
+<div class="slide-label">Slide 11</div>
+
+## So What?
+
+The rhetorical setup: we have established the phenomenon firmly on statistical grounds. Now we examine the most widely used models and ask what they say about this distribution — not whether they fit it, but whether they can produce it.
+
+---
+
+<div class="slide-label">Slide 12</div>
+
+## What the Aggregate-State Model Predicts
+
+Even dynamic models with adjustment costs produce bell-shaped distributions around the optimal firm size — they can generate dispersion, but they cannot generate the absence of a characteristic scale that defines the power law. The variance exists; the tail is thin. What economists call the "representative agent" is this aggregate-state restriction applied to the distribution of firms.
+
+---
+
+<div class="slide-label">Slide 13</div>
+
+## The Aggregate-State Restriction for Firms
+
+This is the hinge slide. The aggregate-state restriction is not a computational convenience that could in principle be relaxed. It is a structural commitment that eliminates distributional heterogeneity from the model's state space. The question is not whether the model fits the power law better or worse. The question is whether the model can represent distributional heterogeneity at all — and an aggregate-state model cannot.
+
+---
+
+<div class="slide-label">Slide 14</div>
+
+## The Gap Is Structural, Not Statistical
+
+This is the core of the ABM argument applied to firms. The standard statistical fix — better estimation — is the wrong tool when the gap is structural. The statisticians in the audience know the distinction between misspecification and variance: here we have misspecification in the deepest sense, not of parameter values but of model class.
+
+---
+
+<div class="slide-label">Slide 15</div>
+
+## Axtell's Model — The Logic
+
+The model is simple enough to describe verbally in two minutes. This simplicity is itself part of the argument: the power law does not require a complicated mechanism calibrated to match it. It requires the right structural ingredients — heterogeneity, local increasing returns, decentralized team formation.
+
+---
+
+<div class="slide-label">Slide 16</div>
+
+## Why Teams? Why Power Laws?
+
+The intuition is similar to preferential attachment — teams that are larger attract more workers faster — but the mechanism here is local increasing returns rather than Matthew-effect popularity. The key point: no parameter of the model is set to produce the power law. The exponent emerges from the dynamics.
+
+---
+
+<div class="slide-label">Slide 17 — Team diagram slide</div>
+
+## Team Formation: The Key Asymmetry
+
+The diagram illustrates why no team size is stable. At small sizes, per-member returns exceed the solo option — teams grow. At large sizes, per-member returns fall below what workers can find elsewhere — teams dissolve. The crossing point shifts with conditions, and different agents face different conditions, so teams of every size coexist. This is the generative mechanism.
+
+---
+
+<div class="slide-label">Slide 18</div>
+
+## The Exponent Is Not Calibrated
+
+The robustness of the exponent is crucial. A model that produces the right distribution only at one specific parameter vector might be curve-fitting. A model that produces the right distribution across most of the parameter space is making a structural claim: this is what agent-based team formation does, regardless of the precise values of the parameters. The contrast with equilibrium models is the key point: the equilibrium tradition had the data and could not derive the exponent from first principles. That is an expressive limit, not an empirical one.
+
+---
+
+<div class="slide-label">Slide 19</div>
+
+## Emergence — A Precise Definition
+
+The definition rules out spurious uses of "emergence." A macro regularity that you can derive analytically from the micro rules is not emergent — it is just aggregation. True emergence requires the dynamics: the regularity appears only when the agents interact over time. The firm size power law qualifies because no steady-state analysis of an individual worker's team-joining problem produces a power law at the aggregate level. The methodological constraint is the payoff: emergence tells you which class of model is required. It is not a philosophical preference. It is a logical necessity.
+
+---
+
+<div class="slide-label">Slide 20 — Comparison table slide</div>
+
+## The Contrast Made Sharp
+
+The table crystallizes the argument. It is not that the aggregate-state model fits poorly. The phenomenon — a power law — is outside the representable set of models that apply the aggregate-state restriction to firm distributions. The fix is not better estimation. It is a richer model family.
+
+---
+
+<div class="slide-label">Slide 21</div>
+
+## What This Means for Applied Work
+
+Practical implication for the audience: if you are advising on competition policy, industrial policy, or anything involving the size distribution of firms, a model that treats mean firm size as the complete dynamical state is not an approximation of the right answer. It is an answer to a different question. The statistician's instinct — check your model against the data before trusting its policy implications — applies here with full force.
+
+---
+
+<div class="slide-label">Slide 22</div>
+
+## The Statistician's Translation
+
+This is the statistician's version of the "ODE is a limiting case of the ABM" argument from Block 2, now applied to firm models rather than ODE models. The aggregate-state restriction is a structural commitment, not a neutral default. Relaxing it is not adding complexity. It is removing a constraint.
+
+---
+
+<div class="slide-label">Slide 23</div>
+
+## Summary: Block 3
+
+The summary slide recaps the logical chain: phenomenon → statistical confirmation → structural failure of standard models → mechanism → concept. Each step was necessary. The concept of emergence at the end is not decoration — it is the precise name for what the power law is and where it lives in relation to the agent rules.
+
+---
+
+<div class="slide-label">Slide 24 — Transition to Block 4</div>
+
+## What Comes Next
+
+Transition slide. The afternoon block takes the philosophical argument that has been building implicitly through all three examples and states it explicitly. The firm size result is the last empirical anchor before the argument goes abstract.

@@ -1,0 +1,198 @@
+---
+title: "Speaker Notes — Block 1: The Differential Equations of Living Systems"
+subtitle: "Agent-Based Modeling for Statisticians — JSM 2026"
+author: "John S. Schuler"
+output:
+  html_document:
+    theme: null
+    highlight: null
+    self_contained: true
+    css: null
+---
+
+<style>
+  body {
+    font-family: Georgia, serif;
+    font-size: 13pt;
+    max-width: 720px;
+    margin: 2em auto;
+    padding: 0 1.5em;
+    color: #1C1C1E;
+    background: #fff;
+  }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #1C1C1E; padding-bottom: 0.3em; margin-top: 2em; }
+  h2 { font-size: 1.1em; color: #2D5F8A; margin-top: 1.8em; margin-bottom: 0.3em; }
+  .slide-label {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 0.2em;
+  }
+  p { line-height: 1.65; margin: 0.5em 0 1em 0; }
+  hr { border: none; border-top: 1px solid #DCDCD4; margin: 2em 0; }
+  @media print {
+    body { font-size: 11pt; }
+    h1 { page-break-before: always; }
+    h2 { page-break-after: avoid; }
+  }
+</style>
+
+---
+
+<div class="slide-label">Slide 1 — Title slide</div>
+
+## Opening Quotes (Atrahasis / Ehrlich)
+
+Two predictions of catastrophic overshoot. One from 1700 BCE, one from 1968. Neither came true. Both were built on extrapolation from trend — exponential growth projected past the feedback that stops it. The models we study today are the instruments built to see the feedback that the naked eye misses.
+
+---
+
+<div class="slide-label">Slide 2 — Roadmap</div>
+
+## Block 1: The Differential Equations of Living Systems
+
+Set expectations clearly. This block is not a review session — the audience knows differential equations. The goal is to look at two models they may already know, but to attend to the assumptions embedded in their structure with an eye they haven't needed before. The payoff comes in Block 2.
+
+---
+
+<div class="slide-label">Slide 3</div>
+
+## Feedback Defeats Intuition
+
+The key rhetorical move here is framing the ODE as an instrument that makes assumptions explicit — not as a neutral description of nature. This sets up the mean-field discussion later. The audience of statisticians will be comfortable with the idea that modeling choices embed assumptions; they may be less accustomed to finding those assumptions in functional forms rather than distributional families.
+
+---
+
+<div class="slide-label">Slide 4</div>
+
+## Lotka-Volterra: The Assumptions
+
+Build slowly here. The first two assumptions are unremarkable — they are the standard exponential growth/decay intuition. The third assumption carries enormous weight that will be named explicitly in two slides. Do not rush past it. The fourth is the energy transfer across trophic levels. Efficiency is the ratio of predator birth rate to predation rate — a standard ecological parameter.
+
+---
+
+<div class="slide-label">Slide 5</div>
+
+## The Product Term $\beta NP$
+
+This is the first appearance of what will be named as the mean-field assumption two slides from now. The goal here is to make the audience feel the assumption before it is named — so the naming arrives as a crystallization of something they have already seen. Do not name it yet. Let the strangeness of the claim sit with the room.
+
+---
+
+<div class="slide-label">Slide 6</div>
+
+## The Lotka-Volterra System
+
+The parameter table is here for reference. Do not read it aloud. Point to the nullclines and remind the audience that the fixed point is an orbit center — not an attractor, not a repeller. This will matter for the phase portrait. The closed-orbit result is genuinely strange and deserves a moment of attention.
+
+---
+
+<div class="slide-label">Slide 7</div>
+
+## Lotka-Volterra in R
+
+Keep the code brief on the slide. The full annotated version is in the course materials. Emphasize `deSolve`'s clean interface — state vector, parameter list, the function returns derivatives. The `with(as.list(...))` idiom lets parameter names appear directly in the equations, which is pedagogically useful.
+
+---
+
+<div class="slide-label">Slide 8</div>
+
+## Lotka-Volterra: Time Series
+
+Draw attention to the lag between the prey peak and the predator peak. This is the feedback loop made visible: prey grow, then predators follow (with a lag), then predators suppress prey, then predators collapse, then prey recover. The cycle is self-sustaining and perfectly regular. The perfect regularity will become suspicious in Block 2.
+
+---
+
+<div class="slide-label">Slide 9</div>
+
+## The Phase Portrait
+
+The closed orbit is geometrically beautiful and physically peculiar — like a pendulum that never loses energy to friction. Real ecological systems do not behave this way; populations show damped oscillations or stochastic fluctuations around equilibrium. The model is a clean mathematical object, not a literal description. The question is which of its structural choices produce this cleanliness — and what is the cost.
+
+---
+
+<div class="slide-label">Slide 10</div>
+
+## The Mean-Field Assumption
+
+This is the hinge of the entire day. Name it precisely. Do not apologize for it — the mean-field assumption has been scientifically productive for over a century. The point is not that it is wrong, but that it is a choice — a strong one — embedded silently in the functional form. A statistician in the audience may immediately recognize this framing: a restriction that is never acknowledged is a restriction that can never be relaxed. **Pause here. Let this land.**
+
+---
+
+<div class="slide-label">Slide 11</div>
+
+## SIR: A Model the Room Has Opinions About
+
+The 2020 reference lands differently now than it did in 2019. Use it to humanize the model — these are not abstract symbols, this is a formal description of something many people have lived through. The humor in the understatement ("considerably more opinions") should be dry, not milked. Then pivot immediately to the formal structure. The mean-field assumption appears again — make this explicit: it is the same structural choice, now governing human contact rather than predator-prey encounter.
+
+---
+
+<div class="slide-label">Slide 12</div>
+
+## SIR: Assumptions Built Incrementally
+
+The verbal-to-formal derivation is pedagogically important. The audience should see that the model structure is not arbitrary — each term in the ODE corresponds to a specific verbal claim about biology. This makes the model criticizable: which verbal claim fails for COVID, for influenza, for measles?
+
+---
+
+<div class="slide-label">Slide 13</div>
+
+## The SIR System
+
+Note the conservation property explicitly — it is a consistency check on the model. Each person leaving S enters I; each person leaving I enters R; no one appears or disappears. This is the closed-population assumption made algebraically manifest. Also note: unlike Lotka-Volterra, SIR is not conservative in its phase space — there is no closed orbit. Trajectories spiral inward toward the disease-free equilibrium.
+
+---
+
+<div class="slide-label">Slide 14</div>
+
+## The Epidemic Threshold
+
+Derive this from the sign condition, not from a definition. The audience should see that $\mathcal{R}_0$ is not an external parameter but an emergent quantity of the model — a function of the transmission rate, the population size, and the recovery rate. This makes it a target for intervention: you can reduce $\mathcal{R}_0$ by reducing $\beta$ (transmission), increasing $\gamma$ (recovery, treatment), or reducing the effective $N$ (quarantine, population immunity). Each intervention corresponds to a different epidemiological strategy.
+
+---
+
+<div class="slide-label">Slide 15</div>
+
+## SIR in R
+
+$\mathcal{R}_0$ for these parameters = $\beta N / \gamma$ = $0.0003 \times 1000 / 0.1 = 3$. A value of 3 is within the range estimated for the original SARS-CoV-2 strain. The audience will recognize this number.
+
+---
+
+<div class="slide-label">Slide 16</div>
+
+## SIR: Time Series
+
+Point to three features: (1) the susceptible pool depletes before it reaches zero — herd immunity threshold is $1 - 1/\mathcal{R}_0$, not zero; (2) the infectious curve is skewed right; (3) at the end, a substantial fraction remain susceptible but never infected. These are all consequences of the model structure, not external calibration.
+
+---
+
+<div class="slide-label">Slide 17</div>
+
+## Parameter Sweep: Varying $\mathcal{R}_0$
+
+Two things to emphasize: (1) the epidemic threshold — at $\mathcal{R}_0 = 1.5$, there is a small epidemic; below 1 there would be none; (2) the relationship between $\mathcal{R}_0$ and final epidemic size is nonlinear. Doubling $\mathcal{R}_0$ does not double the attack rate. The nonlinearity comes from the depletion of the susceptible pool. This is the kind of thing the ODE captures exactly — within the mean-field language.
+
+---
+
+<div class="slide-label">Slide 18</div>
+
+## A Language and Its Boundary
+
+This summary slide is the pivot. The audience should leave Block 1 not with a criticism of ODEs but with a precise description of what the ODE says — which is the precondition for knowing what it cannot say. Frame this explicitly: the checklist is not a list of failures, it is a description of a language. A language is a tool; the question is always whether the tool's expressive capacity matches the phenomenon.
+
+---
+
+<div class="slide-label">Slide 19</div>
+
+## What If Individuals Were Actually Individual?
+
+End here. No elaboration. The question is the transition — it should feel like a door left ajar. The audience will return from the break with this question still active. Do not answer it. Do not preview the answer. Let it sit.
+
+---
+
+<div class="slide-label">Slide 20 — Break slide</div>
+
+## Block 1 Complete
+
+Remind the audience that all code is in the distributed materials — they do not need to copy anything from the slides. The GitHub repository has fully commented scripts for every chunk shown today.

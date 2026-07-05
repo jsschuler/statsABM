@@ -176,8 +176,8 @@ lotka_volterra &lt;- function(t, state, parameters) {
     list(c(dN, dP))
   })
 }
-params &lt;- c(alpha = 0.8, beta = 0.02, delta = 0.01, gamma = 0.4)
-state0 &lt;- c(N = 60, P = 15)
+params &lt;- c(alpha = 0.8, beta = 0.4, delta = 0.3, gamma = 0.6)
+state0 &lt;- c(N = 10, P = 5)
 times  &lt;- seq(0, 80, by = 0.1)
 lv_out &lt;- ode(y = state0, times = times,
               func = lotka_volterra, parms = params)

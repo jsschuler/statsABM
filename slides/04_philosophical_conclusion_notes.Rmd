@@ -1,0 +1,318 @@
+---
+title: "Speaker Notes — Block 4: The Possibility Space of Dynamics"
+subtitle: "Agent-Based Modeling for Statisticians — JSM 2026"
+author: "John S. Schuler"
+output:
+  html_document:
+    theme: null
+    highlight: null
+    self_contained: true
+    css: null
+---
+
+<style>
+  body {
+    font-family: Georgia, serif;
+    font-size: 13pt;
+    max-width: 720px;
+    margin: 2em auto;
+    padding: 0 1.5em;
+    color: #1C1C1E;
+    background: #fff;
+  }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #1C1C1E; padding-bottom: 0.3em; margin-top: 2em; }
+  h2 { font-size: 1.1em; color: #2D5F8A; margin-top: 1.8em; margin-bottom: 0.3em; }
+  .slide-label {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 0.2em;
+  }
+  p { line-height: 1.65; margin: 0.5em 0 1em 0; }
+  hr { border: none; border-top: 1px solid #DCDCD4; margin: 2em 0; }
+  @media print {
+    body { font-size: 11pt; }
+    h1 { page-break-before: always; }
+    h2 { page-break-after: avoid; }
+  }
+</style>
+
+---
+
+<div class="slide-label">Slide 1 — Where We Left Off</div>
+
+## Reconnecting After the Afternoon Break
+
+After the afternoon break. This slide reconnects the day. The audience has seen the same argument made three times with three different examples. Block 4 is not a fourth example — it is the crystallization of the structure visible in the first three. The tone should be the most assured of the day.
+
+---
+
+<div class="slide-label">Slide 2 — Roadmap</div>
+
+## Block 4: The Final Argument
+
+Block 4 is 90 minutes. The tone is the most assured of the day — the argument has been built across three examples and can now be stated plainly. There is no new code beyond two illustrative computations. The session closes with a practical reorientation of what modeling is for.
+
+---
+
+<div class="slide-label">Slide 3</div>
+
+## A Model Defines a Language
+
+The key move here is the distinction between failure of fit and failure of expressibility. A failure of fit is fixable — better data, better estimation, more parameters. A failure of expressibility is structural — the phenomenon is outside the model's representable set. The audience has seen three examples of the latter today: extinction events in ODE ecology, topology-driven epidemic dynamics in mean-field SIR, and the power law firm size distribution under aggregate-state models.
+
+---
+
+<div class="slide-label">Slide 4</div>
+
+## What Each Restriction Makes Inexpressible
+
+Each bullet is one of the examples from the course, now stated as a restriction on expressive capacity rather than a modeling choice. The pattern is: the restriction is not stated as a restriction — it is embedded in the functional form, the distributional assumption, the conceptual framework. It does real work that enables tractability and it forecloses real phenomena.
+
+---
+
+<div class="slide-label">Slide 5</div>
+
+## These Are Not Independent Failures
+
+The unification is the central conceptual payoff of the afternoon. Each of these restrictions is a prior that assigns all probability mass to a particular structure. The statistician recognizes this immediately once it is stated — they deal with priors and regularization constantly. The move is to show that this is not analogy but identity.
+
+---
+
+<div class="slide-label">Slide 6</div>
+
+## The Regularization View
+
+The Bayesian-regularization equivalence (Tibshirani 1996, Hoerl & Kennard 1970) is an established result. What this course adds is the extension: the same geometry applies to the ABM-ODE relationship. That extension is the interpretive framework of this course, not a standard result from the ABM literature. State the established identity cleanly, then name the extension as a synthesis.
+
+---
+
+<div class="slide-label">Slide 7 — Math slide</div>
+
+## The Identity, Stated
+
+State this cleanly and let it sit. The audience knows LASSO. They may not have connected it to the priors in their models. The connection matters because it means every modeling assumption — not just regression priors — is a restriction on the prior distribution, a decision about where to assign probability mass in model space.
+
+---
+
+<div class="slide-label">Slide 8</div>
+
+## The Extension: Every Assumption Is a Prior
+
+The distributionally robust optimization connection is a bridge to the audience's statistical training. DRO is increasingly standard in machine learning and statistics. The point: the mean-field assumption, the aggregate-state closure applied to firm distributions, and stationarity are all priors in the sense of restricting the model's effective complexity. The critic who objects to ABM parameter proliferation is demanding a stronger prior — they should say so explicitly and justify it.
+
+---
+
+<div class="slide-label">Slide 9</div>
+
+## Nominal vs. Effective Dimensionality
+
+The sparsity point from Block 2, stated now in full generality. The ABM does not suffer from a curse of dimensionality in the effectual sense — the calibrated structure is sparse. The critic who counts parameters is working in the wrong space.
+
+---
+
+<div class="slide-label">Slide 10</div>
+
+## Stationarity Is a Prior
+
+The analogy is tight: a Gaussian prior assigns all its mass near zero, and when the true coefficients are large and sparse, the prior is badly wrong in a way that more data cannot fix. Stationarity assigns all its mass near the historical distribution, and when the system can bifurcate, the prior is badly wrong in a way that more historical data cannot fix — because more historical data just confirms the pre-bifurcation regime.
+
+---
+
+<div class="slide-label">Slide 11</div>
+
+## The Logistic Equation
+
+The continuous and discrete forms share the same nonlinearity but have different long-run behaviours. The ODE always converges to K for r > 0. The discrete map can cycle or become chaotic for r > 3. The bifurcation diagram coming up is the discrete map — the ODE alone cannot generate the period-doubling cascade. This difference is itself an instance of the resolution argument: discrete and continuous time are different languages, and some phenomena (chaos via period-doubling) are only expressible in the discrete language.
+
+---
+
+<div class="slide-label">Slide 12</div>
+
+## What Extrapolation Cannot See
+
+The setup is simple: logistic growth, observed only in the exponential phase. A researcher who sees only the first 10 time units has no information in those data about the carrying capacity — the data are perfectly consistent with unbounded exponential growth. The linear model in log space is the maximum likelihood estimator under the stationarity assumption. It is correct about what it has seen. It cannot see what it has not seen.
+
+---
+
+<div class="slide-label">Slide 13 — Extrapolation plot</div>
+
+## The Extrapolation Failure
+
+The red line is not a bad forecast — it is the correct forecast under the stationarity assumption applied to the observed data. The problem is not the estimator. The problem is that the carrying capacity K is a parameter of the true model that does not appear in the observed data at all. No amount of additional data in the t = 0–10 window would reveal it. The stationarity prior forecloses K from the language.
+
+---
+
+<div class="slide-label">Slide 14</div>
+
+## Bifurcation: The Language Cannot See the Turn
+
+The language analogy is exact here. A confidence interval is a range of sentences in the model's language. Bifurcation produces a sentence in a different language — one the model cannot form. The COVID pandemic is an example the audience will recognize: ARIMA models fit to 2015–2019 hospitalization data had nothing to say about 2020. Not because the confidence intervals were too narrow. Because the DGP changed regime.
+
+---
+
+<div class="slide-label">Slide 15 — Logistic map math slide</div>
+
+## The Logistic Map: Fixed Points and Stability
+
+The key point for the course argument is what happens to a stationarity-based model calibrated in the fixed-point regime (r < 3). It estimates a single equilibrium x* = 1 − 1/r. The concept of a 2-cycle or chaos is not in its parameter space. When r crosses 3, the shift in the attractor is not a perturbation of x* — it is a qualitatively different object. The Feigenbaum constant is a universality result: the ratio 4.669 governs period-doubling cascades in any one-dimensional unimodal map, not just the logistic.
+
+---
+
+<div class="slide-label">Slide 16 — Bifurcation code slide</div>
+
+## The Logistic Map: Where the Language Breaks
+
+The logistic map is the canonical example of period-doubling bifurcation. At r < 3, the system has a stable fixed point. At r slightly above 3, it bifurcates to a 2-cycle. Further increases produce 4-cycles, 8-cycles, and then chaos. A stationarity-based model estimated at r = 2.8 would have no language for what happens at r = 3.2.
+
+---
+
+<div class="slide-label">Slide 17 — Bifurcation diagram</div>
+
+## The Bifurcation Diagram
+
+The diagram shows the attractor of the logistic map as a function of r. A model calibrated in the fixed-point regime (r < 3) would extrapolate a single equilibrium indefinitely. The period-doubling cascades and eventual chaos are exterior to that model's language — not unlikely predictions, but grammatically impossible ones.
+
+---
+
+<div class="slide-label">Slide 18</div>
+
+## A Genealogy of the Catastrophist Error
+
+The genealogy that follows is not digression. It is evidence that the error is not a product of bad technique or insufficient data. It is built into the expressive structure of models that cannot represent the mechanisms that falsify them. Every era has committed it with the best tools available.
+
+---
+
+<div class="slide-label">Slide 19 — Genesis slide</div>
+
+## Genesis
+
+Genesis and its Mesopotamian antecedent Atrahasis (c. 1700 BCE — see the course epigraph) are the catastrophist template in its theological form. Divine intervention replaces resource constraint as the corrective mechanism, but the structural feature is the same: one attractor, no internal recovery mechanism, correction from outside the model's language.
+
+---
+
+<div class="slide-label">Slide 20 — Plato slide</div>
+
+## Plato
+
+Plato's periodic catastrophism differs from simple pessimism: he believed civilization could be rebuilt after each reset. But the reset mechanism is external — flood, fire — not internal adaptation. The Laws specification is the more interesting case: Plato recognized that population growth is a problem, and his solution was external constraint rather than endogenous demographic transition. The structural deficit is the same.
+
+---
+
+<div class="slide-label">Slide 21 — Aristotle slide</div>
+
+## Aristotle
+
+Aristotle's criticism of Plato is actually the right scientific move — he asked what happens when the boundary conditions of the ideal state are violated. But his answer committed the same error: local extrapolation without a mechanism for the feedback that would prevent the outcome. The poverty attractor is the only one his model contains.
+
+---
+
+<div class="slide-label">Slide 22 — Tertullian slide</div>
+
+## Tertullian
+
+The Tertullian passage is the sharpest illustration that the catastrophist error is not a product of Malthus's era, Jevons's era, or ours. It is structural. No vocabulary for the demographic transition, no vocabulary for the agricultural revolution, no attractor other than catastrophic correction. The same expressive deficit, 1,600 years before Malthus formalized it mathematically.
+
+---
+
+<div class="slide-label">Slide 23</div>
+
+## The Pattern
+
+The genealogy spans approximately 3,700 years. The error recurs not because each generation is careless, but because the structural deficit — a model with one attractor, no representation for adaptive mechanisms — is the natural form of extrapolation from observed local behavior. The ABM framework does not eliminate this error. It makes it visible, by giving the modeler a language in which multiple attractors can be represented and the mechanisms that select between them can be stated.
+
+---
+
+<div class="slide-label">Slide 24</div>
+
+## Near-Decomposability and Temporal Resolution
+
+Simon's near-decomposability result is a theorem about the spectral structure of hierarchically organized systems. The cell coordinates faster than the organ; the organ coordinates faster than the organism; the organism coordinates faster than the market. A model fitted at the market level low-pass filters out everything at the cell level. This is not a limitation to be overcome — it is a feature that makes the model tractable. The error is applying it at the wrong temporal resolution.
+
+---
+
+<div class="slide-label">Slide 25</div>
+
+## Resolution Mismatch
+
+The practical implication: before choosing a model, identify the temporal resolution of the policy question. A model of quarterly business cycles is the wrong instrument for studying the response to a supply shock that resolves in days. A model of daily financial returns is the wrong instrument for studying secular stagnation.
+
+---
+
+<div class="slide-label">Slide 26 — The Checklist Question</div>
+
+## The Checklist Question
+
+This is the takeaway the audience should leave with. It applies to every model they will use or build. ODE, ARIMA, GLM, aggregate industry model, ABM — ask the question. The answer does not always disqualify the model. But the question must be asked before the model's conclusions are taken seriously.
+
+---
+
+<div class="slide-label">Slide 27 — Checklist table slide</div>
+
+## The Checklist Applied
+
+The last row is important: the checklist applies to ABMs too. An ABM without spatial structure cannot express spatially driven phenomena. An ABM with homogeneous agents cannot express heterogeneity-driven emergence. The ABM is a richer language, but it still has a boundary. The point is not that ABMs are better than all other models. It is that every model has a resolution and a boundary, and the honest modeler knows what they are.
+
+---
+
+<div class="slide-label">Slide 28</div>
+
+## Possibility Space vs. Point Forecast
+
+The possibility space framing reorients what modeling is for. The goal is not to produce the number — "GDP growth will be 2.3% next year" — but to produce the chart: these are the regimes, these are the boundaries between them, these are the conditions that select among them. This is a different kind of knowledge than a point estimate. It is also more honest about what the model actually knows.
+
+---
+
+<div class="slide-label">Slide 29 — Three-regime plot</div>
+
+## What the Map Shows
+
+The three trajectories start at x₀ = 0.2. The control parameter r is the only difference. At r = 2.8 the system settles to a fixed point — a stationarity-based model calibrated here would extrapolate a constant. At r = 3.3 it settles to a 2-cycle — the stationarity model is wrong but not catastrophically so. At r = 3.9 the trajectory is chaotic — no finite-horizon forecast is meaningful. A point forecast picks one trajectory. The possibility space map shows all three and identifies which value of r produces which qualitative behavior. Knowing where the bifurcation points are is a different kind of knowledge than knowing the next value of x.
+
+---
+
+<div class="slide-label">Slide 30</div>
+
+## Epistemic Humility in Both Directions
+
+The point here is symmetric. The catastrophist error and the complacency error are both failures of expressive resolution — both involve a model that cannot represent the mechanism that would change the outcome. The wolf-sheep example makes this concrete: grass is the stabilizing mechanism, and its removal is not a parameter perturbation within the cycling model's language; it is a structural change to the system the model was describing. Simon's near-decomposability point adds the temporal dimension: the stability of the cycling regime is a phenomenon at the fast time scale of predation, but it depends on a parameter (regrowth time) that operates at a slower scale. A model fit only at the fast scale cannot see the slow parameter. The right question is always: at what grain is this model working?
+
+---
+
+<div class="slide-label">Slide 31</div>
+
+## The Statistician's Instinct, Extended
+
+The closing argument: the statistician already has the right instinct. They report intervals, not point estimates, because they know the data underdetermine the parameters. The extension is to apply that instinct one level up: the data underdetermine the regime, too. The model class choice is not neutral. The expressive boundary is not given by nature. These are choices, and responsible science requires acknowledging them.
+
+---
+
+<div class="slide-label">Slide 32 — Four-block summary</div>
+
+## Three Examples, One Pattern
+
+The four-block summary. The pattern is the same in every case: a restriction on the model's language, not stated as a restriction, making some phenomena grammatically impossible. The agent-based framework relaxes those restrictions. The checklist question is how to decide whether the relaxation is necessary for the phenomenon at hand.
+
+---
+
+<div class="slide-label">Slide 33</div>
+
+## The Tools Are Harder
+
+The closing line is intentionally spare. There is no consolation prize for the difficulty. The statistician's job is honest representation of what the data and the model can and cannot say — and that requires knowing the model's expressive boundary. The course has been an argument for taking that boundary seriously. The final sentence is the conclusion the morning's examples made, in retrospect, inevitable.
+
+---
+
+<div class="slide-label">Slide 34</div>
+
+## Course Summary
+
+The summary paragraph is the one-paragraph version of the course. If a student remembers nothing else, they should remember this. The checklist question is the tool that turns the abstract argument into a practical habit.
+
+---
+
+<div class="slide-label">Slide 35 — Materials and Contact</div>
+
+## Materials and Contact
+
+Final slide. Make sure students know the repository is public and the `code/` directory scripts are the primary student artifact — fully commented R scripts they can use as a reference after the course.

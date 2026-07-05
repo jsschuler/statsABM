@@ -253,7 +253,7 @@ The years since 2020 have given most people in the room considerably more opinio
 ```{r ch1-sir-base, fig.cap="SIR epidemic dynamics. The epidemic rises, peaks when the susceptible pool is depleted sufficiently, and declines. The herd immunity threshold is reached when enough individuals have recovered that $\\mathcal{R}_0 S/N < 1$."}
 # SIR ODE implementation
 sir_params <- c(beta = 0.0003, gamma = 0.1)
-sir_state  <- c(S = 990, I = 10, R = 0)
+sir_state  <- c(S = 999, I = 1, R = 0)
 N_pop      <- sum(sir_state)
 
 # R0 under these parameters
@@ -521,9 +521,9 @@ run_lv_abm <- function(T = 200, n_prey = 100, n_pred = 20, seed = 42, ...) {
 set.seed(2025)  # master seed for reproducibility
 
 n_reps   <- 10
-T_run    <- 120   # ~2-3 LV cycles; sufficient to show convergence
-n_prey0  <- 200   # large enough for law-of-large-numbers effects
-n_pred0  <- 40
+T_run    <- 300   # matches slides; covers several LV cycles
+n_prey0  <- 60
+n_pred0  <- 15
 
 abm_runs <- map_dfr(1:n_reps, function(rep) {
   run_lv_abm(T = T_run, n_prey = n_prey0, n_pred = n_pred0, seed = rep,
@@ -585,7 +585,7 @@ set.seed(2025)  # reproducibility
 n_reps_small <- 15
 T_small      <- 150
 n_prey_small <- 20   # small enough for demographic stochasticity to matter
-n_pred_small <- 6
+n_pred_small <- 8
 
 abm_small <- map_dfr(1:n_reps_small, function(rep) {
   run_lv_abm(
@@ -1108,149 +1108,105 @@ ggplot() +
 
 \FloatBarrier
 
-## Spatial Extension (Reference Module) {#sec-spatial}
+## Wolf-Sheep Predation and the Absorbing Boundary {#sec-spatial}
 
-> **Note for readers:** This section is provided for self-study and is not covered in the live session. The code below implements a full spatial Lotka-Volterra model on a grid. In the live session, the output animation is shown as a demonstration; the code walkthrough is skipped because the principle has already been established. Students who wish to explore the spatial extension are encouraged to run this code and experiment with the parameters.
+> **Note for readers:** This section is not walked through in the live session. The pre-rendered animation and figures are shown as demonstration. The full implementation is distributed in `slides/render_spatial_anim.R` and `slides/render_parallel_runs.R`.
 
-The spatial extension moves the Lotka-Volterra dynamics onto a discrete grid. Each cell of the grid can hold prey and predators. Interactions are local: agents interact only with their Moore neighborhood (the eight adjacent cells). Every individual's neighborhood is its eight immediate neighbors rather than the entire population.
+Every spatial ABM introduced so far maintains the mean-field assumption in one direction: agents move randomly, and a wolf encounters any sheep with equal probability regardless of position. The spatial extension removes that last refuge of the ODE. A wolf eats a sheep only if they occupy the same cell on a $51 \times 51$ toroidal grid. Contact is local. Neighborhoods exist.
 
-The consequences are qualitative. The most striking is spiral waves of prey and predator density rotating through the grid — a dynamical regime with no name in the ODE's vocabulary, because it requires spatial coordinates to exist and the ODE has none. Before that: spatial structure sustains populations that the mean-field dynamics would drive to extinction, because local refugia can persist even when the global mean density would predict collapse.
+The model is a direct R translation of Wilensky's (2005) Wolf-Sheep Predation in NetLogo — a model with a thirty-year history of classroom use in complex systems courses. The rules are spare:
 
-```{r ch2-spatial-lv, eval=FALSE}
-# SELF-STUDY EXTENSION: Spatial Lotka-Volterra on a grid
-# This code is included in the distributed materials for student exploration.
-# The animation requires gifski; rendering may take several minutes.
-# The live session shows a pre-rendered animation; this code is not run live.
+- Each tick, all agents perform a random walk to an adjacent cell.
+- Wolves lose one energy unit per tick.
+- A wolf on the same cell as one or more sheep grabs one at random, gaining `wolf_gain_food` energy. Each sheep can be eaten by at most one wolf per tick.
+- Any agent whose energy falls below zero dies.
+- Each agent reproduces with a small per-tick probability, halving its energy and placing an offspring in an adjacent cell.
 
-set.seed(2025)  # seed for reproducibility; different seeds produce different spiral patterns
+The key line — the one that changes everything — is the spatial restriction on predation. In the random-mixing ABM, a wolf samples from the full population. Here it samples from `sheep-here`: sheep sharing its current cell. The mean-field assumption is gone.
 
-GRID_SIZE <- 50
-T_SPATIAL <- 120
+```{r ch2-spatial-code, eval=FALSE}
+# Wolf-Sheep Predation — R translation of Wilensky (2005) NetLogo model
+# Full implementation: slides/render_spatial_anim.R
+# set.seed(2025)
 
-# Initialize grid: each cell is a row in a tibble with prey and predator counts
-init_spatial_grid <- function(size = GRID_SIZE, n_prey = 400, n_pred = 80) {
-  grid <- expand.grid(x = 1:size, y = 1:size) %>%
-    as_tibble() %>%
-    mutate(prey = 0L, predator = 0L)
+G             <- 51L   # 51x51 toroidal grid (NetLogo default)
+wolf_gain_food <- 20L
+sheep_reproduce <- 4.0   # % per tick
+wolf_reproduce  <- 5.0   # % per tick
 
-  # Distribute initial agents randomly across cells
-  prey_cells <- sample(nrow(grid), n_prey,  replace = TRUE)
-  pred_cells <- sample(nrow(grid), n_pred, replace = TRUE)
+wrap <- function(v, g) ((v - 1L) %% g) + 1L
 
-  for (cell in prey_cells) grid$prey[cell]     <- grid$prey[cell]     + 1L
-  for (cell in pred_cells)  grid$predator[cell] <- grid$predator[cell] + 1L
-
-  grid
+random_walk <- function(x, y, g) {
+  dx <- sample(-1L:1L, length(x), replace = TRUE)
+  dy <- sample(-1L:1L, length(y), replace = TRUE)
+  list(x = wrap(x + dx, g), y = wrap(y + dy, g))
 }
 
-# Moore neighborhood indices on a toroidal grid (wraps at boundaries)
-moore_nbr_indices <- function(x, y, size, grid_df) {
-  dx <- c(-1L, 0L, 1L, -1L, 1L, -1L, 0L, 1L)
-  dy <- c(-1L, -1L, -1L, 0L, 0L, 1L, 1L, 1L)
-  nx <- ((x + dx - 1L) %% size) + 1L
-  ny <- ((y + dy - 1L) %% size) + 1L
-  # Return row indices into the grid tibble
-  (ny - 1L) * size + nx
-}
-
-# One step of the spatial LV model
-step_spatial_lv <- function(grid, size = GRID_SIZE,
-                              p_birth = 0.25, p_eat = 0.35, p_death = 0.12,
-                              p_move = 0.4) {
-  new_grid <- grid
-
-  for (i in seq_len(nrow(grid))) {
-    x <- grid$x[i]
-    y <- grid$y[i]
-    nbr_idx <- moore_nbr_indices(x, y, size, grid)
-
-    # --- Prey reproduction with offspring dispersal to random neighbor ---
-    if (grid$prey[i] > 0L) {
-      born <- rbinom(1L, grid$prey[i], p_birth)
-      if (born > 0L) {
-        # Offspring land in random neighboring cells
-        targets <- sample(nbr_idx, born, replace = TRUE)
-        for (target in targets) {
-          new_grid$prey[target] <- new_grid$prey[target] + 1L
-        }
-      }
-    }
-
-    # --- Predator-prey encounter: local predation ---
-    if (grid$prey[i] > 0L && grid$predator[i] > 0L) {
-      encounters <- min(grid$prey[i], grid$predator[i])
-      eaten      <- rbinom(1L, encounters, p_eat)
-      new_grid$prey[i] <- max(0L, new_grid$prey[i] - eaten)
-      # Each kill produces a new predator with probability 0.7
-      offspring <- rbinom(1L, eaten, 0.7)
-      new_grid$predator[i] <- new_grid$predator[i] + offspring
-    }
-
-    # --- Predator natural death ---
-    if (grid$predator[i] > 0L) {
-      dead <- rbinom(1L, grid$predator[i], p_death)
-      new_grid$predator[i] <- max(0L, new_grid$predator[i] - dead)
-    }
-
-    # --- Predator movement toward most prey-dense neighbor ---
-    if (new_grid$predator[i] > 0L && runif(1L) < p_move) {
-      # Find neighbor with most prey
-      nbr_prey     <- grid$prey[nbr_idx]
-      best_nbr_pos <- which.max(nbr_prey)
-      target_idx   <- nbr_idx[best_nbr_pos]
-
-      # Move a binomial fraction of predators to that neighbor
-      movers <- rbinom(1L, new_grid$predator[i], p_move)
-      new_grid$predator[i]          <- new_grid$predator[i] - movers
-      new_grid$predator[target_idx] <- new_grid$predator[target_idx] + movers
-    }
-  }
-
-  new_grid
-}
-
-# Run the spatial model and collect frames for animation
-spatial_grid   <- init_spatial_grid()
-spatial_frames <- vector("list", T_SPATIAL)
-spatial_frames[[1]] <- mutate(spatial_grid, t = 1L)
-
-for (tt in 2:T_SPATIAL) {
-  spatial_grid       <- step_spatial_lv(spatial_grid)
-  spatial_frames[[tt]] <- mutate(spatial_grid, t = as.integer(tt))
-  # Early termination if total population crashes to zero
-  if (sum(spatial_grid$prey) == 0 || sum(spatial_grid$predator) == 0) break
-}
-
-spatial_df <- bind_rows(spatial_frames)
-
-# Prey density animation
-spatial_anim <- ggplot(spatial_df, aes(x = x, y = y, fill = prey)) +
-  geom_tile() +
-  scale_fill_gradient(
-    low  = "#FAFAF7",
-    high = "#2D5F8A",
-    name = "Prey count"
-  ) +
-  coord_equal() +
-  labs(
-    title    = "Spatial Lotka-Volterra: prey density",
-    subtitle = "Time: {as.integer(frame_time)}"
-  ) +
-  theme_void(base_family = "Source Serif 4") +
-  theme(
-    plot.background = element_rect(fill = "#FAFAF7", color = NA),
-    plot.title      = element_text(family = "Raleway", size = 12),
-    legend.position = "right"
-  ) +
-  transition_time(t) +
-  ease_aes("linear")
-
-# Uncomment to save the animation (requires gifski package):
-# anim_save(
-#   "spatial_lv.gif",
-#   animate(spatial_anim, nframes = T_SPATIAL, fps = 10, width = 600, height = 600)
-# )
+# Wolves eat one random sheep per cell; each sheep eaten at most once per tick
+eats <- wolf_df |>
+  left_join(sheep_df, by = c("x", "y"), relationship = "many-to-many") |>
+  group_by(wolf_id)  |> slice_sample(n = 1L) |> ungroup() |>
+  group_by(sheep_id) |> slice_sample(n = 1L) |> ungroup()
 ```
+
+The animation below shows every tick of a single run from $t = 0$ to extinction at $t = 146$. Sheep (blue) expand freely in the early ticks. Wolves (red) follow with a lag, cluster where sheep are dense, and overshoot. By $t = 110$ the wolves number 544; only 195 sheep remain. The prey base collapses. The wolves, now hunting an empty grid, starve.
+
+```{r ch2-spatial-anim, echo=FALSE, fig.cap="Wolf-Sheep Predation on a 51×51 toroidal grid. Each frame is one tick; the animation runs from t = 0 to extinction at t = 146. Sheep: blue. Wolves: red.", out.width="55%", fig.align="center"}
+knitr::include_graphics("../slides/spatial_lv.gif")
+```
+
+```{r ch2-spatial-ts, echo=FALSE, fig.cap="Population time series for the same run. Wolf overshoot at t ≈ 110 depletes the prey base; both species reach zero by t = 146.", out.width="90%"}
+knitr::include_graphics("../slides/wolf_sheep_timeseries.png")
+```
+
+The ODE with equivalent parameters cycles forever. The ABM does not. This is not a quantitative discrepancy — not a matter of the ABM predicting a slightly different amplitude or period. The ABM reaches a state the ODE cannot represent: zero population, an absorbing boundary from which there is no return. The differential equation continues through zero into negative population sizes without complaint, because its language has no concept of an absorbing boundary. The individuals are gone. There is nothing left to reproduce, nothing left to eat, no mechanism by which the system could recover. The ODE's language simply does not contain this possibility.
+
+### The Stabilizing Role of Grass
+
+One is entitled to ask whether extinction is the inevitable outcome or merely the typical one — and whether the ODE's cycling behavior could emerge from the ABM under different conditions. Both questions have the same answer: add grass.
+
+The grass variant of the model (Wilensky 2005) introduces a third trophic level. Each grid cell is either green (grazeable) or brown (exhausted). A sheep on a green cell gains `sheep_gain_from_food` energy units, turning the cell brown. Brown cells regrow to green after `grass_regrowth_time` ticks. Sheep now lose one energy unit per tick regardless of predation — they must eat to live.
+
+```{r ch2-grass-code, eval=FALSE}
+# Grass extension — slides/render_parallel_runs.R
+sheep_gain_from_food <- 4L
+grass_regrowth_time  <- 30L
+
+# patch_countdown is a flat integer vector of length G*G.
+# 0 = green (grazeable); >0 = brown, counting down to regrowth.
+cell_idx <- function(x, y, g) (x - 1L) * g + y
+
+# Each tick: sheep on green patches eat; patch turns brown.
+s_cells  <- cell_idx(agents$x[sheep_idx], agents$y[sheep_idx], G)
+is_green <- patch_countdown[s_cells] == 0L
+eat_df   <- tibble(row = sheep_idx[is_green], cell = s_cells[is_green]) |>
+  group_by(cell) |> slice_sample(n = 1L) |> ungroup()
+agents$energy[eat_df$row] <- agents$energy[eat_df$row] + sheep_gain_from_food
+patch_countdown[eat_df$cell] <- grass_regrowth_time
+
+# Each tick: brown patches count down.
+patch_countdown[patch_countdown > 0L] <- patch_countdown[patch_countdown > 0L] - 1L
+```
+
+The mechanism is a resource cycle. When sheep are scarce, ungrazed patches recover. Recovered grass feeds surviving sheep. A recovering sheep population eventually supports a recovering wolf population. The feedback is negative at every link: high wolves → low sheep → grass recovery → sheep recovery → wolf recovery. This is the structure that generates sustained oscillation.
+
+The question is empirical. Fifty independent runs of each variant, 300 ticks each:
+
+```{r ch2-parallel-runs, echo=FALSE, fig.cap="50 independent runs of the no-grass (left) and grass (right) Wolf-Sheep models, 300 ticks each. Without grass, 47 of 50 runs end in wolf overshoot and sheep extinction. With grass, 49 of 50 runs sustain both populations to t = 300.", out.width="100%"}
+knitr::include_graphics("../slides/parallel_runs.png")
+```
+
+Without grass, 47 of 50 runs end in wolf overshoot followed by sheep extinction. Cycling is the exception — three runs in fifty. With grass, 49 of 50 runs sustain both species to $t = 300$. The third trophic level converts extinction from the norm to the anomaly.
+
+This result exposes something about the ODE that the ODE itself cannot reveal. The Lotka-Volterra prey equation is:
+
+$$\frac{dN}{dt} = \alpha N - \beta NP$$
+
+The $\alpha N$ term says prey grow at a fixed per-capita rate, limited only by predation. There is no resource. There is no grass. The prey population can always grow — there is always food, always energy, always the possibility of recovery from low numbers. This is not an approximation of a world with unlimited grass. It *is* a world with unlimited grass, encoded in functional form. The assumption is not stated; it is structural.
+
+The grass model makes the assumption explicit, then relaxes it. When grass is finite and regrows slowly, the prey's recovery mechanism is bounded. Wolf overshoot can exhaust both prey and prey's food supply simultaneously, leaving the system with no path back from low sheep numbers. The absorbing boundary becomes reachable.
+
+The ODE cycles forever not because cyclic dynamics are generic — the ABM shows they are not — but because the ODE imposes a prior that places all probability mass on a world where prey resources are inexhaustible. The prior is not conservative. It is not modest. It is a very strong claim about the structure of the world, stated implicitly in the functional form of a differential equation. Whether that claim is warranted depends on the system being modeled. For many real predator-prey systems, it is not.
 
 
 ---

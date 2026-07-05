@@ -210,8 +210,8 @@ lotka_volterra <- function(t, state, parameters) {
     list(c(dN, dP))
   })
 }
-params <- c(alpha = 0.8, beta = 0.02, delta = 0.01, gamma = 0.4)
-state0 <- c(N = 60, P = 15)
+params <- c(alpha = 0.8, beta = 0.4, delta = 0.3, gamma = 0.6)
+state0 <- c(N = 10, P = 5)
 times  <- seq(0, 80, by = 0.1)
 lv_out <- ode(y = state0, times = times,
               func = lotka_volterra, parms = params)
@@ -254,8 +254,8 @@ The trajectories are closed orbits. The system cycles forever — without dampin
 ```{r lv-phase, echo=FALSE, fig.height=4.2, fig.width=8}
 # Multiple initial conditions to show orbit family
 ic_list <- list(
-  c(N = 40, P = 10), c(N = 60, P = 15),
-  c(N = 80, P = 20), c(N = 50, P = 25)
+  c(N = 10, P = 5), c(N = 15, P = 4),
+  c(N = 8,  P = 7), c(N = 20, P = 3)
 )
 
 lv_phase <- map_dfr(seq_along(ic_list), function(i) {

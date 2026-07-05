@@ -31,24 +31,6 @@ class: center, middle, inverse, title-slide
 
 
 ---
-class: center, middle
-
-.pull-left[
-&gt; *"The land had grown wide, the people had multiplied, the land was bellowing like a bull; the god grew restless at their clamour, Enlil heard their noise and addressed the great gods: 'The noise of mankind has become too much for me, with their uproar I am deprived of sleep.'"*
-&gt;
-&gt; — *Atrahasis*, Tablet I (c. 1700 BCE), trans. Dalley
-]
-
-.pull-right[
-&gt; *"The battle to feed all of humanity is over. In the 1970s hundreds of millions of people will starve to death in spite of any crash programs embarked upon now."*
-&gt;
-&gt; — Paul Ehrlich, *The Population Bomb* (1968)
-]
-
-???
-Speaker notes: The epigraphs again, after lunch. Both predictions extrapolated from the visible trend and missed the distributional structure that governed the phenomenon. The firm size distribution is the same lesson in a different register: the aggregate statistics told one story, the full distribution told another.
-
----
 
 ## Where We Left Off
 
@@ -133,7 +115,7 @@ The key rhetorical move here: stability across institutional contexts is evidenc
 
 
 
-&lt;img src="03_axtell_empirics_files/figure-html/linear-hist-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="03_axtell_empirics_files/figure-html/linear-hist-1.png" alt="" width="72%" style="display: block; margin: auto;" /&gt;
 
 ???
 The histogram on a linear scale is deliberately useless. The dynamic range — from 1-person firms to 100,000-person firms — compresses almost the entire distribution into the left margin. This failure is itself an argument: the ordinary statistical toolkit for continuous bell-shaped distributions is the wrong instrument for this phenomenon.
@@ -167,7 +149,7 @@ Make this explicit for the statisticians: a distribution with no characteristic 
 
 ## Now Use the Right Scale
 
-&lt;img src="03_axtell_empirics_files/figure-html/ccdf-loglog-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="03_axtell_empirics_files/figure-html/ccdf-loglog-1.png" alt="" width="72%" style="display: block; margin: auto;" /&gt;
 
 ???
 The CCDF on log-log axes is the standard diagnostic for power law behavior. A straight line means P(X &gt;= x) ~ x^(-alpha+1), which is the survival function of a power law. The slope of the line is related to the exponent alpha. The visual argument is immediate: this is a straight line over roughly three orders of magnitude.
@@ -210,7 +192,7 @@ The poweRlaw package uses maximum likelihood estimation — not the naive log-lo
 
 ## Fit Results
 
-&lt;img src="03_axtell_empirics_files/figure-html/fit-plot-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="03_axtell_empirics_files/figure-html/fit-plot-1.png" alt="" width="72%" style="display: block; margin: auto;" /&gt;
 
 ???
 The fitted line tracks the empirical CCDF closely over the range above xmin. Departures in the very small-firm region are expected — the power law applies to the tail, and the xmin estimate tells us where the power law regime begins. The Axtell simulation produces an alpha consistent with the empirically observed exponent near 2.0–2.1.
@@ -252,7 +234,7 @@ The Vuong test compares the log-likelihood ratio of the two fits. A positive tes
 
 ## Power Law vs. Lognormal: The Visual
 
-&lt;img src="03_axtell_empirics_files/figure-html/ln-vs-pl-plot-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
+&lt;img src="03_axtell_empirics_files/figure-html/ln-vs-pl-plot-1.png" alt="" width="72%" style="display: block; margin: auto;" /&gt;
 
 ???
 The lognormal curves away from the data in the upper tail — the region of very large firms. This is where the empirical regularity is most informative: the largest firms are more probable than a lognormal predicts. The power law tracks this correctly because it has no upper-tail damping.
@@ -574,22 +556,8 @@ The final block gives that pattern a name and asks what follows from it — for 
 
 --
 
-*After lunch.*
-
 ???
-Transition slide. The afternoon block (04) takes the philosophical argument that has been building implicitly through all three examples and states it explicitly. The firm size result is the last empirical anchor before the argument goes abstract. Make sure the audience feels satisfied with the empirical grounding before they leave for lunch.
-
----
-class: inverse, center, middle
-
-# Lunch Break
-
-## Back at 12:30 PM
-
-*The code for this block — and all other blocks — is in the `code/` directory of the course repository.*
-
-???
-Announce the break clearly. The materials for Block 3 (the R scripts with full comments) are in code/ch03_axtell_empirics.R in the course repository. Students who want to see the spatial extension code from Block 2 should look at code/ch02_abm_contrast.R.
+Transition slide. The afternoon block (04) takes the philosophical argument that has been building implicitly through all three examples and states it explicitly. The firm size result is the last empirical anchor before the argument goes abstract.
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
