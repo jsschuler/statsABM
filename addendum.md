@@ -1,67 +1,15 @@
-# 10. Calibrate the mathematical framing for a JSM audience
+Add this bibtex citation to the introduction of the mean field assumption:
+@book{sethna2021statistical,
+  title={Statistical mechanics: entropy, order parameters, and complexity},
+  author={Sethna, James P},
+  volume={14},
+  year={2021},
+  publisher={Oxford University Press}
+}
 
-This manuscript is course notes for a JSM short course, not a research monograph.
 
-The objective is therefore not exhaustive mathematical rigor.
+In the sentence: "Population size alone says nothing about network structure" and what follows, we should implement an actual demonstration of this. In particular, show that the large n does not solve the problem.
 
-Instead, make the conceptual framework defensible to statistically sophisticated readers.
+Figure 2.8 has a symbol not rendering in Tex. The same is true for a line toward the end of the paragrap beginning: "The mechanism is a resource cycle"
 
-Specifically:
-
-- distinguish established convergence results from the author's interpretation;
-- avoid overstating what existing theorems prove;
-- connect the discussion to the classical mean-field literature with a small number of well-chosen citations;
-- preserve the accessibility and flow of the exposition.
-
-Do not substantially increase the mathematical sophistication of the text.
-
-The intended audience is statisticians who are familiar with regression, regularization, and stochastic modeling, but not necessarily with interacting particle systems or probability theory.
-
-The manuscript should remain readable as lecture notes rather than as a survey article.
-
----
-
-## Three levels of discourse
-
-Maintain a clear distinction between
-
-### 1. Mathematics
-
-Established results such as
-
-- mean-field limits
-- propagation of chaos
-- density-dependent Markov process limits
-- moment closure
-
-These justify convergence under appropriate assumptions.
-
-### 2. Modeling
-
-The structural assumptions made by the modeler, including
-
-- large populations,
-- homogeneous agents,
-- random mixing,
-- observation resolution,
-- contact structure.
-
-These determine the model family.
-
-### 3. Interpretation
-
-The central contribution of this manuscript.
-
-The manuscript interprets these structural assumptions as restrictions on the expressive power of the modeling language.
-
-Ideas such as
-
-- models as languages,
-- expressive boundaries,
-- ODEs as maximally regularized ABMs,
-- expressive restrictions,
-- and the distinction between parametric family and prior
-
-should be presented as the author's conceptual synthesis rather than as established results from the literature.
-
-The goal is not to diminish these ideas, but to make their originality clear while grounding the mathematical background in the appropriate literature.
+After the sentence: "Each firm $i$ has an employment level $\theta_i = \bar\theta + \varepsilon_i$.", add a footnote remarking that while power laws often do not have means, we can substitute another parameter or assume we are dealing with a clipped distribution. The argument does not depend on this precisely. In a power-law, it might be best to parameterize deviations from a mode. 

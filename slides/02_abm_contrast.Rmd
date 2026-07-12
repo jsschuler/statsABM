@@ -592,7 +592,11 @@ The reduction principle: familiar ODE models can be recovered from agent-based m
 
 --
 
-As population size grows, as mixing becomes increasingly random, and as individual heterogeneity averages out, the ABM converges in distribution to the ODE. The ODE is what the ABM becomes when both restrictions hold exactly.
+As mixing becomes increasingly random and individual heterogeneity averages out, the ABM converges in distribution to the ODE. The ODE is what the ABM becomes when both restrictions hold exactly.
+
+--
+
+Population size alone is not sufficient. A large structured network stabilizes around its own mean — not the ODE's mean-field value. The law of large numbers rescues the estimation of the structured-network dynamics, not convergence to the ODE. The contact structure must itself be random ($\Delta W = 0$) for the ODE limit to obtain.
 
 --
 
