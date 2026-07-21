@@ -46,7 +46,7 @@ Three examples, one pattern.
 
 --
 
-**Block 3:** The firm size power law is outside the representable set of any aggregate-state model — present in every economy ever measured, inexpressible in the standard language of industry dynamics. Axtell's mechanism generates it without calibration.
+**Block 3:** The firm-size power law documented in US data is outside the representable set of a model that collapses all firms to one reference value. Axtell's mechanism generates a compatible exponent without targeting that exponent directly.
 
 --
 
@@ -113,7 +113,7 @@ That language has a boundary.
 When a modeling tradition calls something a paradox or an anomaly, it is often naming a phenomenon that is simply exterior to its formal vocabulary — real, reproducible, and grammatically forbidden within the model.
 
 ???
-The key move here is the distinction between failure of fit and failure of expressibility. A failure of fit is fixable — better data, better estimation, more parameters. A failure of expressibility is structural — the phenomenon is outside the model's representable set. The audience has seen three examples of the latter today: extinction events in ODE ecology, topology-driven epidemic dynamics in mean-field SIR, and the power law firm size distribution under aggregate-state models that restrict the dynamical state to mean employment.
+The key move here is the distinction between failure of fit and failure of expressibility. A failure of fit is fixable — better data, better estimation, more parameters. A failure of expressibility is structural — the phenomenon is outside the model's representable set. The audience has seen three examples of the latter today: extinction events in ODE ecology, topology-driven epidemic dynamics in mean-field SIR, and the power law firm size distribution under aggregate-state models that restrict the dynamical state to a single central reference parameter.
 
 ---
 
@@ -126,7 +126,7 @@ The key move here is the distinction between failure of fit and failure of expre
 
 --
 
-**Aggregate-state closure** (mean-field applied to firm distributions)
+**Aggregate-state closure** (heterogeneity collapsed to a reference value)
 → The firm size distribution is outside the model's representable set. Heterogeneity is restricted away.
 
 --
@@ -169,7 +169,7 @@ Each restriction on this list does the same thing: it collapses a distribution t
 The pattern has a name. In statistics, it is called **regularization**.
 
 ???
-The unification is the central conceptual payoff of the afternoon. Each of these restrictions is a prior that assigns all probability mass to a particular structure. The statistician recognizes this immediately once it is stated — they deal with priors and regularization constantly. The move is to show that this is not analogy but identity.
+The unification is the central conceptual payoff of the afternoon. Each fixed structural restriction can be represented by a degenerate prior concentrated on that structure. This is an interpretive re-expression of model-family choice; it becomes a literal Bayesian prior only when embedded in a specified probabilistic hierarchy.
 
 ---
 
@@ -231,7 +231,7 @@ The unification extends beyond regression.
 
 --
 
-L2 regularization = training on Gaussian-perturbed data (in the limit).
+Small Gaussian input noise can induce an L2-type penalty in special cases; generally it yields a derivative-dependent Tikhonov regularizer.
 
 The distributionally robust optimizer who minimizes worst-case loss over a Wasserstein ball around the empirical distribution recovers regularized estimators as special cases.
 
@@ -291,7 +291,7 @@ When the system is capable of bifurcation, that neighborhood does not contain th
 
 --
 
-The stationarity prior is miscalibrated — in exactly the way a Gaussian prior is miscalibrated when the true signal is sparse.
+The fixed-regime model is structurally misaligned when the process changes regime—analogous, at the level of model choice, to using a dense Gaussian shrinkage prior for a genuinely sparse signal.
 
 ???
 The analogy is tight: a Gaussian prior assigns all its mass near zero, and when the true coefficients are large and sparse, the prior is badly wrong in a way that more data cannot fix. Stationarity assigns all its mass near the historical distribution, and when the system can bifurcate, the prior is badly wrong in a way that more historical data cannot fix — because more historical data just confirms the pre-bifurcation regime.
@@ -412,7 +412,7 @@ Further bifurcations occur at `\(r \approx 3.449,\ 3.544,\ 3.565,\ \ldots\)` wit
 Chaos onset: `\(r \approx 3.570\)`.
 
 ???
-Speaker notes: The key point for the course argument is what happens to a stationarity-based model calibrated in the fixed-point regime (r &lt; 3). It estimates a single equilibrium x* = 1 - 1/r. The concept of a 2-cycle or chaos is not in its parameter space. When r crosses 3, the shift in the attractor is not a perturbation of x* — it is a qualitatively different object. The Feigenbaum constant is a universality result: the same ratio 4.669 governs period-doubling cascades in *any* one-dimensional unimodal map, not just the logistic. The structural result is more general than the specific equation.
+Speaker notes: Consider a stationarity-based model calibrated in the fixed-point regime (r &lt; 3). It estimates a single equilibrium x* = 1 - 1/r; neither a 2-cycle nor chaos exists in its parameter space. When r crosses 3, the attractor is not a perturbation of x* but a qualitatively different object. The Feigenbaum constant is a universality result: the same ratio 4.669 governs period-doubling cascades in *any* one-dimensional unimodal map, not just the logistic. The structural result is more general than the specific equation.
 
 ---
 
@@ -520,7 +520,7 @@ The upland shepherds survive. The coastal cities do not.
 The model has one attractor. The question of what might generate a different one is not asked.
 
 ???
-Plato's periodic catastrophism differs from simple pessimism: he believed civilization could be rebuilt after each reset. But the reset mechanism is external — flood, fire — not internal adaptation. The Laws specification is the more interesting case: Plato recognized that population growth is a problem, and his solution was external constraint rather than endogenous demographic transition. The structural deficit is the same.
+Plato's periodic catastrophism differs from simple pessimism: he believed civilization could be rebuilt after each reset. But the reset mechanism is external—flood, fire—not internal adaptation. The *Laws* supplies the sharper case: Plato treated population growth through external constraint rather than endogenous demographic transition. The structural deficit is the same.
 
 ---
 
@@ -604,13 +604,13 @@ A model fitted at a particular temporal resolution is a **low-pass filter**.
 It recovers structure below its Nyquist limit. It makes faster structure inexpressible — not unlikely, but grammatically absent.
 
 ???
-Simon's near-decomposability result is a theorem about the spectral structure of hierarchically organized systems. The cell coordinates faster than the organ; the organ coordinates faster than the organism; the organism coordinates faster than the market. A model fitted at the market level low-pass filters out everything at the cell level. This is not a limitation to be overcome — it is a feature that makes the model tractable. The error is applying it at the wrong temporal resolution.
+Simon's near-decomposability argument describes hierarchically organized systems whose within-component interactions operate faster than between-component interactions. The cell-to-market sequence is an illustration, not a theorem applying to every hierarchy. Aggregation can suppress faster structure and gain tractability; whether it does so adequately is an empirical question.
 
 ---
 
 ## Resolution Mismatch
 
-A quarterly macroeconomic model is not wrong about the annual dynamics it was designed to capture.
+A model fitted to quarterly aggregates may describe slower dynamics well while leaving within-quarter ordering unidentified.
 
 --
 
@@ -650,7 +650,29 @@ This is the takeaway the audience should leave with. It applies to every model t
 
 ---
 
-## The Checklist Applied
+## Activity: Choose the Minimum Sufficient Model
+
+.activity[
+**Groups of 3–4 — 15 minutes**
+
+Choose one question:
+
+- Forecast total influenza hospitalizations.
+- Allocate vaccines when supply is limited.
+- Explain the firm-size distribution.
+- Assess whether stable growth could cross into another regime.
+
+Name the least expressive model that can answer it, the data needed, and one conclusion that model cannot support.
+]
+
+Your defense must begin: **"This question requires…"**
+
+???
+Speaker notes: Allow 10 minutes for groups and 5 minutes for two or three defenses. Press each group to name the necessary distinction before naming a model. Accept different model choices when the estimand or data justification differs. The constraint is minimum sufficiency, not maximal realism. Use the next slide as the debrief and emphasize that its entries are examples, not universal answers.
+
+---
+
+## Debrief: The Checklist Applied
 
 | Model | Working resolution | Inexpressible phenomena |
 |-------|-------------------|------------------------|
@@ -765,7 +787,7 @@ The closing argument: the statistician already has the right instinct. They repo
 
 .pull-right[
 **Block 3: Firm Size**
-- Aggregate-state closure = mean-field for distributions
+- Aggregate-state closure = point mass at a reference value
 - Power law inexpressible; Axtell's mechanism generates it
 
 **Block 4: The Pattern Named**

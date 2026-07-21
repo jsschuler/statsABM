@@ -84,7 +84,7 @@ These are not accidents. They are the signatures of feedback — the way a syste
 
 --
 
-The differential equation is the instrument built to read feedback's signature. Not because it is the only instrument, but because it makes the feedback structure explicit, manipulable, and — crucially — criticizable.
+The differential equation is the instrument built to read feedback's signature. It makes the feedback structure explicit, manipulable, and open to criticism.
 
 --
 
@@ -165,6 +165,26 @@ Speaker notes: The parameter table is here for reference. Do not read it aloud. 
 
 ---
 
+## Activity: Predict Before Computing
+
+.activity[
+**Work alone, then compare with a neighbor — 10 minutes**
+
+Starting from `\(N(0)=10\)` prey and `\(P(0)=5\)` predators:
+
+1. Sketch both populations through time.
+2. Mark which population peaks first.
+3. Decide whether the cycles grow, shrink, or remain constant.
+4. Name the assumption doing the most work in your prediction.
+]
+
+Do not solve the equations. Commit to a sketch.
+
+???
+Speaker notes: Give 3 minutes for individual sketches, 4 minutes for comparison in pairs, and 3 minutes to collect two contrasting predictions. Ask for commitments before revealing the computed trajectory. Do not resolve disagreements yet; the next two slides provide the debrief.
+
+---
+
 ## Lotka-Volterra in R
 
 
@@ -189,7 +209,7 @@ Speaker notes: Keep the code brief on the slide. The full annotated version is i
 
 ---
 
-## Lotka-Volterra: Time Series
+## Debrief: Lotka-Volterra Through Time
 
 &lt;img src="01_ode_foundations_files/figure-html/lv-timeseries-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
@@ -223,7 +243,7 @@ It is not stated as an assumption in most presentations of Lotka-Volterra. It is
 
 --
 
-It is a structural restriction — one that assigns all probability mass to a single interaction structure, the fully mixed population, and zero probability mass to every other structure that has ever existed in a real ecosystem.
+It is a structural restriction. In probabilistic terms, it can be represented by a degenerate prior concentrated on one interaction structure: the fully mixed population.
 
 ???
 Speaker notes: This is the hinge of the entire day. Name it precisely. Do not apologize for it — the mean-field assumption has been scientifically productive for over a century. The point is not that it is wrong, but that it is a choice — a strong one — embedded silently in the functional form. A statistician in the audience may immediately recognize this framing: a restriction that is never acknowledged is a restriction that can never be relaxed. Pause here. Let this land.

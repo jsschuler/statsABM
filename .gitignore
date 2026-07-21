@@ -1,6 +1,7 @@
 figures/
 *.tex
 *.pdf
+!book/abm_for_statisticians.pdf
 *.aux
 *.log
 .DS_Store
@@ -8,3 +9,6 @@ figures/
 *.RData
 *.Ruserdata
 .Rproj.user/
+book/cache/
+book/abm_course_book_files/
+slides/*_cache/

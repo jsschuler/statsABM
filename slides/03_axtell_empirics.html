@@ -38,7 +38,7 @@ Block 2 showed that the ODE is a limiting case of the ABM — recovered when age
 
 --
 
-Relaxing those restrictions makes new phenomena visible: extinction events the ODE cannot reach, epidemic dynamics that depend on contact network topology.
+Relaxing those restrictions makes new phenomena visible: finite-time extinction events absent from positive deterministic trajectories, and epidemic dynamics that depend on contact network topology.
 
 --
 
@@ -243,7 +243,7 @@ The lognormal curves away from the data in the upper tail — the region of very
 
 ## So What?
 
-A stable power law across all measured economies, robust to the choice of tail cutoff, preferred by the likelihood over the lognormal.
+A stable power-law tail in the US data across years and firm-size definitions, with the lognormal retained as a serious empirical alternative.
 
 --
 
@@ -258,9 +258,32 @@ The rhetorical setup: we have established the phenomenon firmly on statistical g
 
 ---
 
+## Activity: Calibration or Mechanism?
+
+.activity[
+**Pairs — 10 minutes**
+
+A simulation reproduces the observed firm-size tail. What would convince you that the result reflects a mechanism rather than calibration?
+
+Choose the two strongest tests:
+
+- Refit until the exponent matches exactly
+- Vary parameters and initial conditions
+- Remove or alter one behavioral rule
+- Match additional, untargeted regularities
+- Add more agents to the simulation
+]
+
+Be ready to defend your choices.
+
+???
+Speaker notes: Give pairs 6 minutes and use 4 minutes to hear their criteria. Favor robustness across parameters and initial conditions, mechanism ablation, and untargeted validation. More agents can reduce Monte Carlo error but does not establish mechanism; exact exponent matching can be calibration itself. Keep these criteria visible as Axtell's model is introduced.
+
+---
+
 ## What the Aggregate-State Model Predicts
 
-The standard aggregate model of industry dynamics tracks total employment, or mean firm size. The implicit claim: **the mean state is dynamically complete** — knowing mean employment determines the aggregate trajectory.
+The standard aggregate model of industry dynamics tracks total employment or a representative firm-size parameter. The implicit claim: **the reference state is dynamically complete** — departures from it have no further role in the aggregate trajectory.
 
 --
 
@@ -268,7 +291,7 @@ Under this assumption, all firms might as well be the same size.
 
 --
 
-In the simplest version: one firm, at the mean, standing in for all. In richer versions: firms cluster near a modal size determined by returns to scale and input costs.
+In the simplest version: one firm, fixed at a central reference value, standing in for all. In richer versions: firms cluster near a characteristic size determined by returns to scale and input costs.
 
 --
 
@@ -283,9 +306,9 @@ Even dynamic models with adjustment costs produce bell-shaped distributions arou
 
 --
 
-The mean-field assumption, applied to populations of firms, says:
+The aggregate-state restriction, applied to populations of firms, says:
 
-&gt; The distribution of firms can be replaced by its mean. Everything relevant to aggregate dynamics is captured by the first moment.
+&gt; The distribution of firms can be replaced by a single central reference parameter. Departures from that reference do not affect aggregate dynamics.
 
 --
 
@@ -297,7 +320,7 @@ This is not an approximation that becomes exact in the limit of many firms.
 
 --
 
-The power law is a property of the *distribution* — of the full heterogeneity across firms. Collapse that distribution to a point mass at the mean, and you have not approximated the distribution. You have deleted it.
+The power law is a property of the *distribution* — of the full heterogeneity across firms. Collapse that distribution to a point mass at the reference value, and you have not approximated the distribution. You have deleted it.
 
 ???
 This is the hinge slide. The aggregate-state restriction is not a computational convenience that could in principle be relaxed. It is a structural commitment that eliminates distributional heterogeneity from the model's state space. The question is not whether the model fits the power law better or worse. The question is whether the model can represent distributional heterogeneity at all — and an aggregate-state model cannot.
@@ -377,7 +400,7 @@ The result: teams of all sizes are simultaneously forming and dissolving. No siz
 The power law is the **stationary distribution** of this constant churning.
 
 ???
-The intuition is similar to preferential attachment — teams that are larger attract more workers faster — but the mechanism here is local increasing returns rather than Matthew-effect popularity. The key point: no parameter of the model is set to produce the power law. The exponent emerges from the dynamics.
+The intuition resembles preferential attachment—larger teams attract workers faster—but the mechanism is local increasing returns, not Matthew-effect popularity. No parameter is set to produce the power law; the exponent emerges from the dynamics.
 
 ---
 
@@ -390,7 +413,7 @@ The diagram illustrates why no team size is stable. At small sizes, per-member r
 
 ---
 
-## The Exponent Is Not Calibrated
+## Debrief: The Exponent Is Not Calibrated
 
 The canonical result from Axtell (2001):
 
@@ -411,7 +434,7 @@ This is not a subtle distinction. Equilibrium models of industry dynamics had th
 The exponent is not a property of any equilibrium. It is a property of the path.
 
 ???
-The robustness of the exponent is crucial. A model that produces the right distribution only at one specific parameter vector might be curve-fitting. A model that produces the right distribution across most of the parameter space is making a structural claim: this is what agent-based team formation does, regardless of the precise values of the parameters. The contrast with equilibrium models is the key point: the equilibrium tradition had the data and could not derive the exponent from first principles. That is an expressive limit, not an empirical one.
+The exponent persists across a broad region of the parameter space examined. If the right distribution appeared at only one parameter vector, it might be curve-fitting; persistence instead supports a structural claim about the team-formation mechanism. The relevant contrast is with models that remove firm-size heterogeneity from their state space, not with equilibrium analysis in every possible form.
 
 ---
 
@@ -437,10 +460,10 @@ The power law firm size distribution is emergent in this sense.
 
 --
 
-**Emergence, precisely defined, is a methodological constraint.** If the phenomenon cannot be derived analytically from the micro rules, the model must be dynamic, heterogeneous, and process-based — not because ABM is philosophically preferable, but because it is the only language in which the generative mechanism can be written.
+**Emergence, defined operationally, guides model choice.** Here the macro pattern is not imposed as a target; it arises from repeated interaction and persists under relevant parameter changes. Analytical intractability is not part of the definition.
 
 ???
-The definition rules out spurious uses of "emergence." A macro regularity that you can derive analytically from the micro rules is not emergent — it is just aggregation. True emergence requires the dynamics: the regularity appears only when the agents interact over time. The firm size power law qualifies because no steady-state analysis of an individual worker's team-joining problem produces a power law at the aggregate level. The methodological constraint is the payoff: emergence tells you which class of model is required. It is not a philosophical preference. It is a logical necessity.
+The definition keeps the empirical burden visible: the macro regularity must not be inserted as a target, and it should survive relevant changes in parameters and initial conditions. Some emergent patterns admit analytical treatment; simulation is not their only possible language. For Axtell's proposed mechanism, however, a model must retain the heterogeneous team-formation process rather than collapse the firm distribution to one reference value.
 
 ---
 
@@ -448,13 +471,13 @@ The definition rules out spurious uses of "emergence." A macro regularity that y
 
 | Model | Distribution it can produce | Mechanism |
 |-------|----------------------------|-----------|
-| Aggregate-state model | Bell-shaped, characteristic scale | Mean employment as sole dynamical state |
+| Aggregate-state model | Bell-shaped, characteristic scale | Central reference parameter as sole dynamical state |
 | ODE industry dynamics | Smooth trajectory to equilibrium | Aggregate flow equations |
 | Axtell ABM | Power law, no characteristic scale | Decentralized team formation |
 
 --
 
-The first two models share the mean-field assumption.
+The first two models share a point-mass restriction on heterogeneity.
 
 --
 
@@ -482,7 +505,7 @@ The power law distribution is not an obscure fine-grained feature. It governs wh
 A policy model that cannot represent this distribution is working in a language without words for some of the most consequential structural features of the economy.
 
 ???
-Practical implication for the audience: if you are advising on competition policy, industrial policy, or anything involving the size distribution of firms, a model that treats mean firm size as the complete dynamical state is not an approximation of the right answer. It is an answer to a different question. The statistician's instinct — check your model against the data before trusting its policy implications — applies here with full force.
+Practical implication for the audience: if you are advising on competition policy, industrial policy, or anything involving the size distribution of firms, a model that treats one central firm-size parameter as the complete dynamical state is not an approximation of the right answer. It is an answer to a different question. The statistician's instinct — check your model against the data before trusting its policy implications — applies here with full force.
 
 ---
 
@@ -500,11 +523,11 @@ An aggregate-state model of industry dynamics is correctly estimated. Its parame
 
 --
 
-It is misspecified at the level of the **model class**: it cannot represent the heterogeneity in firm sizes because it has restricted the state space to mean employment before estimation begins.
+It is misspecified at the level of the **model class**: it cannot represent heterogeneity in firm sizes because it has restricted the state space to a single reference value before estimation begins.
 
 --
 
-The ABM does not add parameters to the aggregate model. It **relaxes a restriction** the aggregate model imposes silently — the restriction that mean employment is the complete dynamical state.
+The ABM does not add parameters to the aggregate model. It **relaxes a restriction** the aggregate model imposes silently — the restriction that one central reference parameter is the complete dynamical state.
 
 ???
 This is the statistician's version of the "ODE is a limiting case of the ABM" argument from Block 2, now applied to firm models rather than ODE models. The aggregate-state restriction is a structural commitment, not a neutral default. Relaxing it is not adding complexity. It is removing a constraint.
@@ -523,7 +546,7 @@ This is the statistician's version of the "ODE is a limiting case of the ABM" ar
 
 --
 
-**The structural argument:** A model that treats mean firm size as the complete dynamical state cannot produce this distribution — not because it has the wrong parameters, but because the aggregate-state restriction eliminates the heterogeneity that generates the power law.
+**The structural argument:** A model that treats one central firm-size parameter as the complete dynamical state cannot produce this distribution — not because it has the wrong parameters, but because the aggregate-state restriction eliminates the heterogeneity that generates the power law.
 
 --
 
@@ -531,7 +554,7 @@ This is the statistician's version of the "ODE is a limiting case of the ABM" ar
 
 --
 
-**The concept:** Emergence names a macro regularity that is not present in the micro rules and cannot be derived analytically from them.
+**The concept:** Emergence names a macro regularity that is not imposed as an aggregate target but arises from interaction among agents.
 
 ???
 The summary slide recaps the logical chain: phenomenon → statistical confirmation → structural failure of standard models → mechanism → concept. Each step was necessary. The concept of emergence at the end is not decoration — it is the precise name for what the power law is and where it lives in relation to the agent rules.

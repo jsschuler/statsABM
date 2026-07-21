@@ -503,7 +503,10 @@ figcaption,
    ============================================================ */
 
 .callout-note,
-.extension-note {
+.extension-note,
+.activity-box,
+.activitybox,
+.debrief-box {
   background:   var(--color-code-bg);
   border-left:  4px solid var(--color-accent-alt);
   padding:      0.8rem 1rem;
@@ -513,12 +516,18 @@ figcaption,
 }
 
 .callout-note p,
-.extension-note p {
+.extension-note p,
+.activity-box p,
+.activitybox p,
+.debrief-box p {
   margin: 0;
 }
 
 .callout-note strong,
-.extension-note strong {
+.extension-note strong,
+.activity-box strong,
+.activitybox strong,
+.debrief-box strong {
   font-family:  var(--font-heading);
   color:        var(--color-accent-alt);
   font-weight:  700;
@@ -527,6 +536,22 @@ figcaption,
   letter-spacing: 0.05em;
   display:      block;
   margin-bottom: 0.35rem;
+}
+
+.activity-box,
+.activitybox {
+  background: #EEF3F7;
+  border-left-color: var(--color-accent);
+}
+
+.activity-box strong,
+.activitybox strong {
+  color: var(--color-accent);
+}
+
+.debrief-box {
+  background: #F5F0EC;
+  border-left-color: var(--color-accent-alt);
 }
 
 /* ============================================================

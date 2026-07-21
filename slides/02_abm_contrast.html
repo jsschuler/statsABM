@@ -34,7 +34,7 @@ class: center, middle, inverse, title-slide
 
 ## Where We Left Off
 
-Block 1 derived two classical dynamical models from first principles and identified what is hiding in their structure.
+Block 1 derived two classical dynamical models from explicit assumptions and identified what is hiding in their structure.
 
 --
 
@@ -186,7 +186,7 @@ abm_runs &lt;- map_dfr(1:10, ~ run_lv_abm(seed_val = .x) |&gt; mutate(run = .x))
 ```
 
 ???
-Speaker notes: The early termination condition — `if (nrow(...) == 0) break` — is doing something the ODE cannot: it is detecting extinction. The ODE trajectory would continue through zero and into negative population sizes without complaint. The ABM respects the absorbing boundary.
+Speaker notes: The early termination condition — `if (nrow(...) == 0) break` — detects a finite-time extinction event. From positive initial conditions, the deterministic ODE remains nonnegative and does not hit zero in finite time. The finite stochastic population can hit zero, after which the ABM respects the absorbing boundary.
 
 ---
 
@@ -207,7 +207,7 @@ The ODE is the ABM's expectation under the mean-field assumption. The ABM is the
 An ODE is an ABM under maximal regularization.
 
 ???
-Speaker notes: State this before showing the reduction plot, not after. If you show the convergence first and then explain it, it looks like post-hoc justification. If you explain it first, the plot arrives as confirmation of a prediction. This is the rhetorical structure of the reduction result: the ABM is the more general model, and the ODE falls out of it as a theorem. Not as an approximation — as a theorem.
+Speaker notes: State the conditions before showing the reduction plot: a density-dependent process, compatible event-rate scaling, homogeneous agents, random mixing, and a large-population limit over a finite time horizon. Under those conditions, convergence to the ODE is a theorem. The finite simulation is an approximation to that limit, not its exact expectation.
 
 ---
 
@@ -268,7 +268,7 @@ Speaker notes: The infection mechanism implements frequency-dependent transmissi
 &lt;img src="02_abm_contrast_files/figure-html/sir-convergence-plot-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
 ???
-Speaker notes: The convergence is clear at N = 500. The ABM runs cluster tightly around the ODE solution — peak timing, peak height, and tail behavior all align. The residual variance is demographic stochasticity: the irreducible randomness of a finite population. As N grows, this variance shrinks and the ABM approaches the ODE exactly. This is the reduction result for SIR.
+Speaker notes: The convergence is clear at N = 500. The ABM runs cluster tightly around the ODE solution — peak timing, peak height, and tail behavior align. The residual variance is demographic stochasticity. For an appropriately scaled sequence of density-dependent population processes, the normalized stochastic process converges to the ODE on finite time intervals. Do not describe an arbitrary finite ABM as having the ODE as its exact expectation.
 
 ---
 
@@ -289,7 +289,29 @@ Agents have contact networks. A person's neighborhood is not "the population" �
 What happens to an epidemic when you give the population a contact network?
 
 ???
-Speaker notes: The transition here is from the ODE's abstraction (the fully mixed population) to a structure that looks more like how transmission actually works. The key point is not that contact networks are "more realistic" — it is that they introduce a new structural object, the network topology, which is not representable in the ODE's language. Network topology is a first-class variable in this language. You can ask questions about it. You can vary it and observe the consequences.
+Speaker notes: The transition is from the ODE's abstraction (the fully mixed population) to structured transmission. Contact networks matter here not because they look "more realistic," but because they introduce an object the ODE cannot represent: network topology. It becomes a variable that can be specified, altered, and tested.
+
+---
+
+## Activity: Model Autopsy
+
+.activity[
+**Groups of 3–4 — 15 minutes**
+
+For each question, identify the distinction the model must retain:
+
+- What will the epidemic peak be?
+- Who should receive a limited vaccine supply?
+- Does clustering protect part of the population?
+- How variable are outcomes across outbreaks?
+
+Can a mean-field SIR answer it? If not, what state or structure is missing?
+]
+
+Prepare one case to defend in a sentence.
+
+???
+Speaker notes: Ask groups to separate a poor answer from an impossible answer. After 10 minutes, collect one case from two or three groups. Reserve 5 minutes for the distinction: aggregate counts can support a peak estimate under mean-field assumptions; targeting and clustering require identities and topology; outbreak variability requires a stochastic model. The following network comparison is the empirical debrief.
 
 ---
 
@@ -391,7 +413,7 @@ Speaker notes: The critical structural change from the random-mixing ABM: infect
 
 ---
 
-## Same `\(\mathcal{R}_0\)`. Different World.
+## Debrief: Same `\(\mathcal{R}_0\)`. Different World.
 
 &lt;img src="02_abm_contrast_files/figure-html/network-epidemic-curves-1.png" alt="" width="100%" style="display: block; margin: auto;" /&gt;
 
@@ -406,7 +428,7 @@ The reduction principle: familiar ODE models can be recovered from agent-based m
 
 --
 
-As mixing becomes increasingly random and individual heterogeneity averages out, the ABM converges in distribution to the ODE. The ODE is what the ABM becomes when both restrictions hold exactly.
+For an appropriately scaled density-dependent process, increasing population size under random mixing and agent homogeneity yields convergence to the ODE on finite time intervals. The structural restrictions and the limiting argument are both required.
 
 --
 
@@ -418,10 +440,10 @@ In that limiting case, the ODE is not an approximation to the ABM. It is the red
 
 --
 
-This dissolves the apparent competition between the two paradigms. There is no competition. The ABM is the richer language; the ODE is the sublanguage recovered under homogeneity and mean-field contact. The question is always whether the phenomena of interest are expressible in the sublanguage — and for many of the most consequential social and biological phenomena, they are not.
+This reframes the apparent competition between the two paradigms. For the density-dependent models considered here, the ODE is recovered under homogeneity, mean-field contact, large-population scaling, and compatible event dynamics. The practical question is whether the phenomenon of interest is expressible after those restrictions are imposed.
 
 ???
-Speaker notes: This is the central theoretical claim of the session. State it with confidence. The Bayesian framing is available here if the audience wants it: the ODE is the posterior mode of the ABM under a Dirac prior on the interaction structure. The ABM relaxes that prior. The phenomena visible only in the ABM are those that have probability zero under the ODE's prior — not unlikely, but grammatically excluded. Regime change, extinction, network effects, spatial heterogeneity: all exterior to the language.
+Speaker notes: This is the central theoretical claim of the session, with conditions attached. A degenerate prior can enforce homogeneous agents or a fixed interaction structure, but that restriction alone does not prove the ODE limit; population scaling and compatible event dynamics are also required. Present the prior language as the course's interpretation of structural restriction, not as the convergence theorem itself.
 
 ---
 
@@ -456,10 +478,10 @@ Agents (sheep and wolves) move on a grid. A wolf can eat a sheep only if they oc
 
 The result:
 
-**Extinction.** Wolf overshoot drives the system to zero — an absorbing state the ODE cannot reach. The ODE orbits forever; the ABM can crash, and stay crashed.
+**Finite-time extinction.** Wolf overshoot drives the finite stochastic population to zero. The positive ODE trajectory orbits forever; the ABM can hit the absorbing boundary and stay there.
 
 ???
-Speaker notes: The image is the argument. The ODE with these parameters produces neutral cycles indefinitely. The ABM — same parameters, local interaction — produces boom-and-bust dynamics that terminate in extinction. The difference is not a quantitative deviation but a qualitative one: the absorbing state at zero is grammatically excluded from the ODE's language. Once populations hit zero in the ABM, there is no recovery. The ODE has no word for this.
+Speaker notes: The image is the argument. The ODE with these parameters produces neutral cycles indefinitely. The finite ABM produces boom-and-bust dynamics that terminate in extinction. Zero exists in the equations, but a positive deterministic trajectory does not hit it in finite time. Once the stochastic population hits zero, there is no recovery.
 
 ---
 
@@ -490,7 +512,7 @@ Speaker notes: The key structural change from the random-mixing ABM is one line:
 ]
 
 ???
-Speaker notes: Six snapshots from a single run. The ODE with equivalent parameters cycles forever. This ABM — same birth rates, same predation rates, local interaction only — crashes to zero at t = 146. Extinction is an absorbing state. The ODE cannot represent it because its language has no symbol for zero population; the differential equation simply continues through zero and into the negative. The absorbing boundary is exterior to the language. This is what "inexpressible" means.
+Speaker notes: Six snapshots from a single run. The ODE with equivalent parameters cycles forever. This finite ABM crashes to zero at t = 146, after which extinction is absorbing. The ODE contains zero as an invariant boundary, but a positive deterministic trajectory does not hit it in finite time. What is absent is the stochastic hitting event, not the numerical state zero.
 
 ---
 
@@ -501,7 +523,7 @@ Speaker notes: Six snapshots from a single run. The ODE with equivalent paramete
 ]
 
 ???
-Speaker notes: The same run, now shown as a time series. Sheep (blue) multiply unchecked at first; wolves (red) follow them up with a lag. At around t = 110 the wolves overshoot — 544 wolves, only 195 sheep remaining. The prey base collapses, and the wolves, now starving on an empty grid, die off by t = 146. The ODE with these parameters cycles forever. The ABM does not. The difference is the absorbing boundary at zero — a state the ODE cannot represent.
+Speaker notes: The same run, now shown as a time series. Sheep (blue) multiply unchecked at first; wolves (red) follow them up with a lag. At around t = 110 the wolves overshoot — 544 wolves, only 195 sheep remaining. The prey base collapses, and the wolves die off by t = 146. The ODE cycles forever because its positive deterministic trajectory does not hit zero in finite time; the finite ABM can hit the absorbing boundary.
 
 ---
 
@@ -565,7 +587,7 @@ Speaker notes: 50 independent runs of each model variant, 300 ticks. Without gra
 ]
 
 ???
-Speaker notes: The summary should feel like a crystallization, not a list. The key points to land: (1) the competition between ODE and ABM is false — one contains the other; (2) the expressive boundary is the operative concept; (3) the statistician's instinct toward model parsimony is correct, but parsimony should be measured in effective dimensions, not parameter counts; (4) the phenomena visible only in the ABM are exactly those that require the features the ODE's language excludes.
+Speaker notes: Let the summary crystallize the argument: (1) the supposed competition between ODE and ABM is false—one contains the other; (2) the expressive boundary is the operative concept; (3) parsimony should be measured in effective dimensions, not parameter counts; and (4) phenomena visible only in the ABM require precisely the features excluded by the ODE's language.
 
 ---
 
@@ -575,7 +597,7 @@ Block 3 asks a different kind of question.
 
 Not "what happens to a population over time?" but "what is the distribution of outcomes across entities at a point in time?"
 
-The firm size distribution has been stable for decades, across countries with radically different institutions. Its form is a power law. No model that treats mean employment as the complete dynamical state can reproduce it. No ODE model of industry dynamics can generate it.
+The firm size distribution has been stable for decades, across countries with radically different institutions. Its form is a power law. No model that replaces every firm with a single central reference value can reproduce it. No ODE model of industry dynamics can generate it.
 
 The standard models are not giving the wrong answer. The phenomenon is outside their representable set — for exactly the same reason extinction events and topology-driven epidemics are outside the mean-field ODE.
 
@@ -589,9 +611,9 @@ class: center, middle
 
 # Block 2 Complete
 
-### Lunch — 12:00–12:30
+### Lunch — 12:00–1:00
 
-*Block 3 begins at 12:30*
+*Block 3 begins at 1:00*
 
 *All code at: [github.com/jsschuler/abm-statisticians]*
 

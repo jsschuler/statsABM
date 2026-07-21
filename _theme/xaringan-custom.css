@@ -292,3 +292,22 @@ table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
   background-color: var(--black);
 }
 
+/* In-class activity prompts and debriefs */
+.activity {
+  border-left: 6px solid #2D5F8A;
+  background: #EEF3F7;
+  padding: 0.65em 0.9em;
+  margin: 0.7em 0;
+}
+
+.debrief {
+  border-left: 6px solid #8A4A2D;
+  background: #F5F0EC;
+  padding: 0.65em 0.9em;
+  margin: 0.7em 0;
+}
+
+.activity p:last-child,
+.debrief p:last-child {
+  margin-bottom: 0;
+}
