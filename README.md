@@ -37,7 +37,13 @@ If you do not use Git, select **Code → Download ZIP** on GitHub and extract th
 
 ### Optional R setup
 
-Install R and an R editor such as RStudio if you want to run or modify the examples. The course can still be followed without executing the code.
+Install R and one of the following editors if you want to run or modify the examples. You only need one editor:
+
+- [RStudio Desktop](https://posit.co/download/rstudio-desktop/)
+- [Positron](https://positron.posit.co/download)
+- [Visual Studio Code](https://code.visualstudio.com/Download)
+
+The course can still be followed without executing the code.
 
 The examples use these R packages:
 
