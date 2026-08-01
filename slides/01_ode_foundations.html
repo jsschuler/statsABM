@@ -130,11 +130,7 @@ This term says something specific about the world.
 
 --
 
-It says that every predator is equally likely to encounter every prey individual at every moment. That the rate of encounters scales with the product of the two population sizes. That space plays no role. That prior relationships between individuals play no role.
-
---
-
-Every fox is, at every instant, in contact with every rabbit. Simultaneously. Uniformly.
+It treats potential predator–prey partners as exchangeable conditional on the aggregate state, so the expected encounter rate factors as the product `\(NP\)`. Space, persistent relationships, and local neighborhoods do not enter the model.
 
 --
 
@@ -235,7 +231,7 @@ That product term `\(\beta NP\)` has a name.
 
 --
 
-**The mean-field assumption**: every individual in the population interacts with every other individual with equal probability at every moment. The population is perfectly mixed. Space does not exist. Individuals have no persistent relationships, no locations, no neighborhoods. Every interaction is drawn at random from the full population, at every instant.
+**The mean-field assumption**: conditional on the aggregate state, interaction partners are exchangeable and encounters are sufficiently mixed that aggregate interaction rates depend only on population totals. The population is perfectly mixed. Space does not exist. Individuals have no persistent relationships, no locations, no neighborhoods. Every interaction is drawn at random from the full population, at every instant.
 
 --
 
@@ -302,8 +298,10 @@ Speaker notes: The verbal-to-formal derivation is pedagogically important. The a
 
 The system conserves population: `\(\frac{d}{dt}(S + I + R) = 0\)`.
 
+**Convention.** Here `\(\beta\)` is a per susceptible–infectious pair transmission coefficient, so `\(\mathcal{R}_0 = \beta N/\gamma\)`. In Block 2, the agent implementation uses the frequency-dependent convention `\(\beta SI/N\)`, for which `\(\mathcal{R}_0 = \beta/\gamma\)`.
+
 ???
-Speaker notes: Note the conservation property explicitly — it is a consistency check on the model. Each person leaving S enters I; each person leaving I enters R; no one appears or disappears. This is the closed-population assumption made algebraically manifest. Also note: unlike Lotka-Volterra, SIR is not conservative in its phase space — there is no closed orbit. Trajectories spiral inward toward the disease-free equilibrium.
+Speaker notes: Note the conservation property explicitly — it is a consistency check on the model. Each person leaving S enters I; each person leaving I enters R; no one appears or disappears. This is the closed-population assumption made algebraically manifest. Also note: unlike Lotka–Volterra, SIR has no closed orbits. The infectious population rises and then declines as susceptibles are depleted, and trajectories approach the disease-free set.
 
 ---
 

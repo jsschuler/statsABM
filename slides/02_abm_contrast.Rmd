@@ -164,6 +164,10 @@ Three rules. No differential equations required.
 
 Random pairing in Rule 2 is the mean-field assumption — explicit, named, and adjustable. We can relax it. We will.
 
+--
+
+The per-step probabilities are discrete-time analogues of continuous-time rates. Exact conversion depends on the timestep and update scheme; for a rate $\lambda$, a common conversion is $p = 1 - e^{-\lambda \Delta t}$.
+
 ???
 Speaker notes: The rules are deliberately verbal before they are computational. This is intentional — the verbal statement is the model; the code is just the execution. A model that can only be described in code is a model that cannot be criticized. These three rules map directly to the three terms in the Lotka-Volterra ODEs: alpha*N, beta*N*P, gamma*P. The correspondence will be made visible in the reduction result.
 
@@ -237,11 +241,11 @@ It is what *this* model — the ABM with random pairing — becomes when you tak
 
 --
 
-The ODE is the ABM's expectation under the mean-field assumption. The ABM is the ODE with the mean-field assumption relaxed.
+Under homogeneous agents, random mixing, compatible event-rate scaling, and a large-population limit, the normalized ABM converges to the mean-field ODE over finite time horizons. Relaxing those restrictions permits dynamics that the mean-field ODE does not represent.
 
 --
 
-An ODE is an ABM under maximal regularization.
+An ODE is an ABM under maximal regularization — a conceptual synthesis rather than a universal theorem.
 
 ???
 Speaker notes: State the conditions before showing the reduction plot: a density-dependent process, compatible event-rate scaling, homogeneous agents, random mixing, and a large-population limit over a finite time horizon. Under those conditions, convergence to the ODE is a theorem. The finite simulation is an approximation to that limit, not its exact expectation.
@@ -333,7 +337,9 @@ p_extinct <- ggplot() +
 p_extinct
 ```
 
-**The ODE's language has no word for extinction.** The absorbing state at zero is outside its expressive range.
+**The deterministic ODE cannot reach extinction from a positive initial condition.**
+
+Zero is an invariant boundary: a population remains extinct if it starts at zero, but an interior Lotka–Volterra trajectory cannot hit zero in finite time. A finite stochastic ABM can hit zero with positive probability, after which extinction is absorbing.
 
 ???
 Speaker notes: Some of the translucent lines hit zero and stay there — extinction. The ODE line continues cycling, because a differential equation defined at the origin has no mechanism for absorbing state dynamics. The ODE is not wrong about the populations it was designed to describe — large, well-mixed, continuous. It is incapable of expressing a phenomenon that requires discreteness and small-number stochasticity. The ODE cannot say "the population went extinct." The phrase is grammatically forbidden in its language.
@@ -470,7 +476,7 @@ ba_tg <- as_tbl_graph(ba_graph) |>
   mutate(degree = centrality_degree())
 ```
 
-Both networks have $\bar{k} \approx 6$. The same $\mathcal{R}_0$ applies to both.
+Both networks have $\bar{k} \approx 6$. The same transmission and recovery parameters, and approximately the same mean degree, are used for both.
 
 ???
 Speaker notes: Mean degree is fixed to isolate the effect of topology on epidemic dynamics. Everything else — transmission rate, recovery rate, initial infected fraction — will be identical. If the ODE were the correct model, we would see identical epidemic curves. What we will see is something quite different.
@@ -762,7 +768,7 @@ Speaker notes: 50 independent runs of each model variant, 300 ticks. Without gra
 - The ABM is a more general language; the ODE is its mean-field limit
 - Random mixing → ABM converges to ODE (the reduction result)
 - Small populations → extinction; the ODE has no word for it
-- Contact network topology changes epidemic dynamics qualitatively — same $\mathcal{R}_0$, different world
+- Contact network topology changes epidemic dynamics qualitatively — same transmission parameters, different world
 - Spatial structure generates phenomena exterior to the mean-field language
 - ODE cycling requires conditions (grass, energy buffering) that are assumptions, not defaults — 47/50 no-grass runs go extinct
 ]

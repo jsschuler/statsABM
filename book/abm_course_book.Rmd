@@ -246,6 +246,8 @@ $$\frac{dI}{dt} = \beta S I - \gamma I$$
 
 $$\frac{dR}{dt} = \gamma I$$
 
+Here $\beta$ is a per susceptible–infectious pair transmission rate, so $\mathcal{R}_0 = \beta N/\gamma$; under frequency-dependent incidence $\beta SI/N$, the corresponding expression is $\mathcal{R}_0 = \beta/\gamma$.
+
 The mean-field assumption is here again: the contact rate is proportional to the product $SI$, which assumes that every susceptible individual is equally likely to contact every infectious individual. Human contact, of course, is not structured this way. People have households, workplaces, social networks — structures that make some contacts far more probable than others. The SIR model, like Lotka-Volterra, assumes this structure away.
 
 From the sign of $dI/dt$ at the start of an epidemic, when $S \approx N$:
@@ -254,7 +256,7 @@ $$\frac{dI}{dt}\bigg|_{t=0} \approx I(\beta N - \gamma) = I \cdot \gamma\left(\f
 
 The epidemic grows if $\beta N / \gamma > 1$ and dies out if $\beta N / \gamma < 1$. The quantity $\mathcal{R}_0 = \beta N / \gamma$ is the basic reproduction number: the expected number of secondary infections produced by a single infectious individual in a fully susceptible population [@Kermack1927; @Hethcote2000]. It is not a numerical fact to memorize. It is a structural consequence of the model — a ratio between the transmission term and the recovery term, visible directly in the algebra. The epidemic threshold at $\mathcal{R}_0 = 1$ is where the production of new infections exactly balances the removal of current ones.
 
-In the years since 2020 many of us have thought more about this model than we ever ancitipated. The herd immunity threshold, the effect of contact reduction, the role of $\mathcal{R}_0$ in policy discussions — these became household concepts in a span of weeks. What remained, for the most part, unstated in those discussions was the mean-field assumption underlying the standard SIR framework: that the contact structure of the population could be adequately represented by the product $SI$, ignoring the network topology that governs who actually contacts whom.
+In the years since 2020 many of us have thought more about this model than we ever anticipated. The herd immunity threshold, the effect of contact reduction, the role of $\mathcal{R}_0$ in policy discussions — these became household concepts in a span of weeks. What remained, for the most part, unstated in those discussions was the mean-field assumption underlying the standard SIR framework: that the contact structure of the population could be adequately represented by the product $SI$, ignoring the network topology that governs who actually contacts whom.
 
 ```{r ch1-sir-base, fig.cap="SIR epidemic dynamics. The epidemic rises, peaks when the susceptible pool is depleted sufficiently, and declines. The herd immunity threshold is reached when enough individuals have recovered that $\\mathcal{R}_0 S/N < 1$."}
 # SIR ODE implementation
@@ -345,7 +347,7 @@ From the decision to track totals, the rest follows by a logical chain with no e
 
 Identical individuals interacting through their totals: the mean-field assumption, arrived at not by declaration but by consequence. If all prey individuals are equivalent, the encounter rate is proportional to $N$, independently of position or history. The product $\beta NP$ follows immediately — a consequence of the prior two choices, not a third independent assumption. Space disappears because individuals have no positions; history disappears because two numbers are all the state there is.
 
-These choices have been scientifically productive for over a century. Lotka-Volterra was formulated in the 1920s [@Lotka1925; @Volterra1926]; SIR was published in 1927 by Kermack and McKendrick [@Kermack1927]. The models have generated real insight into predator-prey dynamics, epidemic thresholds, herd immunity. The chain — continuity, homogeneity, mean-field, no position, no history — was forged in a few equations and has persisted every since. 
+These choices have been scientifically productive for over a century. Lotka-Volterra was formulated in the 1920s [@Lotka1925; @Volterra1926]; SIR was published in 1927 by Kermack and McKendrick [@Kermack1927]. The models have generated real insight into predator-prey dynamics, epidemic thresholds, herd immunity. The chain — continuity, homogeneity, mean-field, no position, no history — was forged in a few equations and has persisted ever since. 
 The product term $\beta NP$ is this commitment. When it fits, the model is the right instrument. When it fails, the model gives precise answers — about an imaginary world.
 
 ---
@@ -424,7 +426,7 @@ Give an agent a neighborhood smaller than the full population, and you give the 
 
 The biology is unchanged. Prey reproduce, predators hunt, predators die — the same rules as the differential equations. What changes is the substrate: a population of discrete individuals rather than a continuous quantity.
 
-Each individual is a row in a `tibble` carrying an identifier, a type (prey or predator), and an alive status. At each discrete time step: each surviving prey reproduces with probability $p_\text{birth}$; each predator independently encounters each prey individual with probability $p_\text{kill}$, killing it on contact; each kill produces a new predator with probability $p_\text{convert}$; each predator dies independently with probability $p_\text{death}$. The parameters map directly onto the ODE: $p_\text{birth} = \alpha$, $p_\text{kill} = \beta$, $p_\text{kill} \times p_\text{convert} = \delta$, $p_\text{death} = \gamma$ — the same rates, now governing discrete individuals rather than continuous quantities.
+Each individual is a row in a `tibble` carrying an identifier, a type (prey or predator), and an alive status. At each discrete time step: each surviving prey reproduces with probability $p_\text{birth}$; each predator independently encounters each prey individual with probability $p_\text{kill}$, killing it on contact; each kill produces a new predator with probability $p_\text{convert}$; each predator dies independently with probability $p_\text{death}$. The event probabilities correspond approximately to the ODE rates for sufficiently small time steps; exact conversion depends on the update scheme and $\Delta t$: $p_\text{birth} \approx \alpha$, $p_\text{kill} \approx \beta$, $p_\text{kill} \times p_\text{convert} \approx \delta$, $p_\text{death} \approx \gamma$ — the same rates, now governing discrete individuals rather than continuous quantities.
 
 ```{r ch2-abm-lv-functions}
 # Agent-based Lotka-Volterra
@@ -665,7 +667,7 @@ ggplot() +
   )
 ```
 
-The ODE orbits forever. For the Lotka-Volterra system with positive initial conditions, the positive quadrant is invariant: trajectories do not reach zero. The ABM can fall to zero because it represents discrete individuals: when the last prey individual dies, the population is extinguished, and that is a state from which there is no return. The phenomenon of extinction — one of the most consequential events in population biology — has no representation in the ODE's state space: the ODE's variables are real-valued and positive, and zero is not an absorbing state. [@Lande1993]
+The ODE orbits forever. For the Lotka-Volterra system with positive initial conditions, the positive quadrant is invariant: trajectories do not reach zero. The ABM can fall to zero because it represents discrete individuals: when the last prey individual dies, the population is extinguished, and that is a state from which there is no return. The phenomenon of extinction — one of the most consequential events in population biology — has no representation in the ODE's state space: Positive deterministic Lotka–Volterra trajectories do not reach zero in finite time, whereas the finite stochastic model can hit zero with positive probability; once reached, extinction is absorbing. [@Lande1993]
 
 A minority of runs go the other direction entirely: demographic stochasticity amplifies a favorable initial sequence and the population explodes before the predator response can stabilize it. Those runs exceed the figure's y-axis limit and are clipped — the upper face of small-number noise, and equally outside the ODE's representational range.
 
@@ -985,7 +987,7 @@ p_er_net + p_ba_net
 
 The same $\beta$. The same $\gamma$ and a different outcome.
 
-The ODE has no state variable or parameter representing contact network topology [@PastorSatorras2001]. No values of $\beta$ and $\gamma$ reproduce the difference between these two epidemics — the model cannot distinguish Erdős-Rényi from Barabási-Albert contact structure except through changes in aggregate rates, and the aggregate rates are the same. In the model's terms, networks have no place to enter.
+The ODE has no state variable or parameter representing contact network topology [@PastorSatorras2001]. Recalibrating $\beta$ and $\gamma$ may mimic a selected aggregate trajectory, but it cannot generally preserve topology-dependent responses across initial conditions, interventions, and counterfactuals. In the model's terms, networks have no place to enter.
 
 ## The Reduction Principle {#sec-reduction}
 
@@ -1569,7 +1571,7 @@ Every modeling choice is a choice of resolution — temporal, spectral, expressi
 
 ## The Regularization View {#sec-regularization}
 
-The framework developed in this course interprets the ODE-ABM relationship through the geometry of regularization. This is a conceptual synthesis rather than a standard result from the ABM literature, but it rests on established mathematics — the convergence ideas of the previous section and the Bayesian-regularization equivalences discussed below. Writing it out makes visible a connection the course has been approaching from several directions simultaneously.
+The framework developed in this course interprets the ODE-ABM relationship through the geometry of regularization. This is a conceptual synthesis rather than a standard result from the ABM literature, but it rests on established mathematics — the convergence ideas of the previous section and the Bayesian-regularization equivalences discussed below. Writing it out makes visible a connection the course has been approaching from several directions simultaneously. The regularization interpretation is conceptual; convergence to an ODE additionally requires compatible population and event-rate scaling.
 
 In an ABM, each agent $i$ carries a property vector $\theta_i$ — a birth rate, a productivity, a threshold for infection. Write $\theta_i = \theta_0 + \varepsilon_i$, where $\theta_0$ is a central reference parameter chosen by the model and $\varepsilon_i$ is the agent's departure from it. The reference may be a mean, median, mode, equilibrium, or other scientifically defined anchor; the decomposition does not require $\sum_i \varepsilon_i=0$. The ODE is the model that sets $\varepsilon_i = 0$ for every agent — all heterogeneity collapsed to the reference value. Nothing about this restriction is forced by the biology or the economics. It is a structural choice about the distribution of agent properties, and that distribution is a point mass at $\theta_0$. An L2 penalty on $\{\varepsilon_i\}$ shrinks agents toward that reference; as the penalty strength increases, the ABM continuously approaches the ODE. From this perspective, they can be viewed as members of a common modeling family indexed by regularization strength.
 

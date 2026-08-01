@@ -165,13 +165,13 @@ The key move here is the distinction between failure of fit and failure of expre
 
 --
 
-**Stationarity assumption**
-→ Regime change and bifurcation are inexpressible. The future distribution must resemble the past.
+**Fixed-regime stationarity**
+→ Unmodeled changes in the transition law are outside the model.
 
 --
 
-**Equilibrium assumption**
-→ Path dependence and lock-in are inexpressible. History cannot matter.
+**Unique, path-independent equilibrium closure**
+→ Lock-in and history-dependent equilibrium selection are outside the model.
 
 ???
 Each bullet is one of the examples from the course, now stated as a restriction on expressive capacity rather than a modeling choice. The pattern is: the restriction is not stated as a restriction — it is embedded in the functional form, the distributional assumption, the conceptual framework. It does real work that enables tractability and it forecloses real phenomena.
@@ -209,7 +209,7 @@ The unification is the central conceptual payoff of the afternoon. Each fixed st
 
 ## The Regularization View
 
-Bayesian priors and regularization penalties are the same operation.
+For common likelihoods and priors, posterior-mode estimation is equivalent to penalized optimization: Gaussian priors yield ridge-type penalties and Laplace priors yield LASSO-type penalties. The broader analogy in this course is that structural assumptions likewise restrict the effective model space.
 
 --
 
@@ -275,7 +275,7 @@ The Bayesian prior, the regularization penalty, and the distributional perturbat
 
 --
 
-Every modeling assumption examined today is a prior of this kind — it restricts the language in which the model works.
+Every structural assumption restricts model space and can often be represented as a prior, penalty, or hard constraint once a probabilistic formulation is specified.
 
 ???
 The distributionally robust optimization connection is a bridge to the audience's statistical training. DRO is increasingly standard in machine learning and statistics. The point: the mean-field assumption, the aggregate-state closure applied to firm distributions, and stationarity are all priors in the sense of restricting the model's effective complexity. The critic who objects to ABM parameter proliferation is demanding a stronger prior — they should say so explicitly and justify it.
@@ -292,7 +292,7 @@ The statistician's response: "Are you counting nominal or effective dimensions?"
 
 --
 
-A model with 50 parameters where 45 produce qualitatively identical dynamics has **effective dimensionality of ~5**.
+A model may have many nominal parameters while its behavior of scientific interest varies mainly along a much lower-dimensional set of combinations. Effective dimensionality should therefore be studied rather than inferred from the raw parameter count.
 
 --
 
@@ -309,7 +309,7 @@ The sparsity point from Block 2, stated now in full generality. The ABM does not
 
 ## Stationarity Is a Prior
 
-Time series modeling rests on stationarity: the data-generating process in the future resembles the data-generating process in the past.
+Many classical time-series methods rely on some form of stability in the data-generating process, such as stationarity, local stationarity, or a fixed transition law.
 
 --
 
@@ -317,7 +317,7 @@ This is not a neutral observation. It is a restriction on the model's language.
 
 --
 
-**Stationarity asserts that the data-generating process lies within a neighborhood of the estimated distribution.**
+**A fixed-regime model assumes that the transition law governing the forecast period remains sufficiently close to the law learned from the observed period.**
 
 --
 
@@ -352,7 +352,7 @@ Early in time ($N \ll K$), the $1 - N/K$ term is approximately 1 and growth is e
 
 $$x_{t+1} = r\, x_t (1 - x_t)$$
 
-Same structure. Radically different dynamics — fixed points, cycles, chaos — depending on $r$.
+The continuous ODE and the discrete map share a quadratic density-feedback term, but they are different dynamical systems. The discrete update can generate period doubling and chaos; the continuous one-dimensional autonomous ODE cannot.
 
 ???
 Speaker notes: The continuous and discrete forms share the same nonlinearity but have different long-run behaviours. The ODE always converges to K for r > 0. The discrete map can cycle or become chaotic for r > 3. The bifurcation diagram on the next few slides is the discrete map — the ODE alone cannot generate the period-doubling cascade. This difference is itself an instance of the resolution argument: discrete and continuous time are different languages, and some phenomena (chaos via period-doubling) are only expressible in the discrete language.
@@ -431,7 +431,7 @@ The red line is not a bad forecast — it is the correct forecast under the stat
 
 ## Bifurcation: The Language Cannot See the Turn
 
-Any system capable of **bifurcation** — a qualitative change in the regime of its dynamics — will defeat stationarity-based extrapolation at the bifurcation point.
+A model estimated entirely within one regime will generally fail to anticipate a bifurcation unless the changing control parameter and the relevant nonlinear mechanism are represented in the model.
 
 --
 
@@ -443,7 +443,7 @@ It is a structural claim: the distributional shift at a bifurcation is not a lar
 
 --
 
-Wider confidence intervals do not help. They are still centered on the wrong regime.
+Wider intervals quantify uncertainty within the assumed regime. They do not repair omission of the mechanism that generates a different regime, although sufficiently broad predictive distributions may still cover some post-change outcomes without explaining them.
 
 ???
 The language analogy is exact here. A confidence interval is a range of sentences in the model's language. Bifurcation produces a sentence in a different language — one the model cannot form. The COVID pandemic is an example the audience will recognize: ARIMA models fit to 2015–2019 hospitalization data had nothing to say about 2020. Not because the confidence intervals were too narrow. Because the DGP changed regime.
