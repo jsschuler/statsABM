@@ -850,16 +850,33 @@ The wolf-sheep ABM without grass crashes in 47 of 50 runs. Adding grass — a re
 
 Remove the grass — drought, overgrazing at a faster rate, a parameter shift in regrowth time — and the dynamics change again. The stability does not belong to the predator-prey interaction. It belongs to the triple: predator, prey, and resource.
 
---
+???
+Speaker notes: The point here is symmetric. The catastrophist error and the complacency error are both failures of expressive resolution — both involve a model that cannot represent the mechanism that would change the outcome. The wolf-sheep example makes this concrete: grass is the stabilizing mechanism, and its removal is not a parameter perturbation within the cycling model's language; it is a structural change to the system the model was describing.
+
+---
+
+## The Grain Is a Choice
 
 Herbert Simon observed that complex systems are nearly decomposable: fast dynamics within subsystems, slow dynamics between them. The wolf-sheep system with grass has two time scales. The predation cycle is fast; grass regrowth takes 30 ticks — slow relative to reproduction. The cycling depends on that ratio. Compress regrowth and the buffer disappears.
 
 --
 
-A model calibrated in the stable cycling regime has no language for what happens when the regrowth rate shifts. That perturbation operates at a different grain than the one the model describes. The grain is a choice, not a fact about the world.
+A model calibrated in the stable cycling regime has no language for what happens when the regrowth rate shifts. That perturbation operates at a different grain than the one the model describes.
+
+--
+
+**The grain is a choice, not a fact about the world.**
+
+--
+
+Simon's near-decomposability point adds the temporal dimension: the stability of the cycling regime is a phenomenon at the fast time scale of predation, but it depends on a parameter (regrowth time) that operates at a slower scale. A model fit only at the fast scale cannot see the slow parameter. A model fit only at the slow scale cannot see the fast dynamics.
+
+--
+
+The right question is always: at what grain is this model working?
 
 ???
-Speaker notes: The point here is symmetric. The catastrophist error and the complacency error are both failures of expressive resolution — both involve a model that cannot represent the mechanism that would change the outcome. The wolf-sheep example makes this concrete: grass is the stabilizing mechanism, and its removal is not a parameter perturbation within the cycling model's language; it is a structural change to the system the model was describing. Simon's near-decomposability point adds the temporal dimension: the stability of the cycling regime is a phenomenon at the fast time scale of predation, but it depends on a parameter (regrowth time) that operates at a slower scale. A model fit only at the fast scale cannot see the slow parameter. A model fit only at the slow scale cannot see the fast dynamics. The right question is always: at what grain is this model working?
+Speaker notes: The grain argument is the bridge between the wolf-sheep example and the checklist question that closes the block. A model fit at one temporal or structural grain is linguistically incapable of expressing phenomena that emerge at a different grain — not unlikely, but grammatically absent. The complacency error and the catastrophist error are symmetric failures of this kind.
 
 ---
 
@@ -956,7 +973,7 @@ The summary paragraph is the one-paragraph version of the course. If a student r
 
 ## Materials and Contact
 
-**Course repository:** `github.com/[username]/abm-statisticians`
+**Course repository:** `github.com/jsschuler/statsABM`
 
 The repository contains:
 - `book/abm_course_book.Rmd` — the complete course textbook (renderable R Markdown)
@@ -972,7 +989,7 @@ The repository contains:
 
 --
 
-**Contact:** [instructor email]
+**Contact:** jschule4@gmu.edu
 
 *Thank you.*
 

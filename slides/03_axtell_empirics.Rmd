@@ -693,3 +693,17 @@ The final block gives that pattern a name and asks what follows from it — for 
 
 ???
 Transition slide. The afternoon block (04) takes the philosophical argument that has been building implicitly through all three examples and states it explicitly. The firm size result is the last empirical anchor before the argument goes abstract.
+
+---
+class: center, middle
+
+# Block 3 Complete
+
+### Break — 15 minutes
+
+*Block 4 begins at 3:30*
+
+*All code at: github.com/jsschuler/statsABM*
+
+???
+Speaker notes: Remind the audience that the firm size data and Axtell simulation code are in the distributed materials. The afternoon session is conceptual — no new model runs. Encourage them to return with the question: what do all three examples have in common?
